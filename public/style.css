@@ -247,3 +247,22 @@ code.path { word-break: break-all; }
 .wall-switch { position: absolute; border: 0; background: transparent; cursor: pointer; padding: 0; }
 .wall-switch:hover { outline: 2px solid #feae34; outline-offset: 1px; }
 body.talk-open .help { display: none; }
+
+/* ---- top bar v3: brand + counters share one panel; toggles show on/off clearly ---- */
+.bar .brand { border-radius: 10px 0 0 10px; border-right: 1px solid rgba(255,255,255,.08); padding: 8px 14px; }
+.bar .counts { border-radius: 0 10px 10px 0; border-left: 0; margin-left: -14px; padding: 8px 6px; gap: 0; }
+.bar .counts .stat { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 7px; background: none; border: 0; box-shadow: none; border-radius: 6px; padding: 3px 12px; color: #f4ecd8; }
+.bar .counts .stat + .stat { border-left: 1px solid rgba(255,255,255,.08); border-radius: 0; }
+.bar .counts .stat i { width: 8px; height: 8px; border-radius: 2px; box-shadow: none; align-self: center; }
+.bar .counts .stat b { font-size: 15px; }
+.bar .counts .stat small { color: #b9a88a; font-size: 10px; }
+.bar .counts .stat.zero { opacity: .4; }
+.bar .counts .stat.need { background: #e43b44; border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
+.bar .counts .stat.need + .stat { border-left-color: transparent; }
+.bar .counts .stat.need small { color: #fff; }
+/* toggles: on = filled + green led, off = dim + slashed icon */
+.bar .tools .icon-btn { position: relative; background: rgba(20, 16, 26, .82); color: #6e6577; }
+.bar .tools .icon-btn[aria-pressed="true"] { background: #d97757; color: #fff; box-shadow: 2px 2px 0 var(--edge), 0 0 12px rgba(217,119,87,.45); }
+.bar .tools .icon-btn[aria-pressed="true"]::after { content: ''; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; background: #63c74d; box-shadow: 0 0 0 1px var(--edge); }
+.bar .tools .icon-btn[aria-pressed="false"]::before { content: ''; position: absolute; left: 7px; right: 7px; top: 50%; height: 2px; background: #e43b44; transform: rotate(-40deg); box-shadow: 0 0 0 1px var(--edge); }
+.bar .tools .icon-btn.lang { color: #f4ecd8; }

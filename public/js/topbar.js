@@ -26,7 +26,7 @@ function renderBar() {
   empty.innerHTML = T.empty; empty.hidden = data.people.length > 0;
   for (const [id, on, label] of [['btn-notify', !!notifyOn, T.notify], ['btn-sound', soundOn, T.sound]]) {
     const b = document.getElementById(id);
-    b.setAttribute('aria-pressed', on); b.title = label.replace(/^\S+\s/, ''); b.querySelector('.sr').textContent = b.title;
+    b.setAttribute('aria-pressed', on); b.title = `${label.replace(/^\S+\s/, '')}: ${on ? T.on : T.off}`; b.querySelector('.sr').textContent = b.title;
   }
   document.getElementById('btn-lang').textContent = T.lang;
 
