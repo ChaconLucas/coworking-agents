@@ -11,13 +11,24 @@ const PENDING_STALE_MS = 6000;           // ferramenta parada há isto = rodando
 const ASLEEP_MS = 20 * 60 * 1000;
 const EDIT_WINDOW_MS = 15 * 60 * 1000;   // janela para "duas sessões editando o mesmo clone"
 
+// Ferramenta parada há mais de uns segundos pode ser só demorada ou um pedido de permissão.
+// Só vira "waiting" quando o modo de permissão pergunta mesmo por aquela ferramenta.
+function mayAskPermission(st, kind) {
+  if (st.explicitApprovals) return false;
+  const mode = st.permissionMode || 'default';
+  if (mode === 'auto' || mode === 'bypassPermissions' || mode === 'plan') return false;
+  if (mode === 'acceptEdits' && kind === 'edit') return false;
+  return true;
+}
+
 function stateOf(status, st, now) {
   if (!st) return status === 'busy' ? 'thinking' : 'idle';
   if (status !== 'busy') return now - Math.max(st.lastTs, st.mtime) > ASLEEP_MS ? 'asleep' : 'idle';
   const pend = newest(st.pending);
   if (!pend) return 'thinking';
   if (pend.kind === 'ask') return 'needs_you';
-  if (!['delegate', 'thinking'].includes(pend.kind) && now - pend.ts > PENDING_STALE_MS && now - st.mtime > PENDING_STALE_MS) return 'waiting';
+  const stale = !['delegate', 'thinking'].includes(pend.kind) && now - pend.ts > PENDING_STALE_MS && now - st.mtime > PENDING_STALE_MS;
+  if (stale && mayAskPermission(st, pend.kind)) return 'waiting';
   return pend.kind;
 }
 
@@ -34,6 +45,7 @@ function person(s, now) {
     repo: repo ? { name: repo.name, path: repo.repo, worktree: repo.worktree, isWorktree: repo.isWorktree } : null,
     model: st ? st.model : '', ctx: st ? st.ctx : 0, ctxMax: st ? st.ctxMax : 0, turns: st ? st.turns : 0,
     doing: pend ? { tool: pend.name, what: pend.what, kind: pend.kind, for: now - pend.ts } : null,
+    permissionMode: st ? st.permissionMode || '' : '',
     recent: st ? st.recent.slice(-8).reverse().map(r => ({ tool: r.name, what: r.what, kind: r.kind, ts: r.ts })) : [],
     skills: st ? st.skills : {}, mcps: st ? st.mcps : {}, tools: st ? st.tools : {},
     editing: edits.map(e => ({ worktree: e.repo.worktree, repo: e.repo.name, at: e.at })),

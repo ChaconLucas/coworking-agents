@@ -86,7 +86,8 @@ function absorb(st, d) {
   }
 }
 
-const read = incremental(() => Object.assign(baseState(), { busy: false, since: 0, startedAt: 0, version: '', originator: '', id: '', firstPrompt: '' }), absorb);
+// o Codex grava *_approval_request quando pede aprovação, então ferramenta parada é só demorada
+const read = incremental(() => Object.assign(baseState(), { explicitApprovals: true, busy: false, since: 0, startedAt: 0, version: '', originator: '', id: '', firstPrompt: '' }), absorb);
 
 let procCache = { at: 0, v: false };
 function codexRunning() {

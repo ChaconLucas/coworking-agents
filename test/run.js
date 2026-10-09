@@ -49,6 +49,9 @@ session(process.ppid, 'C', 'busy', [
   use('e3', 'Edit', { file_path: path.join(repo, 'c.txt') }, now - 6000), result('e3', now - 5900),
   use('q1', 'AskUserQuestion', {}, now - 100),
 ]);
+// E: Bash parado há 10s em modo auto continua "terminal"; F: o mesmo em modo default vira "waiting"
+const staleBash = id => [use('b' + id, 'Bash', { command: 'npm test' }, now - 10000)];
+const permMode = m => ({ type: 'permission-mode', permissionMode: m });
 // D: processo morto não aparece
 session(999999, 'D', 'busy', []);
 
@@ -78,11 +81,19 @@ fs.writeFileSync(path.join(day, 'rollout-x2.jsonl'), [
   ev('event_msg', { type: 'task_complete' }, now - 6000),
 ].map(line).join(''));
 
+// sessões vivas extra usando pids de processos-filho que ficam a dormir durante o teste
+const { spawn } = require('child_process');
+const sleepers = [spawn('sleep', ['30']), spawn('sleep', ['30'])];
+session(sleepers[0].pid, 'E', 'busy', [permMode('auto'), ...staleBash('E')]);
+session(sleepers[1].pid, 'F', 'busy', [permMode('default'), ...staleBash('F')]);
+// o ficheiro só conta como "parado" se não mexeu há mais de 6s
+for (const id of ['E', 'F']) { const f = path.join(claude, 'projects', 'p', id + '.jsonl'); fs.utimesSync(f, new Date(now - 10000), new Date(now - 10000)); }
+
 const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
 // Codex
 assert.strictEqual(by('X1').agent, 'codex');
 assert.strictEqual(by('X1').title, 'Conversa do Codex');
@@ -102,6 +113,8 @@ assert.deepStrictEqual(by('A').mcps, { rea: 1 });
 assert.strictEqual(by('A').ctx, 1001);
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
+assert.strictEqual(by('E').state, 'terminal', 'modo auto: Bash demorado é trabalho, não permissão');
+assert.strictEqual(by('F').state, 'waiting', 'modo default: Bash parado pode ser pedido de permissão');
 if (by('B')) {
   assert.strictEqual(by('B').state, 'idle');
   assert.strictEqual(by('B').doing, null, 'turno encerrado limpa a pendência');
@@ -121,5 +134,6 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
+sleepers.forEach(p => p.kill());
 fs.rmSync(root, { recursive: true, force: true });
 console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));

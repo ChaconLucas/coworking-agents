@@ -43,6 +43,7 @@ function absorb(st, d) {
   if (d.cwd) st.cwd = d.cwd;
   if (d.gitBranch) st.branch = d.gitBranch;
   if (d.type === 'ai-title' && d.aiTitle) st.title = d.aiTitle;
+  if (d.type === 'permission-mode' && d.permissionMode) st.permissionMode = d.permissionMode;
   if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; }
   const m = d.message;
   if (!m) return;

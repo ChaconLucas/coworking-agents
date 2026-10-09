@@ -210,6 +210,13 @@ function bubble(x, y, kind, t) {
   r(x - 1, y - 1, 15, 11, PAL.ink); r(x, y, 13, 9, PAL.white); r(x + 3, y + 10, 3, 2, PAL.ink); r(x + 4, y + 9, 2, 2, PAL.white);
   if (kind === 'need') { r(x + 5, y + 1, 3, 5, PAL.red); r(x + 5, y + 7, 3, 1, PAL.red); }
   else if (kind === 'wait') { r(x + 4, y + 1, 5, 1, PAL.amber); r(x + 8, y + 2, 1, 2, PAL.amber); r(x + 6, y + 4, 2, 2, PAL.amber); r(x + 6, y + 7, 2, 1, PAL.amber); }
+  else if (kind === 'clock') {
+    // ampulheta que vira de tempos em tempos
+    const flip = ((t / 1200) | 0) % 2, c = '#8f553f', sand = '#feae34';
+    r(x + 4, y + 1, 5, 1, c); r(x + 4, y + 7, 5, 1, c);
+    r(x + 5, y + 2, 3, 1, flip ? '#fff' : sand); r(x + 6, y + 3, 1, 1, sand); r(x + 6, y + 4, 1, 1, sand); r(x + 5, y + 6, 3, 1, flip ? sand : '#fff');
+    r(x + 5, y + 5, 3, 1, f % 2 ? sand : '#fff');
+  }
   else if (kind === 'think') { for (let k = 0; k < 3; k++) r(x + 2 + k * 4, y + 4 - (k === f % 3 ? 1 : 0), 2, 2, '#68386c'); }
   else if (kind === 'zz') {
     const p = f % 6 > 2 ? 0 : 1, c = '#3a4466';

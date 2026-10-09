@@ -473,7 +473,8 @@ function drawScene(t, dt) {
     if (!a) continue;
     if (a.mode === 'nap') { Art.bubble(a.x + 16, a.y - 14, 'zz', t); continue; }
     if (a.mode !== 'desk') continue;
-    const bk = st === 'needs_you' ? 'need' : st === 'waiting' ? 'wait' : st === 'thinking' ? 'think' : st === 'asleep' ? 'zz' : null;
+    const long = c.p.doing && c.p.doing.for > 60000 && !['needs_you', 'waiting'].includes(st);
+    const bk = st === 'needs_you' ? 'need' : st === 'waiting' ? 'wait' : long ? 'clock' : st === 'thinking' ? 'think' : st === 'asleep' ? 'zz' : null;
     if (bk) Art.bubble(c.chair.x + 13, c.chair.y - 15, bk, t);
   }
 }
@@ -489,7 +490,7 @@ function ago(ms) {
 
 function stateText(p) {
   const base = T.states[p.state] || p.state;
-  if (p.doing && ['edit', 'read', 'terminal', 'web', 'skill', 'mcp', 'delegate', 'other'].includes(p.state)) return `${base}${p.doing.what ? ' · ' + p.doing.what : ''}`;
+  if (p.doing && ['edit', 'read', 'terminal', 'web', 'skill', 'mcp', 'delegate', 'other'].includes(p.state)) return `${base}${p.doing.what ? ' · ' + p.doing.what : ''}${p.doing.for > 60000 ? ' · ' + T.for(ago(p.doing.for)) : ''}`;
   if (p.state === 'waiting' && p.doing) return `${p.doing.tool} ${T.for(ago(p.doing.for))}`;
   if (p.state === 'idle' || p.state === 'asleep') return `${base} · ${ago(data.now - (p.since || p.lastActivity))}`;
   return base;
