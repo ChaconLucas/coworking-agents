@@ -1,0 +1,12 @@
+{
+  "name": "claudehq",
+  "version": "0.1.0",
+  "description": "A pixel-art office where every Claude Code session is a person at a desk — see who's working, who needs you, and who's editing the same checkout.",
+  "bin": { "claudehq": "bin/claudehq.js" },
+  "files": ["bin", "src", "public", "commands", ".claude-plugin", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node bin/claudehq.js", "demo": "node bin/claudehq.js --demo", "test": "node test/run.js" },
+  "keywords": ["claude", "claude-code", "agents", "dashboard", "pixel-art", "monitor"],
+  "author": "Lucas Chacon",
+  "license": "MIT"
+}

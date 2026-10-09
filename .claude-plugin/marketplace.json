@@ -1,0 +1,11 @@
+{
+  "name": "claudehq",
+  "owner": { "name": "Lucas Chacon" },
+  "plugins": [
+    {
+      "name": "claudehq",
+      "description": "Open a pixel-art office that shows every Claude Code session on this machine as a person at a desk.",
+      "source": "./"
+    }
+  ]
+}

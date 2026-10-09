@@ -1,0 +1,8 @@
+{
+  "name": "claudehq",
+  "description": "Open a pixel-art office that shows every Claude Code session on this machine as a person at a desk.",
+  "version": "0.1.0",
+  "author": { "name": "Lucas Chacon" },
+  "license": "MIT",
+  "keywords": ["dashboard", "sessions", "agents", "pixel-art"]
+}
