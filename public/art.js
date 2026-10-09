@@ -453,10 +453,125 @@ function applyLight(W, H, sky, lights, glows) {
   ctx.restore();
 }
 
+// ---------------- zonas novas ----------------
+function drawTile(x, y, w, h, a, b) {
+  for (let yy = 0; yy < h; yy += 8) for (let xx = 0; xx < w; xx += 8) r(x + xx, y + yy, Math.min(8, w - xx), Math.min(8, h - yy), ((xx + yy) / 8) % 2 ? a : b);
+}
+
+function drawGlassWall(x, y, w, h, doorAt) {
+  // parede de vidro vista de cima: moldura escura, vidro azulado e reflexos
+  ctx.save(); ctx.fillStyle = 'rgba(160,220,240,0.16)'; ctx.fillRect(x, y, w, 4); ctx.fillRect(x, y, 3, h); ctx.fillRect(x + w - 3, y, 3, h); ctx.restore();
+  r(x, y, w, 1, PAL.aluDark); r(x, y + 4, w, 1, PAL.aluDark);
+  r(x, y, 1, h, PAL.aluDark); r(x + 3, y + 4, 1, h - 4, PAL.aluDark); r(x + w - 1, y, 1, h, PAL.aluDark); r(x + w - 4, y + 4, 1, h - 4, PAL.aluDark);
+  for (let k = 12; k < w - 6; k += 24) { r(x + k, y + 1, 1, 3, '#ffffff99'); }
+  if (doorAt != null) { r(x + doorAt, y, 18, 5, PAL.floor[0]); r(x + doorAt, y, 1, 5, PAL.aluDark); r(x + doorAt + 17, y, 1, 5, PAL.aluDark); }
+}
+
+function drawMeetingTable(x, y, w, h) {
+  r(x + 2, y + h + 1, w, 4, '#00000026');
+  r(x - 1, y - 1, w + 2, h + 6, PAL.ink);
+  r(x, y, w, h, '#a8693f'); r(x, y, w, 1, '#c9855a'); r(x, y + h, w, 4, '#7a4428');
+  for (let k = 8; k < w - 8; k += 18) { r(x + k, y + 3, 8, 5, PAL.paper); r(x + k + 1, y + 4, 5, 1, PAL.paperLine); }
+}
+
+function drawTV(x, y, w, h, t, active) {
+  const f = (t / 160) | 0;
+  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, PAL.bezel);
+  if (!active) { r(x, y, w, h, '#14141c'); r(x + 2, y + 1, 6, 1, '#ffffff14'); return; }
+  r(x, y, w, h, '#1e2233');
+  const c = '#feae34';
+  r(x + w / 2 - 4, y + 2, 8, 3, c); r(x + w / 2, y + 5, 1, 2, c); r(x + 4, y + 7, w - 8, 1, c);
+  for (let k = 0; k < 4; k++) { const bx = x + 4 + k * ((w - 10) / 3); r(bx, y + 7, 1, 2, c); r(bx - 2, y + 9, 5, 3, (f + k) % 4 === 0 ? '#fff' : '#63c74d'); }
+}
+
+function drawPingPong(x, y, w, h, t, playing) {
+  r(x + 3, y + h + 4, w - 2, 4, '#00000026');
+  r(x - 1, y - 1, w + 2, h + 6, PAL.ink);
+  r(x, y, w, h, '#2f7f5a'); r(x, y, w, 1, '#4ca37a'); r(x, y + h, w, 4, '#1f5a40');
+  r(x + 1, y + 1, w - 2, 1, '#ffffff'); r(x + 1, y + h - 2, w - 2, 1, '#ffffff'); r(x + 1, y + 1, 1, h - 2, '#ffffff'); r(x + w - 2, y + 1, 1, h - 2, '#ffffff');
+  r(x + 1, y + h / 2, w - 2, 1, '#ffffff88');
+  r(x + w / 2, y - 3, 1, h + 5, '#e8e8f0'); r(x + w / 2 - 1, y - 4, 3, 2, PAL.ink); r(x + w / 2 - 1, y + h, 3, 2, PAL.ink);
+  r(x + 3, y + h + 4, 2, 4, PAL.ink); r(x + w - 5, y + h + 4, 2, 4, PAL.ink);
+  if (!playing) { r(x + w / 4, y + h / 2 - 3, 4, 4, PAL.red); r(x + w / 4 + 1, y + h / 2 + 1, 1, 3, '#6e3f31'); return; }
+  // bolinha indo e voltando num arco
+  const period = 1400, p = (t % period) / period, dir = ((t / period) | 0) % 2;
+  const u = dir ? 1 - p : p;
+  const bx = x + 4 + u * (w - 8), arc = Math.sin(u * Math.PI) * 9;
+  r(bx, y + h / 2 - 3 - arc, 2, 2, '#ffffff'); r(bx, y + h / 2 + 1, 2, 1, '#00000040');
+}
+
+function drawBeanBag(x, y, color) {
+  r(x + 1, y + 13, 20, 3, '#00000026');
+  r(x + 2, y - 1, 18, 16, PAL.ink); r(x, y + 3, 22, 10, PAL.ink);
+  r(x + 3, y, 16, 14, color); r(x + 1, y + 4, 20, 8, color);
+  r(x + 4, y + 1, 6, 2, shade(color, 1.3)); r(x + 2, y + 10, 18, 2, shade(color, .75));
+}
+
+// pessoa deitada: o sprite de frente girado 90°, pixel a pixel
+function drawLying(x, y, lk, t) {
+  const col = colorsOf(lk, { e: PAL.ink2 });
+  const key = 'lying|' + JSON.stringify(col);
+  let cv = spriteCache.get(key);
+  if (!cv) {
+    const src = document.createElement('canvas'); src.width = 16; src.height = 21;
+    const c = src.getContext('2d');
+    c.drawImage(sprite(BODY, col, 'body'), 0, 10); c.drawImage(sprite(LEGS_SIT, col, 'legssit'), 0, 17); c.drawImage(sprite(HEAD_FRONT, col, 'hf'), 0, 0);
+    // olhos fechados
+    c.fillStyle = lk.S; c.fillRect(5, 5, 1, 1); c.fillRect(10, 5, 1, 1); c.fillStyle = PAL.ink; c.fillRect(4, 6, 2, 1); c.fillRect(10, 6, 2, 1);
+    cv = document.createElement('canvas'); cv.width = 21; cv.height = 16;
+    const d = cv.getContext('2d'); d.translate(0, 16); d.rotate(-Math.PI / 2); d.drawImage(src, 0, 0);
+    spriteCache.set(key, cv);
+  }
+  const breathe = (t / 1200 | 0) % 2;
+  ctx.drawImage(cv, x | 0, (y - breathe) | 0);
+}
+
+function drawFridge(x, y) {
+  r(x + 1, y + 34, 16, 2, '#00000030');
+  r(x - 1, y - 1, 18, 36, PAL.ink); r(x, y, 16, 34, '#e8ecf4'); r(x, y, 16, 1, '#ffffff'); r(x + 13, y + 1, 3, 33, '#c0cbdc');
+  r(x, y + 12, 16, 1, PAL.ink); r(x + 2, y + 4, 1, 6, '#8b9bb4'); r(x + 2, y + 16, 1, 8, '#8b9bb4');
+  r(x + 5, y + 18, 4, 4, PAL.amber); r(x + 9, y + 20, 3, 3, PAL.red); r(x + 6, y + 4, 5, 3, '#0099db');
+}
+
+function drawCounter(x, y, w) {
+  r(x - 1, y - 1, w + 2, 22, PAL.ink); r(x, y, w, 6, '#d9d9e0'); r(x, y, w, 1, '#ffffff'); r(x, y + 6, w, 14, '#8f553f');
+  for (let k = 0; k < w - 4; k += 16) { r(x + k + 2, y + 8, 13, 10, PAL.ink); r(x + k + 3, y + 9, 11, 8, '#a86a52'); r(x + k + 8, y + 12, 2, 1, '#e8b04b'); }
+  r(x + 6, y + 1, 12, 4, PAL.ink); r(x + 7, y + 1, 10, 3, '#8b9bb4'); r(x + 11, y - 3, 2, 4, '#8b9bb4');
+  r(x + w - 18, y - 6, 14, 7, PAL.ink); r(x + w - 17, y - 5, 12, 5, '#3a4466'); r(x + w - 15, y - 4, 6, 3, '#14141c'); r(x + w - 7, y - 4, 1, 1, PAL.green);
+}
+
+function drawBookshelf(x, y, w, h) {
+  r(x - 1, y - 1, w + 2, h + 2, PAL.ink); r(x, y, w, h, '#6e3f31');
+  const shelves = Math.floor((h - 2) / 11);
+  for (let s = 0; s < shelves; s++) {
+    const sy = y + 2 + s * 11;
+    r(x + 1, sy + 9, w - 2, 1, '#8f553f');
+    for (let bx = x + 2, k = 0; bx < x + w - 3; k++) {
+      const hh = hash('book' + x + s + k), bw = 2 + hh % 3, bh = 6 + (hh >>> 4) % 3;
+      if (bx + bw > x + w - 2) break;
+      r(bx, sy + 9 - bh, bw, bh, ['#e43b44', '#0099db', '#feae34', '#3e8948', '#b55088', '#f4ecd8', '#5a6988'][hh % 7]);
+      bx += bw + (hh % 5 === 0 ? 2 : 0);
+    }
+  }
+}
+
+function drawPrinter(x, y, t) {
+  const f = (t / 300) | 0;
+  r(x + 1, y + 14, 18, 2, '#00000030');
+  r(x - 1, y - 1, 20, 16, PAL.ink); r(x, y, 18, 14, '#d9d9e0'); r(x, y, 18, 1, '#ffffff'); r(x + 2, y + 3, 14, 2, PAL.ink2);
+  r(x + 3, y + 1 - (f % 3), 12, 3, PAL.white); r(x + 13, y + 8, 2, 2, f % 4 < 2 ? PAL.green : '#2a5a2a');
+  r(x + 2, y + 15, 3, 3, PAL.ink); r(x + 13, y + 15, 3, 3, PAL.ink);
+}
+
+function drawStool(x, y) { r(x, y, 10, 4, PAL.ink); r(x + 1, y, 8, 3, '#b86f50'); r(x + 4, y + 4, 2, 5, PAL.ink); r(x + 1, y + 9, 8, 1, PAL.ink); }
+function drawRoundTable(x, y) { r(x + 2, y + 14, 16, 2, '#00000026'); r(x, y, 20, 8, PAL.ink); r(x + 1, y + 1, 18, 6, '#c37a55'); r(x + 1, y + 1, 18, 1, '#dc9a6c'); r(x + 9, y + 8, 2, 6, PAL.ink); r(x + 5, y + 14, 10, 1, PAL.ink); r(x + 4, y + 2, 4, 3, PAL.white); }
+function drawEmptyChair(x, y) { drawChairBase(x, y + 24); r(x - 1, y + 13, 18, 11, PAL.ink); r(x, y + 14, 16, 9, PAL.chair); r(x, y + 14, 16, 2, PAL.chairLight); }
+
 window.Art = {
   PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,
   drawCooler, drawRug, drawFloor, applyLight, LEGS_SIT,
+  drawTile, drawGlassWall, drawMeetingTable, drawTV, drawPingPong, drawBeanBag, drawLying, drawFridge, drawCounter, drawBookshelf, drawPrinter, drawStool, drawRoundTable, drawEmptyChair,
 };
 })();

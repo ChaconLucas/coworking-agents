@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { snapshot: real } = require('./collect');
 const { demoSnapshot } = require('./demo');
+const { focus } = require('./focus');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json' };
@@ -31,6 +32,22 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       res.write(`data: ${JSON.stringify(snapshot({ privacy }))}\n\n`);
       clients.add(res);
       req.on('close', () => clients.delete(res));
+      return;
+    }
+    if (url.pathname === '/api/focus' && req.method === 'POST') {
+      // só a própria página pode pedir: o cabeçalho próprio força preflight CORS, que este servidor nunca aprova
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworks'] !== '1' || (origin && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 1e4) req.destroy(); });
+      req.on('end', async () => {
+        let id = '';
+        try { id = JSON.parse(body).id; } catch {}
+        const person = demo ? null : real().people.find(p => p.id === id);
+        const out = person ? await focus(person) : { ok: false, reason: demo ? 'demo' : 'gone' };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(out));
+      });
       return;
     }
     if (url.pathname === '/api/state') {
