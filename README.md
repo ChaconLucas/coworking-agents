@@ -1,21 +1,21 @@
-# claudehq
+# coworks-agents
 
-**Um escritório em pixel art onde cada sessão do Claude Code é uma pessoa numa mesa.** Você vê quem está trabalhando, quem precisa de você e quem está editando o mesmo clone que outra sessão.
+**Um coworking em pixel art para as suas IAs de programação.** Cada sessão aberta (Claude Code, Codex, …) vira uma pessoa numa mesa. Você vê quem está trabalhando, quem precisa de você e quem está editando o mesmo clone que outra sessão, mesmo que sejam IAs diferentes.
 
-![claudehq em modo demo](docs/demo.png)
+![coworks-agents em modo demo](docs/demo.png)
 
 *[English below](#english)*
 
 ## Por que existe
 
-Quem roda várias sessões do Claude Code ao mesmo tempo perde de vista qual delas parou para perguntar alguma coisa, qual terminou e qual está mexendo no mesmo repositório que outra. O claudehq junta tudo numa tela só, que dá vontade de deixar aberta.
+Quem roda várias sessões de IA ao mesmo tempo perde de vista qual delas parou para perguntar alguma coisa, qual terminou e qual está mexendo no mesmo repositório que outra. O coworks-agents junta todas numa tela só, que dá vontade de deixar aberta.
 
 ## Usar
 
 ```bash
-npx claudehq            # abre http://127.0.0.1:4777 no navegador
-npx claudehq --demo     # escritório de mentira, com todos os estados
-npx claudehq --private  # esconde títulos, pastas e arquivos (para compartilhar a tela)
+npx coworks-agents            # abre http://127.0.0.1:4777 no navegador
+npx coworks-agents --demo     # escritório de mentira, com todos os estados
+npx coworks-agents --private  # esconde títulos, pastas e arquivos (para compartilhar a tela)
 ```
 
 Requer Node 18+ e não tem nenhuma dependência.
@@ -23,74 +23,89 @@ Requer Node 18+ e não tem nenhuma dependência.
 ### Como plugin do Claude Code
 
 ```
-/plugin marketplace add <seu-usuario>/claudehq
-/plugin install claudehq@claudehq
-/hq
+/plugin marketplace add <seu-usuario>/coworks-agents
+/plugin install coworks-agents@coworks-agents
+/coworks
 ```
 
-O comando `/hq` sobe o servidor e devolve o link.
+## IAs suportadas
+
+| IA | Como é lida | Sessão aberta = |
+|---|---|---|
+| **Claude Code** | `~/.claude/sessions/` e `~/.claude/projects/**.jsonl` | registro oficial de sessões vivas (com pid) |
+| **Codex** (CLI e app) | `~/.codex/sessions/AAAA/MM/DD/*.jsonl` | processo do Codex rodando e conversa mexida nas últimas 3h |
+
+A plaquinha colorida na mesa e a borda do crachá dizem de qual IA é cada pessoa. Quer adicionar outra IA? Veja [Adicionar uma IA](#adicionar-uma-ia).
 
 ## O que aparece
 
 | No escritório | Significa |
 |---|---|
-| Monitor com código sendo digitado | editando arquivo (`Edit`, `Write`) |
-| Monitor preto com texto verde | rodando comando (`Bash`) |
-| Monitor com folha de papel | lendo ou procurando (`Read`, `Grep`, `Glob`) |
-| Monitor com globo | na web (`WebFetch`, `WebSearch`, MCP de navegador) |
+| Monitor com código sendo digitado | editando arquivo |
+| Monitor preto com texto verde | rodando comando |
+| Monitor com folha de papel | lendo ou procurando |
+| Monitor com globo | na web |
 | Monitor com organograma, mais estagiários nos banquinhos | delegando para subagentes |
 | Virada para você, acenando, com balão **!** | fez uma pergunta e espera a sua resposta |
 | Virada para você, com balão **?** | ferramenta parada há mais de 6s: ainda rodando **ou** esperando a sua permissão |
 | Protetor de tela, com uma caneca fumegante | terminou o turno, é a sua vez |
 | Balão **zZ**, monitor desligado | parada há mais de 20 min |
-| Divisória piscando em vermelho e faixa no topo | duas sessões editaram o mesmo checkout nos últimos 15 min |
+| Divisória piscando em vermelho e faixa no topo | duas sessões, de qualquer IA, editaram o mesmo checkout nos últimos 15 min |
 
-**Certificados na parede:** cada mesa ganha quadros com as skills e os servidores MCP que aquela sessão usou, além de conquistas como *Maratonista*, *Chefe de equipe*, *Memória de elefante* e *Mestre do terminal*. Passe o mouse para ler. O **mural de cortiça** mostra as skills mais usadas na máquina toda.
+**Certificados na parede:** cada mesa ganha quadros com as skills e os servidores MCP que aquela sessão usou, além de conquistas como *Maratonista*, *Chefe de equipe*, *Memória de elefante* e *Mestre do terminal*. Passe o mouse para ler. O **mural de cortiça** mostra as skills de cada IA instaladas na máquina e as mais usadas.
 
-Clique numa pessoa para ver o repositório, a branch, o modelo, o contexto, as últimas ações, os subagentes e os certificados.
+Clique numa pessoa para ver o repositório, a branch, o modelo, o contexto, as últimas ações, os subagentes e os certificados. Há avisos opcionais: som e notificação do sistema quando alguém precisa de você ou termina o turno.
 
-Há avisos opcionais: som e notificação do sistema quando alguém precisa de você ou termina o turno.
+## Privacidade (e o que não faz)
 
-## Como funciona (e o que não faz)
-
-- **Só lê, não instala nada.** Usa o que o Claude Code já grava em `~/.claude/`:
-  - `sessions/*.json`: as sessões vivas e se cada uma está trabalhando ou parada.
-  - `projects/**/<sessão>.jsonl`: o título, a pasta, a branch, as ferramentas e o contexto.
-  - `projects/**/<sessão>/subagents/`: os subagentes.
-  - `~/.claude.json`: só as chaves `skillUsage`, `pluginUsage` e `mcpServers`.
-- **Não usa hooks** e não altera `settings.json`.
-- **Não gasta token**: não faz nenhuma chamada a modelo.
-- **Não sai da sua máquina**: o servidor escuta só em `127.0.0.1`, e os ficheiros `*.key` da pasta de sessões nunca são lidos.
+- **Só lê, não instala nada:** não usa hooks e não altera nenhuma configuração das IAs.
+- **Não gasta token:** não faz nenhuma chamada a modelo.
+- **Não sai da sua máquina:** o servidor escuta só em `127.0.0.1`.
+- **Nunca lê credenciais:** nem os `*.key` do Claude Code nem o `auth.json` do Codex. Do `~/.claude.json` lê só `skillUsage`, `pluginUsage` e `mcpServers`.
 - **Limitação honesta:** pelo disco não dá para distinguir "comando demorado" de "esperando permissão". Os dois aparecem como **?**, com o tempo parado.
-- Respeita `CLAUDE_CONFIG_DIR`.
+- Respeita `CLAUDE_CONFIG_DIR` e `CODEX_HOME`.
+
+## Adicionar uma IA
+
+Cada IA é um arquivo em `src/sources/` que exporta:
+
+```js
+module.exports = {
+  id: 'minha-ia', label: 'Minha IA',
+  sessions(now) { return [/* { agent, id, name, status: 'busy'|'idle', startedAt, since, cwd, st, subagents } */]; },
+  credentials() { return { topSkills: [], skills: [], mcps: [], plugins: [] }; },
+};
+```
+
+O `st` vem de `incremental()` em `src/util.js`: você escreve só o `absorb(state, linha)` que entende o formato da sua IA e chama `track()` para cada ferramenta. Depois registre o arquivo em `src/collect.js`, dê uma cor em `AGENT` no `public/app.js` e acrescente um caso ao `test/run.js`.
 
 ## Desenvolver
 
 ```bash
-npm test        # monta um ~/.claude falso e confere o coletor
+npm test                                  # monta ~/.claude e ~/.codex falsos e confere as fontes
 npm run demo
-node bin/claudehq.js --json   # um retrato do estado, em JSON
+node bin/coworks-agents.js --json         # um retrato do estado, em JSON
 ```
-
-Estrutura: `src/collect.js` (leitura incremental dos transcritos), `src/server.js` (HTTP + SSE), `public/app.js` (desenho no canvas, sem imagens: tudo é retângulo).
 
 ---
 
 ## English
 
-**A pixel-art office where every Claude Code session is a person at a desk.** See who's working, who needs you, and who's editing the same checkout as another session.
+**A pixel-art coworking office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk: see who's working, who needs you, and who's editing the same checkout as another session, even across different AIs.
 
 ```bash
-npx claudehq            # opens http://127.0.0.1:4777
-npx claudehq --demo     # fake office with every state
-npx claudehq --private  # hide titles, paths and file names
+npx coworks-agents            # opens http://127.0.0.1:4777
+npx coworks-agents --demo     # fake office with every state
+npx coworks-agents --private  # hide titles, paths and file names
 ```
 
-Or as a Claude Code plugin: `/plugin marketplace add <you>/claudehq`, then `/plugin install claudehq@claudehq`, then `/hq`.
+Or as a Claude Code plugin: `/plugin marketplace add <you>/coworks-agents`, then `/plugin install coworks-agents@coworks-agents`, then `/coworks`.
 
-- **Read-only, no hooks, no tokens, local only.** It reads what Claude Code already writes under `~/.claude/` (`sessions/`, `projects/` transcripts and subagents, plus the usage counters in `~/.claude.json`). It never reads the `*.key` files and binds to `127.0.0.1`.
+- **Supported:** Claude Code (official live-session registry) and Codex CLI/app (a running Codex process plus a conversation touched in the last 3h). Each desk's colored nameplate shows which AI it is.
+- **Read-only, no hooks, no tokens, local only.** Never reads credentials (`*.key`, `auth.json`). Binds to `127.0.0.1`.
 - **States:** editing, terminal, reading, web, delegating (with interns for subagents), has a question for you (**!**), tool stalled for more than 6s (**?**: still running *or* waiting for permission; the disk can't tell which), done/your turn, asleep.
-- **Certificates:** each desk's partition shows the skills and MCP servers that session used, plus achievements. The cork board shows your most-used skills.
-- **Clash alert:** two sessions that edited the same checkout in the last 15 minutes flash red.
+- **Certificates:** skills, MCP servers and achievements on each desk's partition. The cork board shows installed and most-used skills per AI.
+- **Clash alert:** sessions from any AI that edited the same checkout in the last 15 minutes flash red.
+- **Add an AI:** one file in `src/sources/` (see the section above).
 
 Node 18+, zero dependencies, MIT.
