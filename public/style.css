@@ -112,3 +112,25 @@ main { padding: 16px; display: flex; justify-content: center; overflow-x: auto; 
 .building .need { color: var(--bad); }
 .building .dot { font-style: normal; background: var(--bad); color: #fff; border-radius: 999px; padding: 0 7px; font-size: 11px; font-weight: 700; }
 .floor.bld { font-weight: 600; }
+
+.help { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; }
+.hcard { display: flex; align-items: flex-end; gap: 8px; pointer-events: auto; animation: rise .35s cubic-bezier(.2,.9,.3,1.2) both; }
+.hcard.out { animation: sink .25s ease-in both; }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sink { to { transform: translateY(30px); opacity: 0; } }
+.hcard .face { width: 64px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 4px 6px rgba(0,0,0,.35)); animation: bob 1.2s steps(2) infinite; flex: none; }
+.hcard.done .face { animation: none; }
+@keyframes bob { 50% { transform: translateY(-3px); } }
+.hcard .balloon { position: relative; background: #fffdf8; color: #2a1d27; border: 3px solid #2a1d27; border-radius: 6px; padding: 10px 12px; box-shadow: 4px 4px 0 rgba(42,29,39,.35); margin-bottom: 26px; }
+.hcard .balloon::before { content: ''; position: absolute; left: -11px; bottom: 10px; border: 8px solid transparent; border-right-color: #2a1d27; border-left: 0; }
+.hcard .balloon p { margin: 0 0 8px; font-size: 13px; line-height: 1.35; max-height: 7.5em; overflow: hidden; }
+.hcard .balloon p b { display: block; font: 700 10px/1.2 var(--pix); color: #be4a2f; margin-bottom: 4px; }
+.hcard.done .balloon p b { color: #3e8948; }
+.hbtns { display: flex; gap: 6px; }
+.hb { border: 2px solid #2a1d27; background: #f4ecd8; color: #2a1d27; border-radius: 4px; padding: 4px 8px; font: 700 11px/1 var(--pix); cursor: pointer; }
+.hb.main { background: #d97757; color: #fff; }
+.hb.x { margin-left: auto; padding: 4px 7px; }
+.hb:disabled { opacity: .6; }
+@media (prefers-reduced-motion: reduce) { .hcard, .hcard .face { animation: none; } }
+.help.open { max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
+.hmore { pointer-events: auto; order: -1; border: 2px solid #2a1d27; background: #e43b44; color: #fff; border-radius: 999px; padding: 6px 12px; font: 700 11px/1 var(--pix); cursor: pointer; box-shadow: 3px 3px 0 rgba(42,29,39,.35); }

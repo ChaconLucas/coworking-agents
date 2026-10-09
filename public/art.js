@@ -574,7 +574,21 @@ function drawStool(x, y) { r(x, y, 10, 4, PAL.ink); r(x + 1, y, 8, 3, '#b86f50')
 function drawRoundTable(x, y) { r(x + 2, y + 14, 16, 2, '#00000026'); r(x, y, 20, 8, PAL.ink); r(x + 1, y + 1, 18, 6, '#c37a55'); r(x + 1, y + 1, 18, 1, '#dc9a6c'); r(x + 9, y + 8, 2, 6, PAL.ink); r(x + 5, y + 14, 10, 1, PAL.ink); r(x + 4, y + 2, 4, 3, PAL.white); }
 function drawEmptyChair(x, y) { drawChairBase(x, y + 24); r(x - 1, y + 13, 18, 11, PAL.ink); r(x, y + 14, 16, 9, PAL.chair); r(x, y + 14, 16, 2, PAL.chairLight); }
 
+// retrato 16x18 (cabeça de frente + ombros) para os avisos
+function portrait(id, mood) {
+  const lk = look(id);
+  const col = colorsOf(lk, mood === 'open' ? { m: '#5a1f2a' } : null);
+  const cv = document.createElement('canvas'); cv.width = 16; cv.height = 18;
+  const c = cv.getContext('2d');
+  c.drawImage(sprite(BODY, col, 'body'), 0, 10);
+  c.drawImage(sprite(HEAD_FRONT, col, 'hf'), 0, 0);
+  const prev = ctx; ctx = c; hairExtras(lk, 0, 0, true); ctx = prev;
+  if (lk.glasses) { c.fillStyle = PAL.ink; c.fillRect(4, 5, 3, 1); c.fillRect(9, 5, 3, 1); c.fillRect(7, 5, 2, 1); }
+  return cv;
+}
+
 window.Art = {
+  portrait,
   PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,

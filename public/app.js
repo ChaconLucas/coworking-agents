@@ -5,6 +5,7 @@
 const I18N = {
   pt: {
     working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`, building: 'Ver prédio', agents: 'agentes',
+    help: { question: 'Tenho uma pergunta para você.', plan: 'Meu plano está pronto. Pode revisar?', run: c => `Posso rodar “${c}”?`, edit: f => `Posso editar ${f}?`, tool: t => `Posso usar ${t}? Está esperando a sua aprovação.`, done: t => `Pronto! ${t}`, see: 'Ver', more: n => `+${n} precisam de você`, less: 'Mostrar menos' },
     notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
     offline: 'Sem conexão com o coworks-agents. Tentando de novo…',
@@ -46,6 +47,7 @@ const I18N = {
   },
   en: {
     working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`, building: 'Building view', agents: 'agents',
+    help: { question: 'I have a question for you.', plan: 'My plan is ready. Can you review it?', run: c => `Can I run “${c}”?`, edit: f => `Can I edit ${f}?`, tool: t => `Can I use ${t}? Waiting for your approval.`, done: t => `Done! ${t}`, see: 'Show', more: n => `+${n} more need you`, less: 'Show less' },
     notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
     offline: 'Lost connection to coworks-agents. Retrying…',
@@ -778,6 +780,87 @@ function renderBar() {
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
 }
 
+// ---------------- avisos com rosto: quem precisa de você ----------------
+const helpEl = document.createElement('aside');
+helpEl.className = 'help'; helpEl.setAttribute('aria-live', 'polite');
+document.body.appendChild(helpEl);
+const helpCards = new Map(), doneUntil = new Map();
+
+function helpText(p) {
+  const H = T.help;
+  if (p.state === 'needs_you') {
+    const ask = p.doing && p.doing.ask;
+    return ask === 'plan' ? H.plan : ask ? `“${ask}”` : H.question;
+  }
+  if (p.state === 'waiting') {
+    const d = p.doing || {};
+    return d.kind === 'terminal' && d.what ? H.run(d.what) : d.kind === 'edit' && d.what ? H.edit(d.what) : H.tool(d.tool || '');
+  }
+  return H.done(p.title || '');
+}
+
+const HELP_MAX = 3;
+let helpOpen = false;
+const helpMore = document.createElement('button');
+helpMore.className = 'hmore'; helpMore.hidden = true;
+helpMore.onclick = () => { helpOpen = !helpOpen; renderHelp(); };
+
+function renderHelp() {
+  const now = Date.now();
+  const rank = p => p.state === 'needs_you' ? 0 : p.state === 'waiting' ? 1 : 2;
+  const all = data.people.filter(p => p.state === 'needs_you' || p.state === 'waiting' || (doneUntil.get(p.id) || 0) > now).sort((a, b) => rank(a) - rank(b));
+  // poucos cartões de cada vez; o resto fica num botão que expande
+  const list = helpOpen ? all : all.slice(0, HELP_MAX);
+  helpMore.hidden = all.length <= HELP_MAX;
+  helpMore.textContent = helpOpen ? T.help.less : T.help.more(all.length - HELP_MAX);
+  if (!helpMore.isConnected) helpEl.prepend(helpMore);
+  helpEl.classList.toggle('open', helpOpen);
+  const keep = new Set(list.map(p => p.id));
+  for (const [id, el] of helpCards) if (!keep.has(id)) { el.classList.add('out'); setTimeout(() => el.remove(), 250); helpCards.delete(id); }
+  for (const p of list) {
+    let el = helpCards.get(p.id);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'hcard';
+      el.dataset.id = p.id;
+      const face = Art.portrait(p.id, 'open'); face.className = 'face';
+      el.innerHTML = `<div class="who"></div><div class="balloon"><p></p><div class="hbtns"><button class="hb" data-act="see"></button><button class="hb main" data-act="goto"></button><button class="hb x" data-act="close" aria-label="×">×</button></div></div>`;
+      el.querySelector('.who').appendChild(face);
+      helpEl.appendChild(el);
+      helpCards.set(p.id, el);
+    }
+    const kind = p.state === 'needs_you' || p.state === 'waiting' ? 'urgent' : 'done';
+    el.classList.toggle('done', kind === 'done');
+    const msg = helpText(p), head = `${p.name}${p.repo ? ' · ' + p.repo.name : ''}`;
+    const pEl = el.querySelector('p');
+    const html = `<b>${esc(head)}</b>${esc(msg)}`;
+    if (pEl.innerHTML !== html) pEl.innerHTML = html;
+    el.querySelector('[data-act="see"]').textContent = T.help.see;
+    el.querySelector('[data-act="goto"]').textContent = (p.agent === 'codex' && !p.pid ? T.panel.gotoCodex : T.panel.goto) + ' →';
+  }
+}
+
+helpEl.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'), card = e.target.closest('.hcard');
+  if (!b || !card) return;
+  const id = card.dataset.id;
+  if (b.dataset.act === 'close') { doneUntil.delete(id); card.classList.add('out'); setTimeout(() => card.remove(), 250); helpCards.delete(id); dismissed.add(id + ':' + ((data.people.find(p => p.id === id) || {}).state)); return; }
+  if (b.dataset.act === 'see') return showPerson(id);
+  b.disabled = true;
+  try { await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworks': '1' }, body: JSON.stringify({ id }) }); } catch {}
+  b.disabled = false;
+});
+const dismissed = new Set();
+
+// leva até a pessoa: muda de andar, abre o painel e rola até a mesa
+function showPerson(id) {
+  const f = floorOf(id);
+  if (f >= 0 && f !== floor) goFloor(f); else if (building) setBuilding(false);
+  selected = id; renderOverlay(); renderPanel();
+  const tag = document.querySelector(`.tag[data-id="${CSS.escape(id)}"]`);
+  if (tag) tag.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 // ---------------- avisos ----------------
 let prevStates = new Map(), audio = null;
 function beep(urgent) {
@@ -797,6 +880,7 @@ function notifyChanges() {
     if (before && before !== p.state) {
       const urgent = p.state === 'needs_you' || p.state === 'waiting';
       const done = p.state === 'idle' && !['idle', 'asleep'].includes(before);
+      if (done) doneUntil.set(p.id, Date.now() + 9000);
       if (urgent || done) {
         beep(urgent);
         if (notifyOn && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
@@ -830,7 +914,7 @@ function renderAll() {
     for (const f of floors) for (const sh of f.shelves) for (const R of sh.rooms) R.people = R.people.map(p => byId.get(p.id) || p);
     renderFloors();
   }
-  renderOverlay(); renderBar(); renderPanel();
+  renderOverlay(); renderBar(); renderPanel(); renderHelp();
   if (building) renderBuildingCounts();
 }
 
