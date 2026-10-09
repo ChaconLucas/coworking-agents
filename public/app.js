@@ -683,6 +683,12 @@ function renderAll() {
   if (!data) return;
   const key = data.people.map(p => p.id).join(',') + '|' + document.getElementById('stage').clientWidth;
   if (key !== lastLayoutKey) { lastLayoutKey = key; relayout(); }
+  else {
+    // mesmas pessoas: troca só os dados de cada mesa, senão o desenho fica preso ao estado antigo
+    const byId = new Map(data.people.map(p => [p.id, p]));
+    for (const c of layout) c.p = byId.get(c.p.id) || c.p;
+    for (const d of desks) if (d.p) d.p = byId.get(d.p.id) || d.p;
+  }
   renderOverlay(); renderBar(); renderPanel();
 }
 
