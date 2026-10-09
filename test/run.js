@@ -6,7 +6,7 @@ const path = require('path');
 const assert = require('assert');
 const { execFileSync } = require('child_process');
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'claudehq-test-'));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coworks-test-'));
 const claude = path.join(root, '.claude');
 process.env.CLAUDE_CONFIG_DIR = claude;
 fs.mkdirSync(path.join(claude, 'sessions'), { recursive: true });
@@ -52,11 +52,47 @@ session(process.ppid, 'C', 'busy', [
 // D: processo morto não aparece
 session(999999, 'D', 'busy', []);
 
+// Codex: uma conversa de hoje rodando um comando e outra que editou a worktree (choca com B)
+const codex = path.join(root, '.codex');
+process.env.CODEX_HOME = codex;
+process.env.COWORKS_CODEX_RUNNING = '1';
+const d = new Date(now);
+const day = path.join(codex, 'sessions', String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0'));
+fs.mkdirSync(day, { recursive: true });
+fs.writeFileSync(path.join(codex, 'session_index.jsonl'), line({ id: 'X1', thread_name: 'Conversa do Codex' }));
+fs.writeFileSync(path.join(codex, 'auth.json'), '{"token":"secret"}');
+const ev = (type, payload, ts) => ({ type, timestamp: iso(ts), payload });
+fs.writeFileSync(path.join(day, 'rollout-x1.jsonl'), [
+  ev('session_meta', { id: 'X1', cwd: repo, cli_version: '0.1', originator: 'codex_cli', timestamp: iso(now - 9000) }, now - 9000),
+  ev('event_msg', { type: 'task_started', model_context_window: 258400 }, now - 8000),
+  ev('event_msg', { type: 'token_count', info: { last_token_usage: { input_tokens: 5000 } } }, now - 7000),
+  ev('response_item', { type: 'function_call', name: 'exec_command', call_id: 'c1', arguments: JSON.stringify({ cmd: 'sed -n 1p ~/.codex/skills/imagegen/SKILL.md' }) }, now - 6000),
+  ev('response_item', { type: 'function_call_output', call_id: 'c1' }, now - 5900),
+  ev('response_item', { type: 'function_call', name: 'exec_command', call_id: 'c2', arguments: JSON.stringify({ cmd: 'npm test' }) }, now - 300),
+].map(line).join(''));
+fs.writeFileSync(path.join(day, 'rollout-x2.jsonl'), [
+  ev('session_meta', { id: 'X2', cwd: path.join(root, 'wt'), timestamp: iso(now - 9000) }, now - 9000),
+  ev('event_msg', { type: 'task_started' }, now - 8000),
+  ev('response_item', { type: 'custom_tool_call', name: 'apply_patch', call_id: 'p1', input: '*** Begin Patch\n*** Update File: ' + path.join(root, 'wt', 'z.txt') + '\n' }, now - 7000),
+  ev('response_item', { type: 'custom_tool_call_output', call_id: 'p1' }, now - 6900),
+  ev('event_msg', { type: 'task_complete' }, now - 6000),
+].map(line).join(''));
+
 const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.map(p => p.id).sort(), ['A', 'B', 'C'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
+// Codex
+assert.strictEqual(by('X1').agent, 'codex');
+assert.strictEqual(by('X1').title, 'Conversa do Codex');
+assert.strictEqual(by('X1').state, 'terminal');
+assert.strictEqual(by('X1').doing.what, 'npm test');
+assert.deepStrictEqual(by('X1').skills, { imagegen: 1 });
+assert.strictEqual(by('X1').ctx, 5000);
+assert.strictEqual(by('X1').ctxMax, 258400);
+assert.strictEqual(by('X2').state, 'idle', 'task_complete encerra o turno');
+assert.ok(s.credentials.codex, 'credenciais do Codex presentes');
 assert.ok(!by('D'), 'pid morto fica de fora');
 assert.strictEqual(by('A').state, 'edit');
 assert.strictEqual(by('A').title, 'Título A');
@@ -72,14 +108,14 @@ if (by('B')) {
   assert.strictEqual(by('B').editing[0].repo, 'repo', 'worktree resolve para o repo principal');
 }
 // A e C editaram o mesmo checkout; B editou outra worktree do mesmo repo e não conta
-assert.strictEqual(s.clashes.length, 1);
-assert.deepStrictEqual(s.clashes[0].who.sort(), ['A', 'C']);
+// A e C no mesmo checkout (Claude + Claude); B e X2 na worktree (Claude + Codex)
+assert.deepStrictEqual(s.clashes.map(c => c.who.sort()).sort(), by('B') ? [['A', 'C'], ['B', 'X2']] : [['A', 'C']]);
 // a .key nunca é lida para a resposta
 assert.ok(!JSON.stringify(s).includes('secret'));
 // modo privado esconde títulos e caminhos
 const priv = snapshot({ privacy: true });
 assert.ok(!JSON.stringify(priv).includes('Título A') && !JSON.stringify(priv).includes(repo));
-assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()), [['A', 'C']], 'esconder caminhos não junta checkouts diferentes');
+assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['A', 'C'], ['B', 'X2']] : [['A', 'C']], 'esconder caminhos não junta checkouts diferentes');
 
 // leitura incremental: linha nova no fim muda o estado
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));

@@ -1,13 +1,13 @@
 'use strict';
-// claudehq — desenha cada sessão do Claude Code como uma pessoa num escritório em pixel art.
+// coworks-agents — desenha cada sessão de IA (Claude Code, Codex, …) como uma pessoa num escritório em pixel art.
 
 // ---------------- textos ----------------
 const I18N = {
   pt: {
     working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo',
     notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
-    empty: 'Nenhuma sessão do Claude Code aberta agora. Abra o <code>claude</code> num terminal e ela aparece aqui.',
-    offline: 'Sem ligação ao claudehq. Tentando de novo…',
+    empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
+    offline: 'Sem conexão com o coworks-agents. Tentando de novo…',
     clash: (who, repo) => `<b>Atenção:</b> ${who} estão editando o mesmo clone <b>${repo}</b>. Commitem cedo ou usem worktrees.`,
     and: ' e ',
     states: {
@@ -23,7 +23,7 @@ const I18N = {
       certs: 'Certificados na parede', tools: 'Ferramentas mais usadas', team: 'Estagiários (subagentes)',
       noCerts: 'Ainda sem certificados nesta sessão.', session: 'Sessão', version: 'Versão',
       hall: 'Mural da casa', topSkills: 'Skills mais usadas (todas as sessões)', installed: 'Skills instaladas',
-      mcps: 'Servidores MCP', plugins: 'Plugins', tokens: n => `${n} tokens`, editingIn: 'Editando em',
+      mcps: 'Servidores MCP', plugins: 'Plugins', tokens: n => `${n} tokens`, editingIn: 'Editando em', agent: 'IA',
       ctxNote: 'Tokens enviados na última resposta. Quando enche, a conversa é resumida.',
       waitNote: 'Não dá para distinguir pelo disco se o comando ainda roda ou se espera a sua permissão — dê uma olhada no terminal.',
     },
@@ -40,8 +40,8 @@ const I18N = {
   en: {
     working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep',
     notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
-    empty: 'No Claude Code sessions open right now. Run <code>claude</code> in a terminal and it shows up here.',
-    offline: 'Lost connection to claudehq. Retrying…',
+    empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
+    offline: 'Lost connection to coworks-agents. Retrying…',
     clash: (who, repo) => `<b>Heads up:</b> ${who} are editing the same checkout <b>${repo}</b>. Commit early or use worktrees.`,
     and: ' and ',
     states: {
@@ -57,7 +57,7 @@ const I18N = {
       certs: 'Certificates on the wall', tools: 'Most used tools', team: 'Interns (subagents)',
       noCerts: 'No certificates in this session yet.', session: 'Session', version: 'Version',
       hall: 'House wall', topSkills: 'Most used skills (all sessions)', installed: 'Installed skills',
-      mcps: 'MCP servers', plugins: 'Plugins', tokens: n => `${n} tokens`, editingIn: 'Editing in',
+      mcps: 'MCP servers', plugins: 'Plugins', tokens: n => `${n} tokens`, editingIn: 'Editing in', agent: 'AI',
       ctxNote: 'Tokens sent on the last reply. When it fills up, the conversation gets compacted.',
       waitNote: "The disk can't tell whether the command is still running or waiting for your permission — check the terminal.",
     },
@@ -74,8 +74,8 @@ const I18N = {
 };
 
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('claudehq.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('claudehq.' + k, JSON.stringify(v)); } catch {} },
+  get(k, d) { try { const v = localStorage.getItem('coworks.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('coworks.' + k, JSON.stringify(v)); } catch {} },
 };
 const qs = new URLSearchParams(location.search);
 let lang = qs.get('lang') || store.get('lang', (navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
@@ -92,6 +92,8 @@ const KIND_COLOR = {
   mcp: '#4fb8a8', other: '#9aa0a6', thinking: '#c8b8f0', needs_you: '#d6453d', waiting: '#d9952b', ask: '#d6453d',
   idle: '#88a', asleep: '#556',
 };
+const AGENT = { claude: { label: 'Claude Code', color: '#d97757' }, codex: { label: 'Codex', color: '#10a37f' } };
+const agentOf = p => AGENT[p.agent] || { label: p.agent || '?', color: '#8a8f98' };
 const CERT = { skill: '#c9a227', mcp: '#3f9e93', badge: '#c0453f' };
 const BADGE_COLOR = { tools100: '#c0453f', tools1000: '#8e2f6b', marathon: '#d9772b', immortal: '#5b3fa0', boss: '#3d6fb0', elephant: '#6f7f8f', chat: '#2f9e6e', terminal: '#1f6f4a', writer: '#b06a3d', research: '#2f86b0' };
 
@@ -170,7 +172,7 @@ function drawRoom(t) {
   hallBox = { x: bx, y: by, w: bw, h: bh };
   r(bx - 2, by - 2, bw + 4, bh + 4, '#7a5534'); r(bx, by, bw, bh, '#c89a62');
   for (let k = 0; k < 40; k++) { const h = hash('cork' + k); r(bx + h % bw, by + (h >>> 8) % bh, 1, 1, '#b5864f'); }
-  const top = data ? data.credentials.topSkills.slice(0, 3) : [];
+  const top = data ? Object.values(data.credentials || {}).flatMap(c => c.topSkills || []).sort((a, b) => b.count - a.count).slice(0, 3) : [];
   const medal = ['#e4b83a', '#c4ccd4', '#c9834a'];
   top.forEach((s, i) => {
     const mx = bx + 6 + i * 24, my = by + 4;
@@ -367,8 +369,10 @@ function drawDesk(cell, t, clashing) {
   r(mx - 1, my - 1, 34, 20, '#2f2f36'); drawScreen(mx, my, 32, 18, st, t, seed);
   r(mx + 14, my + 19, 4, 2, '#2f2f36'); r(mx + 10, my + 20, 12, 1, '#2f2f36');
   r(x + CELL_W / 2 - 9, dy + 3, 18, 3, '#d8d4cc'); r(x + CELL_W / 2 - 8, dy + 4, 16, 1, '#bdb8ae');
-  // caneca do pc da pessoa
+  // caneca e plaquinha com a cor da IA
   r(dx + 6, dy + 2, 4, 4, SHIRT[(seed >> 2) % SHIRT.length]);
+  const ag = agentOf(p).color;
+  r(dx + dw - 18, dy + 1, 12, 5, shade(ag, .7)); r(dx + dw - 17, dy + 2, 10, 3, ag); r(dx + dw - 15, dy + 3, 6, 1, '#fff');
   // cadeira e pessoa
   const cx = x + CELL_W / 2 - 6, cy = y + 38;
   const front = st === 'needs_you' || st === 'waiting';
@@ -416,7 +420,7 @@ function renderOverlay() {
     const repo = p.repo ? `${p.repo.name}${p.branch && p.branch !== 'HEAD' ? ' · ' + p.branch : ''}` : '';
     parts.push(`<div class="desk-hit" data-id="${esc(p.id)}" style="left:${x * S}px;top:${(y + 18) * S}px;width:${CELL_W * S}px;height:${66 * S}px"></div>`);
     tags.push(`<button class="tag ${cls} ${selected === p.id ? 'sel' : ''}" data-id="${esc(p.id)}" style="left:${(x + CELL_W / 2) * S}px;top:${(y + 72) * S}px;max-width:${CELL_W * S - 8}px">
-      <span class="nm">${esc(p.name)}</span>
+      <span class="nm" style="--ag:${agentOf(p).color}" title="${esc(agentOf(p).label)}">${esc(p.name)}</span>
       <span class="tt" title="${esc(p.title)}">${esc(p.title || repo || '—')}</span>
       <span class="st">${esc(stateText(p))}${repo && p.title ? ' · ' + esc(repo) : ''}</span></button>`);
     for (const c of cell.certs || []) {
@@ -446,22 +450,27 @@ function renderPanel() {
   panel.hidden = false;
   const P = T.panel;
   if (selected === '__hall') {
-    const c = data.credentials;
-    panelBody.innerHTML = `<h2>${esc(P.hall)}</h2><p class="sub">${esc(data.host)}</p>
-      <h3>${esc(P.topSkills)}</h3>${c.topSkills.length ? `<ul class="list">${c.topSkills.map((s, i) => `<li><span class="k">${['🥇', '🥈', '🥉'][i] || '·'}</span>${esc(s.name)}<span class="t">${s.count}×</span></li>`).join('')}</ul>` : '<p class="note">—</p>'}
-      <h3>${esc(P.installed)}</h3><div class="certs">${c.skills.map(s => `<div class="cert" style="--c:${CERT.skill}"><small>${T.kinds.skill}</small>${esc(s)}</div>`).join('') || '—'}</div>
-      <h3>${esc(P.mcps)}</h3><div class="certs">${c.mcps.map(s => `<div class="cert" style="--c:${CERT.mcp}"><small>MCP</small>${esc(s)}</div>`).join('') || '—'}</div>
-      ${c.plugins.length ? `<h3>${esc(P.plugins)}</h3><ul class="list">${c.plugins.map(s => `<li>${esc(s.name)}<span class="t">${s.count}×</span></li>`).join('')}</ul>` : ''}`;
+    const section = (id, c) => {
+      const a = AGENT[id] || { label: id, color: '#888' };
+      return `<h3 style="color:${a.color}">${esc(a.label)}</h3>
+      ${c.topSkills.length ? `<p class="note">${esc(P.topSkills)}</p><ul class="list">${c.topSkills.map((s, i) => `<li><span class="k">${['🥇', '🥈', '🥉'][i] || '·'}</span>${esc(s.name)}<span class="t">${s.count}×</span></li>`).join('')}</ul>` : ''}
+      ${c.skills.length ? `<p class="note">${esc(P.installed)}</p><div class="certs">${c.skills.map(s => `<div class="cert" style="--c:${CERT.skill}"><small>${T.kinds.skill}</small>${esc(s)}</div>`).join('')}</div>` : ''}
+      ${c.mcps.length ? `<p class="note">${esc(P.mcps)}</p><div class="certs">${c.mcps.map(s => `<div class="cert" style="--c:${CERT.mcp}"><small>MCP</small>${esc(s)}</div>`).join('')}</div>` : ''}
+      ${c.plugins.length ? `<p class="note">${esc(P.plugins)}</p><ul class="list">${c.plugins.map(s => `<li>${esc(s.name)}<span class="t">${s.count}×</span></li>`).join('')}</ul>` : ''}`;
+    };
+    panelBody.innerHTML = `<h2>${esc(P.hall)}</h2><p class="sub">${esc(data.host)}</p>` +
+      Object.entries(data.credentials || {}).map(([id, c]) => section(id, c)).join('');
     return;
   }
   const p = data.people.find(x => x.id === selected);
   if (!p) { selected = null; panel.hidden = true; return; }
   const col = KIND_COLOR[p.state] || '#888';
-  const ctxMax = p.ctx > 2e5 ? 1e6 : 2e5;
+  const ctxMax = p.ctxMax || (p.ctx > 2e5 ? 1e6 : 2e5);
   const certs = certsOf(p);
   const tools = Object.entries(p.tools || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
   panelBody.innerHTML = `
     <h2>${esc(p.name)}</h2><p class="sub">${esc(p.title || '—')}</p>
+    <span class="pill" style="background:${agentOf(p).color}">${esc(agentOf(p).label)}</span>
     <span class="pill" style="background:${col}">${esc(T.states[p.state] || p.state)}</span>
     ${p.doing ? `<dl style="margin-top:10px"><dt>${P.doing}</dt><dd><code>${esc(p.doing.tool)}</code> ${esc(p.doing.what)} <span class="note">${esc(T.for(ago(p.doing.for)))}</span></dd></dl>` : ''}
     ${p.state === 'waiting' ? `<p class="note">${esc(P.waitNote)}</p>` : ''}
@@ -472,7 +481,7 @@ function renderPanel() {
       ${p.editing.length ? `<dt>${P.editingIn}</dt><dd>${p.editing.map(e => esc(e.repo)).join(', ')}</dd>` : ''}
       ${p.model ? `<dt>${P.model}</dt><dd><code>${esc(p.model)}</code></dd>` : ''}
       <dt>${P.started}</dt><dd>${esc(ago(data.now - p.startedAt))} · ${P.turns}: ${p.turns}</dd>
-      <dt>${P.version}</dt><dd>${esc(p.version || '')} · pid ${p.pid}</dd>
+      <dt>${P.version}</dt><dd>${esc(p.version || '')}${p.pid ? ' · pid ' + p.pid : ''}</dd>
     </dl>
     ${p.ctx ? `<h3>${P.context}</h3><div>${esc(P.tokens(fmtK(p.ctx)))}</div><div class="meter"><i style="width:${Math.min(100, p.ctx / ctxMax * 100)}%"></i></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
     ${p.subagents.length ? `<h3>${P.team}</h3><ul class="list">${p.subagents.map(a => `<li><span class="k">${KIND_ICON[a.state] || '•'}</span><span><b>${esc(a.type)}</b> ${esc(a.description)}${a.doing ? `<br><span class="note">${esc(a.doing)}</span>` : ''}</span></li>`).join('')}</ul>` : ''}
@@ -508,7 +517,7 @@ function renderBar() {
     `<span><i style="background:${KIND_COLOR.idle}"></i>${c.turn} ${T.yourTurn}</span>`,
     c.sleep ? `<span><i style="background:${KIND_COLOR.asleep}"></i>${c.sleep} ${T.asleep}</span>` : '',
   ].join('');
-  document.title = (c.need ? `(${c.need}) ` : '') + 'claudehq';
+  document.title = (c.need ? `(${c.need}) ` : '') + 'coworks-agents';
   const box = document.getElementById('clashes');
   const names = id => (data.people.find(p => p.id === id) || {}).name || id.slice(0, 6);
   box.innerHTML = data.clashes.map(cl => `<div>${T.clash(cl.who.map(names).map(esc).join(T.and), esc(cl.repo))}</div>`).join('');

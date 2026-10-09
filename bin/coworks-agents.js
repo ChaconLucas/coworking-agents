@@ -8,9 +8,9 @@ const flag = n => args.includes(n);
 const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 
 if (flag('-h') || flag('--help')) {
-  console.log(`claudehq — a pixel office for your Claude Code sessions
+  console.log(`coworks-agents — a pixel office for your AI coding agents (Claude Code, Codex, …)
 
-  npx claudehq [--port 4777] [--no-open] [--private]
+  npx coworks-agents [--port 4777] [--no-open] [--private]
 
   --port      port to listen on (default 4777, falls back to a free one)
   --no-open   don't open the browser
@@ -41,9 +41,9 @@ function open(url) {
     if (e.code !== 'EADDRINUSE') throw e;
     // já há um escritório aberto nessa porta? então só abre o navegador nele
     const already = await fetch(`http://127.0.0.1:${port}/api/state`).then(r => r.ok).catch(() => false);
-    if (already) { console.log(`claudehq already running → http://127.0.0.1:${port}`); if (!flag('--no-open')) open(`http://127.0.0.1:${port}`); return; }
+    if (already) { console.log(`coworks-agents already running → http://127.0.0.1:${port}`); if (!flag('--no-open')) open(`http://127.0.0.1:${port}`); return; }
     hq = await start({ port: 0, privacy, demo });
   }
-  console.log(`claudehq → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
+  console.log(`coworks-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
   if (!flag('--no-open')) open(hq.url);
 })();

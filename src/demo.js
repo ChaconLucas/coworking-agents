@@ -12,13 +12,15 @@ function demoSnapshot() {
   const people = STATES.map((state, i) => {
     const busy = !['idle', 'asleep'].includes(state);
     const doing = TOOL[state] ? { tool: TOOL[state], what: WHAT[state] || '', kind: state === 'needs_you' ? 'ask' : state === 'waiting' ? 'terminal' : state, for: state === 'waiting' ? 42000 : 3000 } : null;
+    const agent = [1, 4, 8].includes(i) ? 'codex' : 'claude';
     return {
+      agent, ctxMax: agent === 'codex' ? 258400 : 0,
       id: `demo-${i}-${TITLES[i]}`, name: ['ada', 'grace', 'linus', 'alan', 'margaret', 'ken', 'barbara', 'dennis', 'radia', 'guido'][i],
       pid: 1000 + i, kind: 'interactive', entrypoint: 'cli', version: 'demo', status: busy ? 'busy' : 'idle', state,
       since: now - (state === 'asleep' ? 3 * 36e5 : 4 * 6e4), startedAt: now - (i + 1) * 3.1 * 36e5,
       title: TITLES[i], cwd: `/home/dev/${REPOS[i]}`, branch: i % 3 ? 'main' : `feat/${REPOS[i]}-${i}`,
       repo: { name: REPOS[i], path: `/home/dev/${REPOS[i]}`, worktree: `/home/dev/${REPOS[i]}`, isWorktree: false },
-      model: 'claude-opus-5-5', ctx: [42e3, 180e3, 610e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i],
+      model: agent === 'codex' ? 'gpt-5.5' : 'claude-opus-5-5', ctx: [42e3, 180e3, 610e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i],
       doing, recent: doing ? [{ tool: doing.tool, what: doing.what, kind: doing.kind, ts: now - 3000 }, { tool: 'Read', what: 'README.md', kind: 'read', ts: now - 60000 }] : [],
       skills: i === 0 ? { 'frontend-design': 3, simplify: 1 } : i === 4 ? { 'web-research': 2 } : i === 2 ? { 'code-review': 1 } : {},
       mcps: i === 4 ? { playwright: 6 } : i === 1 ? { github: 4 } : {},
@@ -35,10 +37,14 @@ function demoSnapshot() {
   return {
     now, host: 'demo', people,
     clashes: [{ worktree: '/home/dev/web-app', repo: 'web-app', who: [people[0].id, people[7].id] }],
+    agents: [{ id: 'claude', label: 'Claude Code', sessions: 7 }, { id: 'codex', label: 'Codex', sessions: 3 }],
     credentials: {
-      topSkills: [{ name: 'frontend-design', count: 41 }, { name: 'code-review', count: 17 }, { name: 'simplify', count: 9 }],
-      skills: ['frontend-design', 'code-review', 'simplify', 'web-research'], mcps: ['playwright', 'github'],
-      plugins: [{ name: 'code-review', count: 17 }],
+      claude: {
+        topSkills: [{ name: 'frontend-design', count: 41 }, { name: 'code-review', count: 17 }, { name: 'simplify', count: 9 }],
+        skills: ['frontend-design', 'code-review', 'simplify', 'web-research'], mcps: ['playwright', 'github'],
+        plugins: [{ name: 'code-review', count: 17 }],
+      },
+      codex: { topSkills: [], skills: ['imagegen', 'openai-docs', 'skill-creator'], mcps: [], plugins: [] },
     },
   };
 }

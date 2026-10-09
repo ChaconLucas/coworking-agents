@@ -1,10 +1,10 @@
 {
-  "name": "claudehq",
+  "name": "coworks-agents",
   "owner": { "name": "Lucas Chacon" },
   "plugins": [
     {
-      "name": "claudehq",
-      "description": "Open a pixel-art office that shows every Claude Code session on this machine as a person at a desk.",
+      "name": "coworks-agents",
+      "description": "Open a pixel-art coworking office that shows every AI coding session on this machine (Claude Code, Codex, …) as a person at a desk.",
       "source": "./"
     }
   ]
