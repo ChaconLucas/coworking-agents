@@ -1,6 +1,6 @@
 'use strict';
-// Fonte: Codex (CLI e app). Não há registro de sessões vivas como no Claude Code, então
-// conta como aberta a conversa mexida há pouco, e só enquanto há um processo do Codex a correr.
+// Source: Codex (CLI and app). There is no live-session registry like Claude Code's, so a
+// recently touched conversation counts as open, and only while a Codex process is running.
 
 const fs = require('fs');
 const os = require('os');
@@ -9,7 +9,7 @@ const { execFileSync } = require('child_process');
 const { short, incremental, newest, track, baseState, event, addTokens } = require('../util');
 
 const DIR = () => process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
-const OPEN_MS = 3 * 60 * 60 * 1000; // conversa sem mexer há mais que isto sai do escritório
+const OPEN_MS = 3 * 60 * 60 * 1000; // a conversation untouched for longer than this leaves the office
 
 const ACTIVITY = {
   exec_command: 'terminal', exec: 'terminal', shell: 'terminal', local_shell: 'terminal', js: 'terminal', write_stdin: 'terminal',
@@ -63,7 +63,7 @@ function absorb(st, d) {
       if (p.info.last_token_usage) addTokens(st, ts, p.info.last_token_usage.output_tokens || 0);
       if (p.info.model_context_window) st.ctxMax = p.info.model_context_window;
     } else if (/approval_request$/.test(t || '')) {
-      // pedido de aprovação explícito: precisa de você até a ferramenta responder
+      // explicit approval request: needs you until the tool responds
       const id = p.call_id || 'approval';
       st.pending.set(id, { id, name: 'approval', kind: 'ask', what: short(p.command ? [].concat(p.command).join(' ') : ''), ts: ts || Date.now() });
     }
@@ -75,7 +75,7 @@ function absorb(st, d) {
       const item = { id: p.call_id || p.id, name, kind: activityOf(name), what: s.what, ts: ts || Date.now() };
       if (item.kind === 'ask') item.ask = short(args.prompt || args.question || args.message || '', 140);
       track(st, item, s.file);
-      // as skills do Codex são lidas como ficheiros: ler um SKILL.md conta como usar a skill
+      // Codex skills are read as files: reading a SKILL.md counts as using the skill
       const sk = /skills\/(?:\.system\/)?([^/\s'"]+)\/SKILL\.md/.exec(JSON.stringify(args));
       if (sk) st.skills[sk[1]] = (st.skills[sk[1]] || 0) + 1;
       if (activityOf(name) === 'mcp') { const srv = name.startsWith('_') ? 'connector' : name.split('__')[0]; st.mcps[srv] = (st.mcps[srv] || 0) + 1; }
@@ -89,12 +89,12 @@ function absorb(st, d) {
   }
 }
 
-// o Codex grava *_approval_request quando pede aprovação, então ferramenta parada é só demorada
+// Codex writes *_approval_request when it asks for approval, so a stalled tool is just slow
 const read = incremental(() => Object.assign(baseState(), { explicitApprovals: true, busy: false, since: 0, startedAt: 0, version: '', originator: '', id: '', firstPrompt: '' }), absorb);
 
 let procCache = { at: 0, v: false };
 function codexRunning() {
-  if (process.env.COWORKS_CODEX_RUNNING) return process.env.COWORKS_CODEX_RUNNING === '1'; // testes
+  if (process.env.COWORKS_CODEX_RUNNING) return process.env.COWORKS_CODEX_RUNNING === '1'; // tests
   if (Date.now() - procCache.at < 5000) return procCache.v;
   let v = false;
   try {
@@ -117,7 +117,7 @@ function titles() {
 }
 
 function recentRollouts(now, since) {
-  // só as pastas de hoje e ontem (sessions/AAAA/MM/DD)
+  // only today's and yesterday's folders (sessions/YYYY/MM/DD)
   const files = [];
   for (const back of [0, 1]) {
     const d = new Date(now - back * 864e5);

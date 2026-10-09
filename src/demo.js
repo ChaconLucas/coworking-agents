@@ -1,5 +1,5 @@
 'use strict';
-// Escritório de mentira para `--demo`: mostra todos os estados sem precisar de sessões reais.
+// Fake office for `--demo`: shows every state without needing real sessions.
 
 const STATES = ['edit', 'terminal', 'needs_you', 'read', 'web', 'delegate', 'idle', 'waiting', 'thinking', 'asleep'];
 const TITLES = ['Refactor checkout flow', 'Fix flaky CI test', 'Migrate auth to OAuth', 'Write release notes', 'Investigate slow query', 'Add dark mode', 'Port profile page', 'Review PR #482', 'Bump dependencies', 'Explain the codebase'];

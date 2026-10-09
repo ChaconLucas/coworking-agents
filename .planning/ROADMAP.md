@@ -1,20 +1,20 @@
 # Roadmap
 
-| # | Fase | Estado |
-|---|------|--------|
-| 1 | Coletor Claude Code + servidor SSE + escritório básico | feito |
-| 2 | Fontes por IA (Codex) e nome coworks-agents | feito |
-| 3 | Arte: sprites, luz pela hora, copa, gato | feito |
-| 4 | Andar com zonas (mesas, copa, pingue-pongue, reunião, soneca) | feito |
-| 5 | Verdade do estado: transcrito na hora, shell filho para Bash, modo de permissão | feito |
-| 6 | Ir para o terminal (Terminal/iTerm por tty) | feito |
-| 7 | **Salas por repositório + andares** (muitos agentes) | em andamento |
-| 8 | **Avisos com rosto** ("precisa de você" com a pergunta) + nomes sobre quem está fora da mesa | a fazer |
-| 9 | Linha do tempo, mapa de arquivos e relatório do dia (dados prontos; falta a tela) | a fazer |
-| 10 | Atalhos de teclado + busca e filtro | a fazer |
-| 11 | Auditoria de segurança (pentest) e correções | em andamento |
-| 12 | Publicação: README, npm, plugin | a fazer |
+| # | Phase | Status |
+|---|-------|--------|
+| 1 | Claude Code collector + SSE server + basic office | done |
+| 2 | Per-AI sources (Codex) and the coworks-agents name | done |
+| 3 | Art: sprites, time-of-day lighting, kitchen, cat | done |
+| 4 | Floor with zones (desks, kitchen, ping-pong, meeting room, nap corner) | done |
+| 5 | State truth: live transcript, child shell for Bash, permission mode | done |
+| 6 | Go to terminal (Terminal/iTerm by tty) | done |
+| 7 | **Rooms per repository + floors + building view** (many agents) | done |
+| 8 | **Help toasts with portraits** ("needs you" with the question) + names over agents away from their desks | done |
+| 9 | Timeline, file map and daily report UI (data already served by `/api/state` timeline+files and `/api/report`; the screen is missing) | to do |
+| 10 | Keyboard shortcuts + search and filter | to do |
+| 11 | Security audit (pentest) and fixes | done |
+| 12 | Publishing: README and plugin done; npm publish | to do |
 
-## Fora do escopo (decidido)
-- Responder/aprovar pedidos dentro do escritório para sessões em terminal: não há API oficial; simular teclas é inseguro. Alternativa: botão para o terminal certo.
-- Chat embutido: só para sessões `claude --bg` (futuro).
+## Out of scope (decided)
+- Answering/approving requests from inside the office for terminal sessions: there is no official API, and simulating keystrokes is unsafe. Alternative: a button that jumps to the right terminal.
+- Embedded chat: only for `claude --bg` sessions (future).

@@ -1,9 +1,9 @@
 'use strict';
-// Arte do escritório: paleta, sprites desenhados à mão, mobília, luz e o gato.
-// Tudo em retângulos sobre um canvas de baixa resolução, ampliado sem suavização.
+// Office art: palette, hand-drawn sprites, furniture, lighting and the cat.
+// All rectangles on a low-res canvas, scaled up without smoothing.
 (() => {
 
-// ---------------- paleta (base Endesga 32) ----------------
+// ---------------- palette (based on Endesga 32) ----------------
 const PAL = {
   ink: '#2a1d27', ink2: '#3e2731',
   floor: ['#c28569', '#b97c60', '#c99071'], floorGap: '#8f553f', floorKnot: '#a86a52',
@@ -43,7 +43,7 @@ function setCtx(c) { ctx = c; }
 function r(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x | 0, y | 0, w | 0, h | 0); }
 
 // ---------------- sprites ----------------
-// Cada letra é uma cor: o contorno, s/S pele, h/H cabelo, c/C camisa, p calça, k sapato, e olho, m boca, g óculos.
+// Each letter is a color: o outline, s/S skin, h/H hair, c/C shirt, p pants, k shoes, e eye, m mouth, g glasses.
 const HEAD_BACK = [
   '....oooooooo....',
   '...ohhhhhhhho...',
@@ -123,11 +123,11 @@ function hairExtras(lk, x, y, front) {
     if (front) { r(x + 1, y + 4, 2, 8, o); r(x + 13, y + 4, 2, 8, o); r(x + 2, y + 4, 1, 7, lk.h); r(x + 13, y + 4, 1, 7, lk.h); }
     else { r(x + 3, y + 8, 10, 6, o); r(x + 4, y + 8, 8, 5, lk.h); r(x + 4, y + 12, 8, 1, lk.H); }
   }
-  // brilho do cabelo
+  // hair highlight
   r(x + 5, y + 1, 3, 1, shade(lk.h, 1.35));
 }
 
-// Pessoa sentada de costas, virada para o monitor.
+// Person seated with their back to us, facing the monitor.
 function drawSeatedBack(x, y, lk, t, opts) {
   const f = (t / 140) | 0;
   const breathe = (t / 900 | 0) % 2;
@@ -179,7 +179,7 @@ function drawStanding(x, y, lk, t, walking) {
 
 function drawSleeping(x, y, lk, t) {
   const col = colorsOf(lk);
-  // braços cruzados na mesa e cabeça deitada
+  // arms crossed on the desk, head down
   r(x - 2, y + 4, 20, 6, PAL.ink); r(x - 1, y + 5, 18, 4, lk.c); r(x - 1, y + 8, 18, 1, lk.C);
   blit(sprite(HEAD_BACK.slice(0, 9), col, 'hbs'), x, y - 2);
   hairExtras(lk, x, y - 2, false);
@@ -202,7 +202,7 @@ function drawCat(x, y, mode, t, flip) {
   else blit(sprite(CAT.walk[f % 2], col, 'cw' + (f % 2)), x, y, flip);
 }
 
-// ---------------- balões ----------------
+// ---------------- speech bubbles ----------------
 function bubble(x, y, kind, t) {
   const f = (t / 140) | 0;
   if (kind === 'need') y += f % 4 < 2 ? 0 : -1;
@@ -211,7 +211,7 @@ function bubble(x, y, kind, t) {
   if (kind === 'need') { r(x + 5, y + 1, 3, 5, PAL.red); r(x + 5, y + 7, 3, 1, PAL.red); }
   else if (kind === 'wait') { r(x + 4, y + 1, 5, 1, PAL.amber); r(x + 8, y + 2, 1, 2, PAL.amber); r(x + 6, y + 4, 2, 2, PAL.amber); r(x + 6, y + 7, 2, 1, PAL.amber); }
   else if (kind === 'clock') {
-    // ampulheta que vira de tempos em tempos
+    // hourglass that flips every so often
     const flip = ((t / 1200) | 0) % 2, c = '#8f553f', sand = '#feae34';
     r(x + 4, y + 1, 5, 1, c); r(x + 4, y + 7, 5, 1, c);
     r(x + 5, y + 2, 3, 1, flip ? '#fff' : sand); r(x + 6, y + 3, 1, 1, sand); r(x + 6, y + 4, 1, 1, sand); r(x + 5, y + 6, 3, 1, flip ? sand : '#fff');
@@ -225,7 +225,7 @@ function bubble(x, y, kind, t) {
   }
 }
 
-// ---------------- telas ----------------
+// ---------------- screens ----------------
 const SCREEN_GLOW = { edit: '#7aa2f7', read: '#f4ecd8', terminal: '#63c74d', web: '#2ce8f5', delegate: '#feae34', skill: '#b55088', mcp: '#2ce8f5', other: '#c0cbdc', thinking: '#b4a0f0', needs_you: '#e43b44', waiting: '#feae34', idle: '#3b5dc9', asleep: null };
 function drawScreen(x, y, w, h, state, t, seed) {
   const f = (t / 140) | 0;
@@ -290,7 +290,7 @@ function drawScreen(x, y, w, h, state, t, seed) {
   r(x + w / 2 - 1, y + 3, 3, h - 9, '#fff'); r(x + w / 2 - 1, y + h - 5, 3, 3, '#fff');
 }
 
-// ---------------- mobília ----------------
+// ---------------- furniture ----------------
 function drawPlant(x, y, big) {
   const s = big ? 1.4 : 1;
   r(x + 1, y + 13 * s, 10, 2, '#0000002a');
@@ -317,7 +317,7 @@ function drawLamp(x, y, on) {
 function drawWhiteboard(x, y, w, h, counts, t) {
   r(x - 1, y - 1, w + 2, h + 2, PAL.ink); r(x, y, w, h, '#f4f4f8'); r(x, y + h - 2, w, 2, '#c0cbdc');
   r(x + 2, y + h, w - 4, 2, PAL.aluDark); r(x + 6, y + h, 4, 1, PAL.red); r(x + 12, y + h, 4, 1, PAL.blue);
-  // gráfico de barras com o estado do escritório
+  // bar chart of the office state
   const bars = [[counts.work, PAL.green], [counts.need, PAL.red], [counts.turn, PAL.blue], [counts.sleep, '#8b9bb4']];
   const max = Math.max(1, ...bars.map(b => b[0]));
   const bw = Math.floor((w - 10) / bars.length);
@@ -372,7 +372,7 @@ function drawWindow(x, y, w, h, sky, t, i) {
     }
     if (sky.phase === 'day') { r(x + 4, y + 3, 5, 5, '#ffe08a'); }
   }
-  // prédios ao longe
+  // buildings in the distance
   for (let k = 0; k < w; k += 6) { const hh = hash('b' + i + k) % 7; r(x + k, y + h - 3 - hh, 5, 3 + hh, sky.phase === 'night' ? '#141629' : '#00000030'); if (sky.phase === 'night' && hh > 3) r(x + k + 2, y + h - 2 - hh, 1, 1, '#feae34'); }
   r(x + w / 2 - 1, y, 2, h, '#f4f4f8'); r(x, y + h / 2 - 1, w, 2, '#f4f4f8');
   r(x - 4, y + h + 3, w + 8, 2, PAL.ink); r(x - 3, y + h + 3, w + 6, 1, '#f4f4f8');
@@ -431,7 +431,7 @@ function drawFloor(W, H, top) {
   }
 }
 
-// ---------------- luz ----------------
+// ---------------- lighting ----------------
 let lightCv = null;
 function applyLight(W, H, sky, lights, glows) {
   if (sky.phase === 'day') return;
@@ -460,13 +460,13 @@ function applyLight(W, H, sky, lights, glows) {
   ctx.restore();
 }
 
-// ---------------- zonas novas ----------------
+// ---------------- new zones ----------------
 function drawTile(x, y, w, h, a, b) {
   for (let yy = 0; yy < h; yy += 8) for (let xx = 0; xx < w; xx += 8) r(x + xx, y + yy, Math.min(8, w - xx), Math.min(8, h - yy), ((xx + yy) / 8) % 2 ? a : b);
 }
 
 function drawGlassWall(x, y, w, h, doorAt) {
-  // parede de vidro vista de cima: moldura escura, vidro azulado e reflexos
+  // glass wall seen from above: dark frame, bluish glass and reflections
   ctx.save(); ctx.fillStyle = 'rgba(160,220,240,0.16)'; ctx.fillRect(x, y, w, 4); ctx.fillRect(x, y, 3, h); ctx.fillRect(x + w - 3, y, 3, h); ctx.restore();
   r(x, y, w, 1, PAL.aluDark); r(x, y + 4, w, 1, PAL.aluDark);
   r(x, y, 1, h, PAL.aluDark); r(x + 3, y + 4, 1, h - 4, PAL.aluDark); r(x + w - 1, y, 1, h, PAL.aluDark); r(x + w - 4, y + 4, 1, h - 4, PAL.aluDark);
@@ -500,7 +500,7 @@ function drawPingPong(x, y, w, h, t, playing) {
   r(x + w / 2, y - 3, 1, h + 5, '#e8e8f0'); r(x + w / 2 - 1, y - 4, 3, 2, PAL.ink); r(x + w / 2 - 1, y + h, 3, 2, PAL.ink);
   r(x + 3, y + h + 4, 2, 4, PAL.ink); r(x + w - 5, y + h + 4, 2, 4, PAL.ink);
   if (!playing) { r(x + w / 4, y + h / 2 - 3, 4, 4, PAL.red); r(x + w / 4 + 1, y + h / 2 + 1, 1, 3, '#6e3f31'); return; }
-  // bolinha indo e voltando num arco
+  // ball going back and forth in an arc
   const period = 1400, p = (t % period) / period, dir = ((t / period) | 0) % 2;
   const u = dir ? 1 - p : p;
   const bx = x + 4 + u * (w - 8), arc = Math.sin(u * Math.PI) * 9;
@@ -514,7 +514,7 @@ function drawBeanBag(x, y, color) {
   r(x + 4, y + 1, 6, 2, shade(color, 1.3)); r(x + 2, y + 10, 18, 2, shade(color, .75));
 }
 
-// pessoa deitada: o sprite de frente girado 90°, pixel a pixel
+// person lying down: the front sprite rotated 90°, pixel by pixel
 function drawLying(x, y, lk, t) {
   const col = colorsOf(lk, { e: PAL.ink2 });
   const key = 'lying|' + JSON.stringify(col);
@@ -523,7 +523,7 @@ function drawLying(x, y, lk, t) {
     const src = document.createElement('canvas'); src.width = 16; src.height = 21;
     const c = src.getContext('2d');
     c.drawImage(sprite(BODY, col, 'body'), 0, 10); c.drawImage(sprite(LEGS_SIT, col, 'legssit'), 0, 17); c.drawImage(sprite(HEAD_FRONT, col, 'hf'), 0, 0);
-    // olhos fechados
+    // eyes closed
     c.fillStyle = lk.S; c.fillRect(5, 5, 1, 1); c.fillRect(10, 5, 1, 1); c.fillStyle = PAL.ink; c.fillRect(4, 6, 2, 1); c.fillRect(10, 6, 2, 1);
     cv = document.createElement('canvas'); cv.width = 21; cv.height = 16;
     const d = cv.getContext('2d'); d.translate(0, 16); d.rotate(-Math.PI / 2); d.drawImage(src, 0, 0);
@@ -574,7 +574,7 @@ function drawStool(x, y) { r(x, y, 10, 4, PAL.ink); r(x + 1, y, 8, 3, '#b86f50')
 function drawRoundTable(x, y) { r(x + 2, y + 14, 16, 2, '#00000026'); r(x, y, 20, 8, PAL.ink); r(x + 1, y + 1, 18, 6, '#c37a55'); r(x + 1, y + 1, 18, 1, '#dc9a6c'); r(x + 9, y + 8, 2, 6, PAL.ink); r(x + 5, y + 14, 10, 1, PAL.ink); r(x + 4, y + 2, 4, 3, PAL.white); }
 function drawEmptyChair(x, y) { drawChairBase(x, y + 24); r(x - 1, y + 13, 18, 11, PAL.ink); r(x, y + 14, 16, 9, PAL.chair); r(x, y + 14, 16, 2, PAL.chairLight); }
 
-// retrato 16x18 (cabeça de frente + ombros) para os avisos
+// 16x18 portrait (head-on face + shoulders) for the toasts
 function portrait(id, mood) {
   const lk = look(id);
   const col = colorsOf(lk, mood === 'open' ? { m: '#5a1f2a' } : null);

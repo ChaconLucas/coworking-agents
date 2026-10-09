@@ -1,116 +1,151 @@
 # coworks-agents
 
-**Um coworking em pixel art para as suas IAs de programação.** Cada sessão aberta (Claude Code, Codex, …) vira uma pessoa numa mesa. Você vê quem está trabalhando, quem precisa de você e quem está editando o mesmo clone que outra sessão, mesmo que sejam IAs diferentes.
+**A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
 
-![coworks-agents de dia](docs/demo.png)
+![The office by day](docs/office-day.png)
 
-![coworks-agents à noite: monitores e abajures iluminam o escritório](docs/night.png)
+![The office at night: monitors and desk lamps light the room](docs/office-night.png)
 
-*[English below](#english)*
+## Why
 
-## Por que existe
+When you run several AI sessions at once, you lose track of which one stopped to ask you something, which one finished, and which two are touching the same repository. coworks-agents puts all of them on one screen that you actually want to leave open.
 
-Quem roda várias sessões de IA ao mesmo tempo perde de vista qual delas parou para perguntar alguma coisa, qual terminou e qual está mexendo no mesmo repositório que outra. O coworks-agents junta todas numa tela só, que dá vontade de deixar aberta.
-
-## Usar
+## Quick start
 
 ```bash
-npx coworks-agents            # abre http://127.0.0.1:4777 no navegador
-npx coworks-agents --demo     # escritório de mentira, com todos os estados
-npx coworks-agents --private  # esconde títulos, pastas e arquivos (para compartilhar a tela)
+npx coworks-agents              # opens http://127.0.0.1:4777 in your browser
+npx coworks-agents --demo       # a fake office showing every state (no sessions needed)
+npx coworks-agents --private    # hide names, branches, repos, titles and paths (screen sharing)
+npx coworks-agents --port 5000  # pick a port (default 4777; falls back to a free one if taken)
+npx coworks-agents --no-open    # don't open the browser
+npx coworks-agents --json       # print one snapshot of the state as JSON and exit
 ```
 
-Requer Node 18+ e não tem nenhuma dependência.
+Requires Node 18+. Zero dependencies.
 
-### Como plugin do Claude Code
+### Access token
+
+The server only answers requests that carry a random per-run token. The CLI prints (and opens) a link like `http://127.0.0.1:4777/?t=…`; on first visit the token becomes an `HttpOnly`, `SameSite=Strict` cookie and the URL is cleaned up. Any other page, or a request without the cookie, gets a "locked" page.
+
+Running `npx coworks-agents` a second time reuses the office that is already running instead of starting another: the link is stored in `~/.config/coworks-agents/session.json` (mode `0600`, readable only by you) and checked with a ping before reuse. `--demo`, `--private` and `--port` always start a fresh server.
+
+### As a Claude Code plugin
 
 ```
-/plugin marketplace add <seu-usuario>/coworks-agents
+/plugin marketplace add ChaconLucas/coworks-agents
 /plugin install coworks-agents@coworks-agents
 /coworks
 ```
 
-## IAs suportadas
+`/coworks` starts the office in the background and replies with the URL. It accepts the same flags, e.g. `/coworks --private`.
 
-| IA | Como é lida | Sessão aberta = |
+## Supported AIs
+
+| AI | What is read | A session counts as open when |
 |---|---|---|
-| **Claude Code** | `~/.claude/sessions/` e `~/.claude/projects/**.jsonl` | registro oficial de sessões vivas (com pid) |
-| **Codex** (CLI e app) | `~/.codex/sessions/AAAA/MM/DD/*.jsonl` | processo do Codex rodando e conversa mexida nas últimas 3h |
+| **Claude Code** | `~/.claude/sessions/<pid>.json` (live-session registry) and `~/.claude/projects/**/<id>.jsonl` (transcripts, including subagents) | it is in the official registry and its pid is alive |
+| **Codex** (CLI and app) | `~/.codex/sessions/YYYY/MM/DD/*.jsonl` and `session_index.jsonl` (titles) | a Codex process is running and the conversation was touched in the last 3 hours |
 
-A plaquinha colorida na mesa e a borda do crachá dizem de qual IA é cada pessoa. Quer adicionar outra IA? Veja [Adicionar uma IA](#adicionar-uma-ia).
+`CLAUDE_CONFIG_DIR` and `CODEX_HOME` are respected. The colored nameplate on each desk and the badge border show which AI a person is. Want another AI? See [Adding a new AI source](#adding-a-new-ai-source).
 
-## O que aparece
+## The floor plan
 
-| No escritório | Significa |
+- **One room per repository.** Each room has its agents' desks, a carpet in the repo's color and a sign with its name. Worktrees of the same repo share the room. A room with more than 9 agents splits into several (`api 1`, `api 2`, …).
+- **A shared wing** on the right of every floor:
+  - **Kitchen / lounge:** agents whose turn ended walk over for a coffee or a seat on the sofa. When **2 or more** are idle, two of them play **ping-pong**.
+  - **Glass meeting room:** agents that are delegating sit here together with their subagents (shown as interns).
+  - **Nap corner:** sessions idle for a long time (20+ min) lie down on bean bags.
+- **Floors and Building view.** With many rooms the office gains floors, each with its own shared wing. A floor picker appears at the top, and **Building view** shows every floor as a live thumbnail with counts of who is working and who needs you; click one to go there.
+
+![Building view: every floor as a live thumbnail](docs/building.png)
+
+## States
+
+| In the office | Meaning |
 |---|---|
-| Monitor com código sendo digitado | editando arquivo |
-| Monitor preto com texto verde | rodando comando |
-| Monitor com folha de papel | lendo ou procurando |
-| Monitor com globo | na web |
-| Monitor com organograma, mais estagiários nos banquinhos | delegando para subagentes |
-| Virada para você, acenando, com balão **!** | fez uma pergunta e espera a sua resposta |
-| Virada para você, com balão **?** | ferramenta parada há mais de 6s: ainda rodando **ou** esperando a sua permissão |
-| Levanta, vai a pé até a copa e senta no sofá com um café | terminou o turno, é a sua vez |
-| Balão **zZ**, monitor desligado | parada há mais de 20 min |
-| Divisória piscando em vermelho e faixa no topo | duas sessões, de qualquer IA, editaram o mesmo checkout nos últimos 15 min |
+| Monitor with code being typed | **editing** a file |
+| Black monitor with green text | running a command in the **terminal** |
+| Monitor with a sheet of paper | **reading** or searching |
+| Monitor with a globe | on the **web** |
+| Thought bubble with dots | **thinking** (turn open, no tool running) |
+| Off to the meeting room with interns | **delegating** to subagents |
+| Turned toward you, red **!** bubble | **needs you**: it asked a question; the toast shows the actual question (or "my plan is ready" for plan mode) |
+| Turned toward you, amber **?** bubble | **waiting for approval**. For a pending Bash in Claude Code this is measured: if Claude Code spawned the shell for the command, it is running; if not, it is waiting for you. Other stalled tools are judged by the permission mode |
+| Hourglass bubble | a tool has been running for more than a minute |
+| Walks to the kitchen / lounge | done, **your turn** |
+| Lying in the nap corner, **zZ** | **asleep**: idle for 20+ minutes |
+| Divider flashing red, banner on top | two sessions, of any AI, edited the same checkout in the last 15 minutes |
 
-**O escritório vive:** a luz segue a hora real (dia, entardecer e noite, com monitores e abajures acesos), o quadro branco mostra um gráfico ao vivo de quem está trabalhando, esperando ou parado, e o gato do escritório passeia e vai dormir ao lado de quem está parado.
+Click a person for the side panel: repository, branch, worktree, model, context size, turns, recent actions, subagents, most-used tools and certificates.
 
-**Certificados na parede:** cada mesa ganha quadros com as skills e os servidores MCP que aquela sessão usou, além de conquistas como *Maratonista*, *Chefe de equipe*, *Memória de elefante* e *Mestre do terminal*. Passe o mouse para ler. O **mural de cortiça** mostra as skills de cada IA instaladas na máquina e as mais usadas.
+![Side panel for one agent](docs/panel.png)
 
-Clique numa pessoa para ver o repositório, a branch, o modelo, o contexto, as últimas ações, os subagentes e os certificados. Há avisos opcionais: som e notificação do sistema quando alguém precisa de você ou termina o turno.
+## Help toasts
 
-## Privacidade (e o que não faz)
+When someone needs you, a toast appears with the **agent's pixel portrait**, its name and repo, and what it wants: the question it asked, the command it wants to run, or the file it wants to edit. Finished turns show a short "Done!" toast. Up to 3 toasts show at once; the rest go behind a "+N more" button.
 
-- **Só lê, não instala nada:** não usa hooks e não altera nenhuma configuração das IAs.
-- **Não gasta token:** não faz nenhuma chamada a modelo.
-- **Não sai da sua máquina:** o servidor escuta só em `127.0.0.1`.
-- **Nunca lê credenciais:** nem os `*.key` do Claude Code nem o `auth.json` do Codex. Do `~/.claude.json` lê só `skillUsage`, `pluginUsage` e `mcpServers`.
-- **Limitação honesta:** pelo disco não dá para distinguir "comando demorado" de "esperando permissão". Os dois aparecem como **?**, com o tempo parado.
-- Respeita `CLAUDE_CONFIG_DIR` e `CODEX_HOME`.
+Each toast has **Show** (switches floor, opens the panel and scrolls to the desk) and **Go to terminal**, which brings the exact Terminal.app or iTerm2 tab running that session to the front by matching its tty (macOS only; other terminal apps such as VS Code, Cursor, Warp, Ghostty, WezTerm, kitty and Alacritty are just activated). For Codex sessions without a known process it opens the Codex app.
 
-## Adicionar uma IA
+Agents away from their desks (kitchen, meeting room, nap corner) carry a name tag over their heads. Optional sound and system notifications can be turned on from the top bar.
 
-Cada IA é um arquivo em `src/sources/` que exporta:
+## A living office
+
+- **Certificates and achievements:** each desk's partition gets framed certificates for the skills and MCP servers that session used, plus achievements such as *Hundred tools*, *Thousand tools*, *Marathoner* (4h+), *Immortal* (24h+), *Team lead*, *Elephant memory* (500k+ context tokens), *Long talk*, *Terminal master*, *Writer* and *Researcher*. Hover to read them.
+- **Whiteboard:** a live bar chart of who is working, needs you, has the turn, or is asleep.
+- **Cork board:** skills installed on the machine and the most-used ones, per AI, plus MCP servers and plugins.
+- **Day/night lighting:** the light follows your local time (day, dusk, night with monitors and lamps glowing).
+- **The office cat** wanders around and naps next to sleeping agents.
+- **Languages:** English and Brazilian Portuguese, picked from your browser and switchable in the top bar.
+
+<p align="center"><img src="docs/mobile.png" alt="The office on a phone" width="300"></p>
+
+## Privacy and security
+
+- **Read-only.** No hooks, nothing installed into the AIs, no configuration changed.
+- **No tokens spent.** It never calls a model or any network service.
+- **Local only.** The server binds to `127.0.0.1`.
+- **Host allowlist.** Requests whose `Host` header isn't `127.0.0.1`, `localhost` or `[::1]` are rejected, which blocks DNS-rebinding attacks.
+- **Access token.** Every request needs the per-run token cookie (see [Access token](#access-token)). The "Go to terminal" endpoint additionally requires a custom header and a local origin.
+- **Strict CSP.** `default-src 'self'`, no frames, no external scripts, fonts or connections.
+- **Never reads credentials.** Not Claude Code's `*.key` files, not Codex's `auth.json`. From `~/.claude.json` it reads only `skillUsage`, `pluginUsage` and `mcpServers`.
+- **Secrets are masked.** Tokens, passwords, API keys and `Bearer` values inside commands are replaced with `•••` before display.
+- **`--private` mode** for screen sharing hides agent names, branches, repo names (replaced by aliases like `repo A`), session titles, paths, file names, questions, skills, MCP names and the host name.
+
+## Limitations
+
+- **Codex has no live-session registry.** "Open" means a Codex process is running and the conversation was touched in the last 3 hours, so a closed Codex chat can linger for a while.
+- **Waiting vs. running** is told apart by inspecting processes (`ps`): for Claude Code's Bash it checks whether the command's shell was spawned. When the disk can't tell, the panel says so instead of guessing.
+- **"Go to terminal" is macOS only.**
+
+## Adding a new AI source
+
+Each AI is one file in `src/sources/` that exports:
 
 ```js
 module.exports = {
-  id: 'minha-ia', label: 'Minha IA',
-  sessions(now) { return [/* { agent, id, name, status: 'busy'|'idle', startedAt, since, cwd, st, subagents } */]; },
+  id: 'my-ai', label: 'My AI',
+  // live sessions: { agent, id, name, pid, kind, version, status: 'busy'|'idle', since, startedAt, cwd, st, subagents }
+  sessions(now) { return []; },
+  // conversations touched since `since` (midnight), for the daily report: { agent, id, st, title? }
+  today(since) { return []; },
+  // what the cork board shows
   credentials() { return { topSkills: [], skills: [], mcps: [], plugins: [] }; },
 };
 ```
 
-O `st` vem de `incremental()` em `src/util.js`: você escreve só o `absorb(state, linha)` que entende o formato da sua IA e chama `track()` para cada ferramenta. Depois registre o arquivo em `src/collect.js`, dê uma cor em `AGENT` no `public/app.js` e acrescente um caso ao `test/run.js`.
+`st` comes from `incremental()` in `src/util.js`: you write only an `absorb(state, line)` that understands your AI's transcript format and call `track()` for each tool call (and `event()` for turn starts and ends). Then register the file in `SOURCES` in `src/collect.js`, give it a color in `AGENT` in `public/app.js`, and add a case to `test/run.js`.
 
-## Desenvolver
-
-```bash
-npm test                                  # monta ~/.claude e ~/.codex falsos e confere as fontes
-npm run demo
-node bin/coworks-agents.js --json         # um retrato do estado, em JSON
-```
-
----
-
-## English
-
-**A pixel-art coworking office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk: see who's working, who needs you, and who's editing the same checkout as another session, even across different AIs.
+## Development
 
 ```bash
-npx coworks-agents            # opens http://127.0.0.1:4777
-npx coworks-agents --demo     # fake office with every state
-npx coworks-agents --private  # hide titles, paths and file names
+npm test             # builds fake ~/.claude and ~/.codex folders and checks the collector and the server
+npm run demo         # the fake office with every state
+npm run screenshots  # regenerates docs/*.png from demo mode (needs agent-browser on PATH)
+node bin/coworks-agents.js --json   # one snapshot of the state, as JSON
 ```
 
-Or as a Claude Code plugin: `/plugin marketplace add <you>/coworks-agents`, then `/plugin install coworks-agents@coworks-agents`, then `/coworks`.
+The server also exposes `/api/state` (the snapshot, including a per-session timeline and recently edited files) and `/api/report` (today's sessions, active time, tool calls, files and output tokens).
 
-- **Supported:** Claude Code (official live-session registry) and Codex CLI/app (a running Codex process plus a conversation touched in the last 3h). Each desk's colored nameplate shows which AI it is.
-- **Read-only, no hooks, no tokens, local only.** Never reads credentials (`*.key`, `auth.json`). Binds to `127.0.0.1`.
-- **States:** editing, terminal, reading, web, delegating (with interns for subagents), has a question for you (**!**), tool stalled for more than 6s (**?**: still running *or* waiting for permission; the disk can't tell which), done/your turn, asleep.
-- **A living office:** lighting follows your local time, idle agents walk to the lounge sofa for coffee, the whiteboard charts the office live, and the office cat naps next to idle desks.
-- **Certificates:** skills, MCP servers and achievements on each desk's partition. The cork board shows installed and most-used skills per AI.
-- **Clash alert:** sessions from any AI that edited the same checkout in the last 15 minutes flash red.
-- **Add an AI:** one file in `src/sources/` (see the section above).
+## License
 
-Node 18+, zero dependencies, MIT.
+MIT, see [LICENSE](LICENSE). The Silkscreen font is under the SIL Open Font License (`public/fonts/OFL.txt`).

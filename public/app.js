@@ -1,7 +1,7 @@
 'use strict';
-// coworks-agents — desenha cada sessão de IA (Claude Code, Codex, …) como uma pessoa num escritório em pixel art.
+// coworks-agents — draws each AI session (Claude Code, Codex, …) as a person in a pixel-art office.
 
-// ---------------- textos ----------------
+// ---------------- strings ----------------
 const I18N = {
   pt: {
     working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`, building: 'Ver prédio', agents: 'agentes',
@@ -100,7 +100,7 @@ let T = I18N[lang];
 let notifyOn = store.get('notify', false);
 let soundOn = store.get('sound', false);
 
-// ---------------- cores de estado e certificados ----------------
+// ---------------- state colors and certificates ----------------
 const { PAL, hash, shade, look, r } = Art;
 const KIND_COLOR = {
   edit: '#7aa2f7', read: '#d9cdb0', terminal: '#63c74d', web: '#2ce8f5', delegate: '#feae34', skill: '#b55088',
@@ -112,14 +112,14 @@ const agentOf = p => AGENT[p.agent] || { label: p.agent || '?', color: '#8a8f98'
 const CERT = { skill: '#e8b04b', mcp: '#2c9a8f', badge: '#e43b44' };
 const BADGE_COLOR = { tools100: '#e43b44', tools1000: '#b55088', marathon: '#f77622', immortal: '#68386c', boss: '#3b5dc9', elephant: '#8b9bb4', chat: '#3e8948', terminal: '#265c42', writer: '#b86f50', research: '#0099db' };
 
-// ---------------- planta do andar ----------------
-// Cada repositório é uma sala com as mesas dos seus agentes; as salas ficam em faixas à esquerda.
-// À direita, uma ala comum: copa, pingue-pongue, sala de reunião e canto da soneca.
-// Com muitas salas, o escritório ganha andares (cada andar tem a sua ala comum).
+// ---------------- floor plan ----------------
+// Each repository is a room with its agents' desks; rooms sit in rows on the left.
+// On the right, a shared wing: kitchen, ping-pong, meeting room and nap corner.
+// With many rooms, the office gains floors (each floor has its own shared wing).
 const TOP = 58, CELL_W = 100, CELL_H = 96, RW = 148, ROOM_PAD = 6, ROOM_HEAD = 14, SHELF_GAP = 14, MAX_SHELVES = 2, ROOM_MAX = 9;
 const cv = document.getElementById('cv');
 const mainCtx = cv.getContext('2d');
-let ctx = mainCtx; // troca para o canvas da miniatura quando desenha outro andar
+let ctx = mainCtx; // switched to the thumbnail canvas while drawing another floor
 Art.setCtx(ctx);
 const overlay = document.getElementById('overlay');
 let S = 3, W = 480, H = 300, CX = 320, RX = 330;
@@ -132,11 +132,11 @@ function roomKey(p) {
 }
 
 function planFloors(people, leftW) {
-  // agrupa por repositório; ordem estável pelo nome
+  // group by repository; stable order by name
   const groups = new Map();
   for (const p of people) { const k = roomKey(p); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
   const maxCols = Math.max(1, Math.floor((leftW - ROOM_PAD * 2) / CELL_W));
-  // sala com mais de 9 agentes vira várias (api 1, api 2…) para nenhum andar ficar comprido demais
+  // a room with more than 9 agents splits into several (api 1, api 2…) so no floor gets too long
   const chunks = [];
   for (const [name, ps] of [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     if (ps.length <= ROOM_MAX) { chunks.push([name, ps]); continue; }
@@ -146,7 +146,7 @@ function planFloors(people, leftW) {
     const cols = Math.min(maxCols, Math.max(1, Math.min(3, ps.length)));
     return { name, people: ps, cols, rows: Math.ceil(ps.length / cols), w: cols * CELL_W + ROOM_PAD * 2 };
   });
-  // empacota em faixas (prateleiras) e as faixas em andares
+  // pack rooms into rows (shelves) and rows into floors
   const out = [];
   let cur = { shelves: [] }, shelf = null;
   for (const room of list) {
@@ -163,8 +163,8 @@ function planFloors(people, leftW) {
 
 function relayout() {
   const stage = document.getElementById('stage');
-  const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // escondido (modo prédio) mede 0
-  // com várias salas, encolhe a escala para caberem duas lado a lado; com uma só, fica grande
+  const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // hidden (building view) measures 0
+  // with several rooms, shrink the scale so two fit side by side; with just one, keep it big
   const groups = new Set((data ? data.people : []).map(roomKey)).size;
   const s0 = Math.max(1.6, Math.min(3, availW / (groups > 1 ? 840 : 520)));
   W = Math.max(480, Math.min(920, Math.floor(availW / s0)));
@@ -172,9 +172,9 @@ function relayout() {
   const leftW = CX - 12;
   floors = planFloors(data ? data.people : [], leftW);
   if (floor >= floors.length) floor = floors.length - 1;
-  // todos os andares (a visão do prédio desenha os outros em miniatura)
+  // every floor (the building view draws the others as thumbnails)
   floorStates = floors.map((_, i) => buildFloor(i));
-  // ala comum
+  // shared wing
   wing = { copa: TOP, ping: TOP + 112, meet: TOP + 184, nap: TOP + 290, bottom: TOP + 372 };
   spots = {
     sofa: [0, 1, 2, 3].map(i => ({ x: RX + 12 + i * 19, y: TOP + 50, zone: 'lounge', pose: 'sit' })),
@@ -220,16 +220,16 @@ function useFloor(i) {
 
 function fitScale() {
   const stage = document.getElementById('stage');
-  const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // escondido (modo prédio) mede 0
+  const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // hidden (building view) measures 0
   S = Math.max(1.5, Math.floor(Math.min(availW / W, 4) * 4) / 4);
   cv.width = W; cv.height = H;
   cv.style.width = W * S + 'px'; cv.style.height = H * S + 'px';
   ctx.imageSmoothingEnabled = false;
-  // escala pequena: o crachá mostra nome e estado; o título fica no tooltip
+  // small scale: the badge shows name and state; the title goes in the tooltip
   document.getElementById('office').classList.toggle('compact', S < 2.25);
 }
 
-// seletor de andares (só aparece com mais de um)
+// floor picker (only shown with more than one floor)
 function renderFloors() {
   let bar = document.getElementById('floors');
   if (!bar) { bar = document.createElement('nav'); bar.id = 'floors'; bar.className = 'floors'; document.getElementById('stage').before(bar); bar.addEventListener('click', e => { if (e.target.closest('[data-building]')) return setBuilding(!building); const b = e.target.closest('[data-floor]'); if (b) goFloor(+b.dataset.floor); }); }
@@ -242,7 +242,7 @@ function renderFloors() {
     return `<button class="floor ${i === floor && !building ? 'on' : ''}" data-floor="${i}" title="${esc(names.join(', '))}"><b>${esc(T.floor(i + 1))}</b> <span>${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' +' + (names.length - 3) : ''}</span>${need ? ` <i class="dot">${need}</i>` : ''}</button>`;
   }).join('');
 }
-// ---------------- visão do prédio: cada andar em miniatura, ao vivo ----------------
+// ---------------- building view: every floor as a live thumbnail ----------------
 const buildingEl = document.createElement('section');
 buildingEl.className = 'building'; buildingEl.hidden = true;
 document.getElementById('stage').after(buildingEl);
@@ -287,7 +287,7 @@ function drawThumbs(t, dt) {
 function goFloor(i) { if (i < 0 || i >= floors.length) return; floor = i; setBuilding(false); lastLayoutKey = ''; renderAll(); }
 function floorOf(id) { return floors.findIndex(f => f.shelves.some(s => s.rooms.some(r => r.people.some(p => p.id === id)))); }
 
-// ---------------- para onde cada pessoa vai ----------------
+// ---------------- where each person goes ----------------
 const ZONE_OF = { idle: 'lounge', asleep: 'nap', delegate: 'meet' };
 const DWELL_MS = 3500;
 const want = new Map();
@@ -314,12 +314,12 @@ function plan(now) {
   return assign;
 }
 
-// ---------------- atores ----------------
+// ---------------- actors ----------------
 const actors = new Map();
 const cat = { x: 0, y: 0, tx: 0, ty: 0, mode: 'sit', until: 0, flip: false, ready: false };
 const SPEED = 52;
 
-// cada lugar sabe sair até o corredor vertical (CX); o caminho é: sair, corredor, entrar
+// every spot knows its way out to the vertical corridor (CX); the path is: exit, corridor, enter
 function exitPath(pt, cell) {
   if (pt.x < CX && cell) {
     const R = cell.room;
@@ -370,7 +370,7 @@ function updateCat(dt, t) {
   }
 }
 
-// ---------------- certificados ----------------
+// ---------------- certificates ----------------
 function certsOf(p) {
   const out = [];
   for (const [k, n] of Object.entries(p.skills || {}).sort((a, b) => b[1] - a[1])) out.push({ kind: 'skill', name: k, n });
@@ -407,7 +407,7 @@ function counts() {
   return c;
 }
 
-// ---------------- cena ----------------
+// ---------------- scene ----------------
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
@@ -434,17 +434,17 @@ function drawShafts(sky, nWin) {
   ctx.restore();
 }
 
-// sala de um repositório vista de cima: carpete com a cor do repo, paredes, porta e placa
+// a repository's room seen from above: carpet in the repo color, walls, door and sign
 function drawRoom(R, t) {
   const h = hash(R.name), hue = ['#6b5a7a', '#5a6b7a', '#5a7a6b', '#7a6b5a', '#7a5a62', '#5f6f8a', '#6f8a5f'][h % 7];
   r(R.x, R.y, R.w, R.h, hue);
   for (let yy = 2; yy < R.h; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < R.w; xx += 4) r(R.x + xx, R.y + yy, 1, 1, shade(hue, .9));
-  // paredes: a de cima com face (dá altura), laterais e de baixo finas, porta no meio de baixo
+  // walls: the top one has a face (gives height), sides and bottom are thin, door in the bottom middle
   r(R.x - 2, R.y - 2, R.w + 4, 3, PAL.ink); r(R.x - 2, R.y + 1, R.w + 4, 6, PAL.wall); r(R.x - 2, R.y + 7, R.w + 4, 1, PAL.wallShade);
   r(R.x - 2, R.y, 3, R.h + 2, PAL.ink); r(R.x + R.w - 1, R.y, 3, R.h + 2, PAL.ink);
   r(R.x - 2, R.y + R.h, R.doorX - R.x + 2, 3, PAL.ink); r(R.doorX + 18, R.y + R.h, R.x + R.w - R.doorX - 16, 3, PAL.ink);
   r(R.doorX, R.y + R.h, 18, 3, '#8f553f'); r(R.doorX, R.y + R.h, 1, 3, PAL.ink2); r(R.doorX + 17, R.y + R.h, 1, 3, PAL.ink2);
-  // placa (o texto vem por HTML, nítido)
+  // sign (the text comes from HTML, crisp)
   r(R.x + 4, R.y + 1, 6, 5, agentRoomColor(R)); 
 }
 function agentRoomColor(R) {
@@ -459,7 +459,7 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
   const a = cell && cell.actor;
   const atDesk = !!(a && a.mode === 'desk');
   const st = p ? p.state : 'asleep';
-  // divisória
+  // divider
   const px = x + 6, py = y + 2, pw = CELL_W - 12, ph = 28;
   r(px + 2, py + ph + 1, pw, 2, '#00000022');
   r(px - 1, py - 1, pw + 2, ph + 2, clashing && f % 4 < 2 ? PAL.red : PAL.ink);
@@ -476,7 +476,7 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
     });
     cell.extraCerts = Math.max(0, certs.length - fit);
   }
-  // monitor: desligado na mesa vazia, protetor de tela se a pessoa saiu
+  // monitor: off at an empty desk, screensaver if the person stepped away
   const mw = 34, mh = 20, mx = x + CELL_W / 2 - mw / 2, my = y + 18;
   const screen = !p ? 'asleep' : atDesk ? st : (st === 'asleep' ? 'asleep' : 'idle');
   r(mx - 2, my - 2, mw + 4, mh + 4, PAL.ink); r(mx - 1, my - 1, mw + 2, mh + 2, PAL.bezel); r(mx - 1, my - 1, mw + 2, 1, PAL.bezelLight);
@@ -484,7 +484,7 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
   r(mx + mw / 2 - 2, my + mh + 2, 4, 3, PAL.ink); r(mx + mw / 2 - 6, my + mh + 4, 12, 2, PAL.ink);
   const glow = Art.SCREEN_GLOW[screen];
   if (glow) { glows.push({ x: mx + mw / 2, y: my + mh / 2, r: 30, c: glow }); lights.push({ x: mx + mw / 2, y: my + mh, r: 26 }); }
-  // mesa
+  // desk
   const dx = x + 14, dy = y + 42, dw = CELL_W - 28;
   r(dx + 2, dy + 18, dw, 6, '#00000026');
   r(dx - 1, dy - 1, dw + 2, 20, PAL.ink);
@@ -511,7 +511,7 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
     Art.drawFront(cx, cy - 2, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', wave: st === 'needs_you', mouth: st === 'needs_you' ? 'open' : 'flat' });
   } else if (st === 'asleep') { Art.drawSleeping(cx, cy, lk, t); Art.drawChairBack(cx, cy + 14); }
   else { Art.drawSeatedBack(cx, cy, lk, t, { typing: st === 'edit' || st === 'terminal', reading: st === 'read' }); Art.drawChairBack(cx, cy + 14); }
-  // subagentes que ainda não foram para a reunião ficam em pé ao lado
+  // subagents that haven't gone to the meeting yet stand next to the desk
   cell.interns = p.subagents || [];
   cell.interns.slice(0, 2).forEach((s, i) => {
     const ix = i ? x + 1 : x + CELL_W - 17, iy = y + 40;
@@ -522,7 +522,7 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
 
 function drawWing(t, lights, glows, pingPlaying, meeting) {
   r(CX - 6, TOP, 1, H - TOP, '#00000018');
-  // copa com piso de ladrilho
+  // kitchen with tiled floor
   Art.drawTile(RX - 4, TOP, RW + 8, 104, '#e8dcc8', '#d9c9ae');
   Art.drawCounter(RX + 22, TOP - 8, 60);
   Art.drawCoffeeMachine(RX + 2, TOP - 16, t, true);
@@ -533,18 +533,18 @@ function drawWing(t, lights, glows, pingPlaying, meeting) {
   Art.drawSofa(RX + 10, TOP + 46, 78);
   Art.drawRoundTable(RX + 108, TOP + 70);
   Art.drawStool(RX + 100, TOP + 82); Art.drawStool(RX + 126, TOP + 82);
-  // pingue-pongue
+  // ping-pong
   Art.drawPingPong(RX + 34, wing.ping + 20, 80, 30, t, pingPlaying);
-  // sala de reunião de vidro
+  // glass meeting room
   const my = wing.meet;
   r(RX - 2, my, RW + 4, 98, '#4f5c7a');
   for (let yy = 2; yy < 98; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < RW + 4; xx += 4) r(RX - 2 + xx, my + yy, 1, 1, '#465270');
   Art.drawGlassWall(RX - 2, my, RW + 4, 98, null);
-  r(RX - 2, my + 32, 4, 18, '#4f5c7a'); // porta do lado do corredor
+  r(RX - 2, my + 32, 4, 18, '#4f5c7a'); // door on the corridor side
   Art.drawTV(RX + 8, my + 8, 18, 12, t, meeting);
   if (meeting) glows.push({ x: RX + 17, y: my + 14, r: 20, c: '#feae34' });
   lights.push({ x: RX + RW / 2, y: my + 46, r: 46 });
-  // canto da soneca
+  // nap corner
   const ny = wing.nap;
   Art.drawRug(RX + 2, ny + 22, RW - 4, 50);
   Art.drawBookshelf(RX + 104, ny + 2, 40, 24);
@@ -616,7 +616,7 @@ function drawScene(t, dt) {
   }
 }
 
-// ---------------- etiquetas HTML (texto nítido) ----------------
+// ---------------- HTML labels (crisp text) ----------------
 function ago(ms) {
   const s = Math.max(0, ms / 1000) | 0, a = T.ago;
   if (s < 60) return s + a.s;
@@ -639,7 +639,7 @@ let lastHits = '', lastTags = '';
 const hitsLayer = document.createElement('div'), tagsLayer = document.createElement('div');
 overlay.append(hitsLayer, tagsLayer);
 function renderOverlay() {
-  // duas camadas: as áreas de toque quase nunca mudam (e não perdem o tooltip); as etiquetas mudam todo segundo
+  // two layers: hit areas rarely change (so they keep their tooltip); labels change every second
   const parts = [], tags = [];
   for (const cell of layout) {
     const { p, x, y } = cell;
@@ -660,11 +660,11 @@ function renderOverlay() {
       parts.push(`<div class="hit" title="${esc(a.type)}${a.description ? ': ' + esc(a.description) : ''}${a.doing ? ' — ' + esc(a.doing) : ''}" style="left:${ix * S}px;top:${(y + 40) * S}px;width:${16 * S}px;height:${24 * S}px"></div>`);
     });
     if ((cell.interns || []).length > 2) parts.push(`<span class="more" style="left:${(x + CELL_W - 12) * S}px;top:${(y + 64) * S}px">+${cell.interns.length - 2}</span>`);
-    // quem foi para a copa continua clicável lá
+    // whoever went to the kitchen stays clickable there
     const a = cell.actor;
     if (a && a.mode !== 'desk' && a.mode !== 'walk') parts.push(`<div class="desk-hit" data-id="${esc(p.id)}" title="${esc(p.name)} · ${esc(T.states[p.state] || '')}" style="left:${Math.round(a.x) * S}px;top:${Math.round(a.y - 2) * S}px;width:${18 * S}px;height:${24 * S}px"></div>`);
   }
-  // placas das salas e nomes de quem está fora da mesa
+  // room signs and names of whoever is away from their desk
   for (const R of rooms) tags.push(`<span class="room-sign" style="left:${(R.x + 12) * S}px;top:${(R.y - 1) * S}px;max-width:${(R.w - 16) * S}px" title="${esc(R.name)}">${esc(R.name)} <em>${R.people.length}</em></span>`);
   for (const cell of layout) {
     const a = cell.actor;
@@ -677,7 +677,7 @@ function renderOverlay() {
   if (g !== lastTags) { tagsLayer.innerHTML = g; lastTags = g; }
 }
 
-// ---------------- painel lateral ----------------
+// ---------------- side panel ----------------
 const panel = document.getElementById('panel'), panelBody = document.getElementById('panel-body');
 function fmtK(n) { return n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n); }
 const KIND_ICON = { edit: '✎', read: '👁', terminal: '›_', web: '🌐', delegate: '👥', skill: '✦', mcp: '🔌', other: '•', ask: '?' };
@@ -750,7 +750,7 @@ panelBody.addEventListener('click', async e => {
 document.getElementById('panel-close').onclick = () => { selected = null; renderOverlay(); renderPanel(); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && building && !selected) return setBuilding(false); if (e.key === 'Escape' && selected) { selected = null; renderOverlay(); renderPanel(); } });
 
-// ---------------- barra de cima ----------------
+// ---------------- top bar ----------------
 function renderBar() {
   document.getElementById('host').textContent = data.host || '';
   const c = { work: 0, need: 0, turn: 0, sleep: 0 };
@@ -781,7 +781,7 @@ function renderBar() {
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
 }
 
-// ---------------- avisos com rosto: quem precisa de você ----------------
+// ---------------- toasts with faces: who needs you ----------------
 const helpEl = document.createElement('aside');
 helpEl.className = 'help'; helpEl.setAttribute('aria-live', 'polite');
 document.body.appendChild(helpEl);
@@ -810,7 +810,7 @@ function renderHelp() {
   const now = Date.now();
   const rank = p => p.state === 'needs_you' ? 0 : p.state === 'waiting' ? 1 : 2;
   const all = data.people.filter(p => p.state === 'needs_you' || p.state === 'waiting' || (doneUntil.get(p.id) || 0) > now).sort((a, b) => rank(a) - rank(b));
-  // poucos cartões de cada vez; o resto fica num botão que expande
+  // a few cards at a time; the rest go behind an expand button
   const list = helpOpen ? all : all.slice(0, HELP_MAX);
   helpMore.hidden = all.length <= HELP_MAX;
   helpMore.textContent = helpOpen ? T.help.less : T.help.more(all.length - HELP_MAX);
@@ -853,7 +853,7 @@ helpEl.addEventListener('click', async e => {
 });
 const dismissed = new Set();
 
-// leva até a pessoa: muda de andar, abre o painel e rola até a mesa
+// take me to the person: switch floor, open the panel and scroll to the desk
 function showPerson(id) {
   const f = floorOf(id);
   if (f >= 0 && f !== floor) goFloor(f); else if (building) setBuilding(false);
@@ -862,7 +862,7 @@ function showPerson(id) {
   if (tag) tag.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ---------------- avisos ----------------
+// ---------------- notifications ----------------
 let prevStates = new Map(), audio = null;
 function beep(urgent) {
   if (!soundOn) return;
@@ -902,14 +902,14 @@ document.getElementById('btn-notify').onclick = async () => {
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
 document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };
 
-// ---------------- laço ----------------
+// ---------------- loop ----------------
 let lastLayoutKey = '';
 function renderAll() {
   if (!data) return;
   const key = data.people.map(p => p.id + ':' + roomKey(p)).join(',') + '|' + floor + '|' + document.getElementById('stage').clientWidth;
   if (key !== lastLayoutKey) { lastLayoutKey = key; relayout(); }
   else {
-    // mesmas pessoas: troca só os dados de cada mesa, senão o desenho fica preso ao estado antigo
+    // same people: only swap each desk's data, otherwise the drawing stays stuck on the old state
     const byId = new Map(data.people.map(p => [p.id, p]));
     for (const f of floorStates) { for (const c of f.layout) c.p = byId.get(c.p.id) || c.p; for (const d of f.desks) d.p = byId.get(d.p.id) || d.p; }
     for (const f of floors) for (const sh of f.shelves) for (const R of sh.rooms) R.people = R.people.map(p => byId.get(p.id) || p);
@@ -919,7 +919,7 @@ function renderAll() {
   if (building) renderBuildingCounts();
 }
 
-// atualiza só os textos dos cartões (recriar os canvas a cada segundo faria piscar)
+// update only the card texts (recreating the canvases every second would flicker)
 function renderBuildingCounts() {
   if (buildingEl.children.length !== floors.length) return renderBuilding();
   floors.forEach((f, i) => {
@@ -933,9 +933,9 @@ function renderBuildingCounts() {
 
 let lastFrame = -1, lastT = 0;
 function loop(t) {
-  requestAnimationFrame(loop); // agenda antes: um erro num quadro não pode parar a animação
+  requestAnimationFrame(loop); // schedule first: an error in one frame must not stop the animation
   if (data && spots) {
-    const f = (t / 70) | 0; // ~14 quadros por segundo, ritmo de pixel art
+    const f = (t / 70) | 0; // ~14 frames per second, a pixel-art pace
     if (f !== lastFrame) {
       const dt = lastT ? Math.min(.25, (t - lastT) / 1000) : 0;
       lastT = t; lastFrame = f;
@@ -947,7 +947,7 @@ requestAnimationFrame(loop);
 window.addEventListener('resize', () => { if (data) { lastLayoutKey = ''; renderAll(); } });
 setInterval(() => { if (data) renderOverlay(); }, 500);
 
-// ---------------- dados ----------------
+// ---------------- data ----------------
 const offline = document.getElementById('offline');
 function connect() {
   const es = new EventSource('events');

@@ -1,5 +1,5 @@
 'use strict';
-// Fonte: Claude Code. Sessões vivas em ~/.claude/sessions/<pid>.json; conversa em projects/**/<id>.jsonl.
+// Source: Claude Code. Live sessions in ~/.claude/sessions/<pid>.json; conversation in projects/**/<id>.jsonl.
 
 const fs = require('fs');
 const os = require('os');
@@ -49,7 +49,7 @@ function absorb(st, d) {
   if (d.type === 'ai-title' && d.aiTitle) st.title = d.aiTitle;
   if (d.type === 'permission-mode' && d.permissionMode) st.permissionMode = d.permissionMode;
   if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; st.turnOpen = false; event(st, ts, 'idle'); }
-  // a conversa é gravada na hora: mensagem nova sua ou resposta do modelo = turno aberto
+  // the conversation is written immediately: a new message of yours or a model reply = turn open
   const prompt = d.type === 'user' && !d.isMeta && d.message && !isToolResult(d.message.content);
   if (prompt) event(st, ts, 'thinking');
   if (d.type === 'assistant' || prompt) st.turnOpen = true;
@@ -63,7 +63,7 @@ function absorb(st, d) {
       if (c.type !== 'tool_use') continue;
       const name = c.name || '?', input = c.input || {};
       const item = { id: c.id, name, kind: activityOf(name), what: summarize(name, input), ts: ts || Date.now() };
-      // o que a sessão está a perguntar, para o aviso de "precisa de você"
+      // what the session is asking, for the "needs you" notice
       if (name === 'AskUserQuestion') item.ask = short(((input.questions || [])[0] || {}).question || '', 140);
       if (name === 'ExitPlanMode') item.ask = 'plan';
       track(st, item, input.file_path || input.notebook_path);
@@ -121,9 +121,9 @@ function subagentsOf(transcript, now) {
   return out.slice(0, 8);
 }
 
-// O registro de sessões às vezes atrasa; o transcrito é gravado no instante da mensagem.
-// Turno aberto no transcrito manda, a não ser que o registro diga parado e o ficheiro esteja quieto
-// (um turno interrompido nem sempre grava o fim).
+// The session registry sometimes lags; the transcript is written the instant a message arrives.
+// An open turn in the transcript wins, unless the registry says idle and the file has gone quiet
+// (an interrupted turn doesn't always write its end).
 function statusOf(s, st, now) {
   const reg = s.status === 'busy';
   if (!st) return reg ? 'busy' : 'idle';
@@ -138,7 +138,7 @@ function sessions(now) {
   try { files = fs.readdirSync(dir).filter(f => /^\d+\.json$/.test(f)); } catch { return []; }
   const out = [];
   for (const f of files) {
-    const s = safeJson(path.join(dir, f)); // os *.key ao lado nunca são lidos
+    const s = safeJson(path.join(dir, f)); // the *.key files next to it are never read
     if (!s || !s.sessionId || !alive(s.pid)) continue;
     const tp = findTranscript(s.sessionId);
     const st = tp ? read(tp) : null;
@@ -152,7 +152,7 @@ function sessions(now) {
   return out;
 }
 
-// Todas as conversas mexidas desde a meia-noite (abertas ou já fechadas), para o relatório do dia.
+// Every conversation touched since midnight (open or already closed), for the daily report.
 function today(since) {
   const root = path.join(DIR(), 'projects');
   const out = [];

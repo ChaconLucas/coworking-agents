@@ -1,12 +1,12 @@
 # coworks-agents
 
-Escritório em pixel art, ao vivo, para as sessões de IA de programação (Claude Code, Codex, …) de uma máquina.
+A live pixel-art office for the AI coding sessions (Claude Code, Codex, …) on one machine.
 
-## Princípios
-- **Verdade antes de enfeite:** cada estado na tela vem de um sinal medido (transcrito, registro de sessões, processos). Quando o disco não sabe, a tela diz que não sabe.
-- **Só leitura, só local:** sem hooks, sem tokens, sem rede. Servidor em 127.0.0.1, nunca lê credenciais.
-- **Zero dependências:** Node puro + Canvas. Instala com `npx`.
-- **Seguro por padrão:** Host allowlist, CSP, POST com cabeçalho próprio, modo `--private`.
+## Principles
+- **Truth before decoration:** every on-screen state comes from a measured signal (transcript, session registry, processes). When the disk can't tell, the screen says it doesn't know.
+- **Read-only, local-only:** no hooks, no tokens, no network. Server on 127.0.0.1, never reads credentials.
+- **Zero dependencies:** plain Node + Canvas. Installs with `npx`.
+- **Secure by default:** Host allowlist, access token cookie, CSP, POST with a custom header, `--private` mode.
 
-## Público
-Quem roda várias sessões de IA ao mesmo tempo e perde de vista quem precisa de atenção.
+## Audience
+People who run several AI sessions at once and lose track of which one needs attention.

@@ -32,8 +32,8 @@ function open(url) {
   execFile(cmd, a, () => {});
 }
 
-// O link com o token fica num ficheiro só seu (0600): assim uma segunda chamada reabre o mesmo
-// escritório, e um programa alheio na porta 4777 não consegue se passar por ele (não tem o token).
+// The token link lives in a file only you can read (0600): a second run reopens the same
+// office, and a foreign program on port 4777 can't impersonate it (it doesn't have the token).
 const os = require('os'), fs = require('fs'), path = require('path');
 const STATE_DIR = path.join(os.homedir(), '.config', 'coworks-agents');
 const STATE_FILE = path.join(STATE_DIR, 'session.json');
@@ -57,7 +57,7 @@ async function reuse() {
   try { hq = await start({ port, privacy, demo }); }
   catch (e) {
     if (e.code !== 'EADDRINUSE') throw e;
-    hq = await start({ port: 0, privacy, demo }); // porta ocupada por outro: usa uma livre
+    hq = await start({ port: 0, privacy, demo }); // port taken by something else: use a free one
   }
   if (!demo && !privacy) {
     try {

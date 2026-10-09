@@ -1,6 +1,6 @@
 'use strict';
-// Junta as fontes (uma por IA) e monta o estado do escritório.
-// Só leitura: nada aqui escreve nos diretórios das IAs nem fala com a rede.
+// Merges the sources (one per AI) and builds the office state.
+// Read-only: nothing here writes to the AIs' directories or talks to the network.
 
 const os = require('os');
 const path = require('path');
@@ -9,11 +9,11 @@ const { resolveRepo, newest, dayKey } = require('./util');
 
 const SOURCES = [require('./sources/claude'), require('./sources/codex')];
 
-const PENDING_STALE_MS = 6000;           // ferramenta parada há isto = rodando ou esperando permissão
+const PENDING_STALE_MS = 6000;           // tool stalled this long = running or waiting for permission
 const ASLEEP_MS = 20 * 60 * 1000;
-const EDIT_WINDOW_MS = 15 * 60 * 1000;   // janela para "duas sessões editando o mesmo clone"
+const EDIT_WINDOW_MS = 15 * 60 * 1000;   // window for "two sessions editing the same checkout"
 
-// Tabela de processos (uma chamada por retrato): quem é filho de quem e há quanto tempo começou.
+// Process table (one call per snapshot): who is whose child and how long ago it started.
 let procCache = { at: 0, kids: new Map() };
 function processTable(now) {
   if (now - procCache.at < 900) return procCache.kids;
@@ -34,15 +34,15 @@ function processTable(now) {
   return kids;
 }
 
-// Um Bash do Claude Code corre num shell filho ("zsh -c source …/shell-snapshots/…").
-// Shell aberto depois do pedido = o comando está a correr; nenhum = ainda à espera de aprovação.
+// A Claude Code Bash runs in a child shell ("zsh -c source …/shell-snapshots/…").
+// Shell spawned after the request = the command is running; none = still waiting for approval.
 function shellRunning(pid, since, now) {
   const kids = processTable(now).get(pid) || [];
   return kids.some(k => k.start >= since - 2000 && /shell-snapshots|^\/bin\/(ba|z)?sh -c|^(ba|z)?sh -c/.test(k.cmd));
 }
 
-// Ferramenta parada: instantâneas (editar, ler) só param se esperam aprovação; Bash mede-se pelo processo;
-// as lentas por natureza (web, MCP, subagentes) contam como trabalho, salvo modo que pergunta sempre.
+// Stalled tool: instant ones (edit, read) only stall when awaiting approval; Bash is measured by its process;
+// inherently slow ones (web, MCP, subagents) count as work, unless the mode always asks.
 const INSTANT = new Set(['edit', 'read']);
 function stalledState(st, pend, pid, now) {
   if (st.explicitApprovals) return pend.kind;
@@ -62,7 +62,7 @@ function stateOf(status, st, now, pid) {
   return stale ? stalledState(st, pend, pid, now) : pend.kind;
 }
 
-// Junta os marcos em faixas contínuas [de, até, tipo] dentro da janela pedida.
+// Merges the markers into continuous segments [from, to, kind] within the requested window.
 function segments(events, from, to, open) {
   const out = [];
   const ev = events.filter(e => e.ts >= from - 6 * 3600 * 1000 && e.ts <= to);
@@ -117,7 +117,7 @@ function snapshot({ privacy = false } = {}) {
   }
   people.sort((a, b) => a.startedAt - b.startedAt);
 
-  // duas ou mais sessões (de qualquer IA) editando o mesmo checkout nos últimos minutos
+  // two or more sessions (of any AI) editing the same checkout in the last few minutes
   const byTree = new Map();
   for (const p of people) for (const e of p.editing) {
     if (!byTree.has(e.worktree)) byTree.set(e.worktree, { worktree: e.worktree, repo: e.repo, who: new Set() });
@@ -126,7 +126,7 @@ function snapshot({ privacy = false } = {}) {
   const clashes = [...byTree.values()].filter(c => c.who.size > 1)
     .map(c => ({ worktree: privacy ? '' : c.worktree, repo: c.repo, who: [...c.who] }));
 
-  // o mesmo arquivo nas mãos de duas sessões é pior que o mesmo repo
+  // the same file in the hands of two sessions is worse than the same repo
   const byFile = new Map();
   for (const p of people) for (const f of p.files) {
     if (!byFile.has(f.abs)) byFile.set(f.abs, { file: f.rel, repo: f.repo, who: new Set() });
@@ -135,7 +135,7 @@ function snapshot({ privacy = false } = {}) {
   const fileClashes = [...byFile.values()].filter(c => c.who.size > 1).map(c => ({ file: privacy ? '' : c.file, repo: c.repo, who: [...c.who] }));
   for (const p of people) p.files = p.files.map(({ abs, ...f }) => f);
 
-  // modo privado (compartilhar a tela): nada que identifique projeto, pessoa ou máquina
+  // private mode (screen sharing): nothing that identifies a project, person or machine
   const alias = new Map();
   const aliasOf = name => { if (!name) return name; if (!alias.has(name)) alias.set(name, 'repo ' + String.fromCharCode(65 + (alias.size % 26)) + (alias.size >= 26 ? alias.size : '')); return alias.get(name); };
   if (privacy) for (const c of clashes) c.repo = aliasOf(c.repo);
@@ -162,7 +162,7 @@ function snapshot({ privacy = false } = {}) {
   return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, credentials: privacy ? {} : credentials };
 }
 
-// Relatório do dia: todas as conversas mexidas desde a meia-noite, abertas ou já fechadas.
+// Daily report: every conversation touched since midnight, open or already closed.
 function report({ privacy = false } = {}) {
   const now = Date.now(), d = new Date(now);
   const since = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), key = dayKey(now);

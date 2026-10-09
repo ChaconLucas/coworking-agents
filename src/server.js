@@ -39,12 +39,12 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
 
   function tick() {
     const body = safeSnapshot();
-    // o relógio "now" muda sempre; só empurra quando o resto mudou ou a cada 5s
+    // the "now" clock always changes; only push when the rest changed or every 5s
     const key = body.replace(/"now":\d+,/, '');
     if (key === last && Date.now() - lastPush < 5000) return;
     last = key; lastPush = Date.now();
     for (const res of clients) {
-      // cliente que não lê (buffer cheio) é desligado em vez de acumular memória
+      // a client that doesn't read (full buffer) is dropped instead of piling up memory
       if (!res.write(`data: ${body}\n\n`)) { clients.delete(res); res.destroy(); }
     }
   }
@@ -55,7 +55,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   });
 
   function handle(req, res) {
-    // DNS rebinding: um site externo que aponte o seu domínio para 127.0.0.1 chega aqui com outro Host
+    // DNS rebinding: an outside site pointing its domain at 127.0.0.1 arrives here with a different Host
     if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(421); return res.end(); }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -64,7 +64,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
     const url = new URL(req.url, 'http://x');
 
-    // token de acesso: o link com ?t= vira cookie HttpOnly/SameSite=Strict; sem ele nada responde
+    // access token: the ?t= link becomes an HttpOnly/SameSite=Strict cookie; without it nothing answers
     if (url.pathname === '/' && url.searchParams.has('t')) {
       if (!sameSecret(url.searchParams.get('t'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
       res.writeHead(302, { 'Set-Cookie': `cw=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' + (url.searchParams.get('lang') ? '?lang=' + encodeURIComponent(url.searchParams.get('lang')) : '') });
@@ -81,7 +81,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return;
     }
     if (url.pathname === '/api/focus' && req.method === 'POST') {
-      // além do cookie: cabeçalho próprio (força preflight CORS, nunca aprovado) e origem local
+      // on top of the cookie: a custom header (forces a CORS preflight, never approved) and a local origin
       const origin = req.headers.origin || '';
       if (req.headers['x-coworks'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
       let body = '';

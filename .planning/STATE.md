@@ -1,6 +1,5 @@
-# Estado
+# State
 
-- Fase atual: 7 (salas por repositório + andares).
-- Último marco: detecção de "esperando aprovação" pelo shell filho (commit 4a23f95).
-- Auditoria de segurança rodando em paralelo (agente só-leitura).
-- GSD instalado só neste projeto (`.claude/`, perfil core, fora do git).
+- Current phase: 9 (timeline, file map and daily report UI).
+- Last milestones: rooms per repository + floors + building view; help toasts with portraits; security audit fixes; screenshot script (`npm run screenshots`).
+- GSD is installed for this project only (`.claude/`, core profile, outside git).

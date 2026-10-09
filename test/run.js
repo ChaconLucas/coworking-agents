@@ -1,5 +1,5 @@
 'use strict';
-// Monta um ~/.claude falso numa pasta temporária e confere o que o coletor lê dele.
+// Builds a fake ~/.claude in a temp folder and checks what the collector reads from it.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -12,7 +12,7 @@ process.env.CLAUDE_CONFIG_DIR = claude;
 fs.mkdirSync(path.join(claude, 'sessions'), { recursive: true });
 fs.mkdirSync(path.join(claude, 'projects', 'p'), { recursive: true });
 
-// um repo git com uma worktree: as duas resolvem para o mesmo repo, checkouts diferentes
+// a git repo with a worktree: both resolve to the same repo, different checkouts
 const repo = path.join(root, 'repo');
 fs.mkdirSync(repo);
 const git = (...a) => execFileSync('git', a, { cwd: repo, stdio: 'ignore' });
@@ -31,44 +31,44 @@ function session(pid, id, status, entries) {
 const use = (id, name, input, ts) => ({ type: 'assistant', timestamp: iso(ts), cwd: repo, message: { model: 'claude-x', usage: { input_tokens: 1, cache_read_input_tokens: 1000 }, content: [{ type: 'tool_use', id, name, input }] } });
 const result = (id, ts) => ({ type: 'user', timestamp: iso(ts), message: { content: [{ type: 'tool_result', tool_use_id: id }] } });
 
-const pid = process.pid; // precisa de um pid vivo
-// A: editando agora, com skill e MCP usados antes
+const pid = process.pid; // needs a live pid
+// A: editing now, with a skill and an MCP used earlier
 session(pid, 'A', 'busy', [
-  { type: 'ai-title', aiTitle: 'Título A' },
+  { type: 'ai-title', aiTitle: 'Title A' },
   use('s1', 'Skill', { skill: 'impeccable' }, now - 9000), result('s1', now - 8900),
   use('m1', 'mcp__rea__inspect', {}, now - 8000), result('m1', now - 7900),
   use('e1', 'Edit', { file_path: path.join(repo, 'a.txt') }, now - 500),
 ]);
-// B: terminou o turno (pendência limpa), editou na worktree
+// B: finished its turn (pending cleared), edited in the worktree
 session(1, 'B', 'idle', [
   use('e2', 'Write', { file_path: path.join(root, 'wt', 'b.txt') }, now - 4000),
   { type: 'system', subtype: 'turn_duration', timestamp: iso(now - 3000) },
 ]);
-// C: pergunta para o usuário pendente; e editou no mesmo checkout de A
+// C: question to the user pending; also edited in A's checkout
 session(process.ppid, 'C', 'busy', [
   use('e3', 'Edit', { file_path: path.join(repo, 'c.txt') }, now - 6000), result('e3', now - 5900),
   use('q1', 'AskUserQuestion', {}, now - 100),
 ]);
-// E: Bash parado há 10s em modo auto continua "terminal"; F: o mesmo em modo default vira "waiting"
+// E: Bash stalled for 10s in auto mode; F: the same in default mode (both checked below)
 const staleBash = id => [use('b' + id, 'Bash', { command: 'npm test' }, now - 10000)];
 const permMode = m => ({ type: 'permission-mode', permissionMode: m });
-// G: o registro ainda diz "idle", mas você acabou de mandar mensagem: o transcrito manda
+// G: the registry still says "idle", but you just sent a message: the transcript wins
 const sleepG = spawn('sleep', ['30']);
 session(sleepG.pid, 'G', 'idle', [
   { type: 'system', subtype: 'turn_duration', timestamp: iso(now - 60000) },
-  { type: 'user', timestamp: iso(now - 500), message: { content: 'nova pergunta' } },
+  { type: 'user', timestamp: iso(now - 500), message: { content: 'new question' } },
 ]);
-// D: processo morto não aparece
+// D: a dead process doesn't show up
 session(999999, 'D', 'busy', []);
 
-// Codex: uma conversa de hoje rodando um comando e outra que editou a worktree (choca com B)
+// Codex: one conversation from today running a command and another that edited the worktree (clashes with B)
 const codex = path.join(root, '.codex');
 process.env.CODEX_HOME = codex;
 process.env.COWORKS_CODEX_RUNNING = '1';
 const d = new Date(now);
 const day = path.join(codex, 'sessions', String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0'));
 fs.mkdirSync(day, { recursive: true });
-fs.writeFileSync(path.join(codex, 'session_index.jsonl'), line({ id: 'X1', thread_name: 'Conversa do Codex' }));
+fs.writeFileSync(path.join(codex, 'session_index.jsonl'), line({ id: 'X1', thread_name: 'Codex conversation' }));
 fs.writeFileSync(path.join(codex, 'auth.json'), '{"token":"secret"}');
 const ev = (type, payload, ts) => ({ type, timestamp: iso(ts), payload });
 fs.writeFileSync(path.join(day, 'rollout-x1.jsonl'), [
@@ -87,15 +87,15 @@ fs.writeFileSync(path.join(day, 'rollout-x2.jsonl'), [
   ev('event_msg', { type: 'task_complete' }, now - 6000),
 ].map(line).join(''));
 
-// sessões vivas extra usando pids de processos-filho que ficam a dormir durante o teste
+// extra live sessions using pids of child processes that sleep during the test
 const sleepers = [spawn('sleep', ['30']), spawn('sleep', ['30'])];
 session(sleepers[0].pid, 'E', 'busy', [permMode('auto'), ...staleBash('E')]);
 session(sleepers[1].pid, 'F', 'busy', [permMode('default'), ...staleBash('F')]);
-// o ficheiro só conta como "parado" se não mexeu há mais de 6s
+// the file only counts as "stalled" if untouched for more than 6s
 for (const id of ['E', 'F']) { const f = path.join(claude, 'projects', 'p', id + '.jsonl'); fs.utimesSync(f, new Date(now - 10000), new Date(now - 10000)); }
 
-// H: um "Claude" (este processo de teste) com um shell filho aberto depois do pedido do Bash
-// o processo "Claude" de H é um sh que abre outro sh (o do comando) como filho
+// H: a "Claude" with a child shell spawned after the Bash request
+// H's "Claude" process is an sh that spawns another sh (the command's) as its child
 const shellH = spawn('/bin/sh', ['-c', '/bin/sh -c "sleep 20; : shell-snapshots"; :'], { stdio: 'ignore' });
 execFileSync('sleep', ['0.3']);
 session(shellH.pid, 'H', 'busy', [permMode('auto'), use('bH', 'Bash', { command: 'npm test' }, now - 9000)]);
@@ -105,62 +105,61 @@ const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H'].filter(id => id !== 'B' || by('B')).sort(), 'only live sessions');
 // Codex
 assert.strictEqual(by('X1').agent, 'codex');
-assert.strictEqual(by('X1').title, 'Conversa do Codex');
+assert.strictEqual(by('X1').title, 'Codex conversation');
 assert.strictEqual(by('X1').state, 'terminal');
 assert.strictEqual(by('X1').doing.what, 'npm test');
 assert.deepStrictEqual({ ...by('X1').skills }, { imagegen: 1 });
 assert.strictEqual(by('X1').ctx, 5000);
 assert.strictEqual(by('X1').ctxMax, 258400);
-assert.strictEqual(by('X2').state, 'idle', 'task_complete encerra o turno');
-assert.ok(s.credentials.codex, 'credenciais do Codex presentes');
-assert.ok(!by('D'), 'pid morto fica de fora');
+assert.strictEqual(by('X2').state, 'idle', 'task_complete ends the turn');
+assert.ok(s.credentials.codex, 'Codex credentials present');
+assert.ok(!by('D'), 'dead pid is left out');
 assert.strictEqual(by('A').state, 'edit');
-assert.strictEqual(by('A').title, 'Título A');
+assert.strictEqual(by('A').title, 'Title A');
 assert.strictEqual(by('A').doing.what, 'a.txt');
 assert.deepStrictEqual({ ...by('A').skills }, { impeccable: 1 });
 assert.deepStrictEqual({ ...by('A').mcps }, { rea: 1 });
 assert.strictEqual(by('A').ctx, 1001);
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
-assert.strictEqual(by('G').status, 'busy', 'mensagem nova no transcrito vence o registro atrasado');
-assert.strictEqual(by('E').state, 'waiting', 'Bash parado sem shell aberto = esperando aprovação, mesmo em modo auto');
-assert.strictEqual(by('F').state, 'waiting', 'modo default: Bash parado sem shell = esperando aprovação');
-assert.strictEqual(by('H').state, 'terminal', 'Bash parado com shell aberto depois do pedido = comando a correr');
+assert.strictEqual(by('G').status, 'busy', 'a new message in the transcript beats the lagging registry');
+assert.strictEqual(by('E').state, 'waiting', 'stalled Bash with no shell spawned = waiting for approval, even in auto mode');
+assert.strictEqual(by('F').state, 'waiting', 'default mode: stalled Bash with no shell = waiting for approval');
+assert.strictEqual(by('H').state, 'terminal', 'stalled Bash with a shell spawned after the request = command running');
 if (by('B')) {
   assert.strictEqual(by('B').state, 'idle');
-  assert.strictEqual(by('B').doing, null, 'turno encerrado limpa a pendência');
-  assert.strictEqual(by('B').editing[0].repo, 'repo', 'worktree resolve para o repo principal');
+  assert.strictEqual(by('B').doing, null, 'ended turn clears the pending call');
+  assert.strictEqual(by('B').editing[0].repo, 'repo', 'worktree resolves to the main repo');
 }
-// A e C editaram o mesmo checkout; B editou outra worktree do mesmo repo e não conta
-// A e C no mesmo checkout (Claude + Claude); B e X2 na worktree (Claude + Codex)
+// A and C edited the same checkout (Claude + Claude); B and X2 the worktree (Claude + Codex)
 assert.deepStrictEqual(s.clashes.map(c => c.who.sort()).sort(), by('B') ? [['A', 'C'], ['B', 'X2']] : [['A', 'C']]);
-// a .key nunca é lida para a resposta
+// the .key is never read into the response
 assert.ok(!JSON.stringify(s).includes('secret'));
-// modo privado esconde títulos e caminhos
+// private mode hides titles and paths
 const priv = snapshot({ privacy: true });
-assert.ok(!JSON.stringify(priv).includes('Título A') && !JSON.stringify(priv).includes(repo));
-assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['A', 'C'], ['B', 'X2']] : [['A', 'C']], 'esconder caminhos não junta checkouts diferentes');
+assert.ok(!JSON.stringify(priv).includes('Title A') && !JSON.stringify(priv).includes(repo));
+assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['A', 'C'], ['B', 'X2']] : [['A', 'C']], 'hiding paths does not merge different checkouts');
 
-// leitura incremental: linha nova no fim muda o estado
+// incremental read: a new line at the end changes the state
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
-// segredos em comandos nunca aparecem
+// secrets in commands never show up
 const { short } = require('../src/util');
 assert.ok(!short('export GITHUB_TOKEN=ghp_abc123 && x').includes('ghp_abc123'));
 assert.ok(!short('curl -H "Authorization: Bearer xyz.secret" x', 200).includes('xyz.secret'));
 assert.strictEqual(short('npm test'), 'npm test');
 
-// modo privado: nada que identifique projeto, pessoa ou máquina
+// private mode: nothing that identifies a project, person or machine
 const pv = snapshot({ privacy: true }), pvJson = JSON.stringify(pv);
-assert.ok(pv.people.every(p => !p.branch && /^(claude|codex)-\d+$/.test(p.name)), 'privado: sem branch nem nome');
-assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') && !pvJson.includes('Conversa do Codex'), 'privado: repo com apelido, sem skills, sem títulos');
+assert.ok(pv.people.every(p => !p.branch && /^(claude|codex)-\d+$/.test(p.name)), 'private: no branch or name');
+assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') && !pvJson.includes('Codex conversation'), 'private: repo aliased, no skills, no titles');
 assert.deepStrictEqual(pv.credentials, {});
 
-// servidor: tentativas de entrar sem ser a própria página
+// server: attempts to get in other than through the page itself
 const http = require('http');
 const { start } = require('../src/server');
 function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
@@ -177,21 +176,21 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
 (async () => {
   const hq = await start({ port: 0 });
   const port = hq.server.address().port, ck = { Cookie: 'cw=' + hq.token };
-  for (const pth of ['/api/state', '/api/report', '/events', '/app.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'sem token: ' + pth);
-  assert.strictEqual((await req(port, '/?t=errado')).code, 401, 'token errado');
+  for (const pth of ['/api/state', '/api/report', '/events', '/app.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'no token: ' + pth);
+  assert.strictEqual((await req(port, '/?t=wrong')).code, 401, 'wrong token');
   const login = await req(port, '/?t=' + hq.token);
   assert.strictEqual(login.code, 302);
-  assert.ok(/HttpOnly/.test(login.headers['set-cookie']) && /SameSite=Strict/.test(login.headers['set-cookie']), 'cookie protegido');
+  assert.ok(/HttpOnly/.test(login.headers['set-cookie']) && /SameSite=Strict/.test(login.headers['set-cookie']), 'protected cookie');
   const ok = await req(port, '/api/state', { headers: ck });
   assert.strictEqual(ok.code, 200);
   assert.ok(JSON.parse(ok.body).people.length > 0);
   assert.strictEqual((await req(port, '/api/state', { headers: { ...ck, Host: 'evil.example:' + port } })).code, 421, 'DNS rebinding');
-  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus sem cabeçalho próprio');
-  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworks': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus de outra origem');
+  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus without the custom header');
+  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworks': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');
   assert.ok([403, 404].includes((await req(port, '/../src/server.js', { headers: ck })).code), 'path traversal');
-  assert.ok([403, 404].includes((await req(port, '/%2e%2e/package.json', { headers: ck })).code), 'path traversal codificado');
+  assert.ok([403, 404].includes((await req(port, '/%2e%2e/package.json', { headers: ck })).code), 'encoded path traversal');
   const csp = (await req(port, '/', { headers: ck })).headers['content-security-policy'] || '';
-  assert.ok(/default-src 'self'/.test(csp) && !/googleapis/.test(csp), 'CSP só local');
+  assert.ok(/default-src 'self'/.test(csp) && !/googleapis/.test(csp), 'CSP local only');
   hq.close();
 
   sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill();

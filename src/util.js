@@ -1,12 +1,12 @@
 'use strict';
-// Peças comuns às fontes: git, leitura incremental de JSONL, pequenos formatadores.
+// Pieces shared by the sources: git, incremental JSONL reading, small formatters.
 
 const fs = require('fs');
 const path = require('path');
 
-const FIRST_READ_MAX = 24 * 1024 * 1024; // transcrito gigante: começa pelo fim
-const PARTIAL_MAX = 1024 * 1024;          // linha sem fim (ficheiro estranho) é descartada
-const STATE_IDLE_MS = 26 * 3600 * 1000;   // estado de ficheiro não lido há isto sai da memória
+const FIRST_READ_MAX = 24 * 1024 * 1024; // huge transcript: start from the end
+const PARTIAL_MAX = 1024 * 1024;          // a line with no end (odd file) is dropped
+const STATE_IDLE_MS = 26 * 3600 * 1000;   // state of a file unread this long is evicted
 
 function safeJson(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
@@ -16,7 +16,7 @@ function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
 }
 
-// comandos podem trazer segredos (TOKEN=..., --password x, Bearer ...): tapa antes de mostrar
+// commands may carry secrets (TOKEN=..., --password x, Bearer ...): mask them before showing
 const SECRET = /((?:token|secret|passw(?:or)?d|api[_-]?key|auth|bearer|credential)[\w-]*\s*[=:\s]\s*)("[^"]*"|'[^']*'|\S+)/gi;
 function short(s, n = 48) {
   s = String(s || '').replace(/\s+/g, ' ').trim().replace(/(bearer\s+)\S+/gi, '$1•••').replace(SECRET, (m, k, v) => v === '•••' ? m : k + '•••');
@@ -36,9 +36,9 @@ function resolveRepo(dir) {
     if (st) {
       let common = g;
       if (st.isFile()) {
-        // worktree: .git é um ficheiro que aponta para o gitdir; commondir leva ao repo principal
+        // worktree: .git is a file pointing at the gitdir; commondir leads to the main repo
         let txt = '';
-        try { txt = fs.readFileSync(g, 'utf8'); } catch {} // .git ilegível (outro usuário): ignora em vez de derrubar
+        try { txt = fs.readFileSync(g, 'utf8'); } catch {} // unreadable .git (another user): skip instead of crashing
         const m = /gitdir:\s*(.+)/.exec(txt);
         if (m) {
           const gitdir = path.resolve(cur, m[1].trim());
@@ -59,7 +59,7 @@ function resolveRepo(dir) {
   return v;
 }
 
-// Lê só o que foi acrescentado desde a última vez; `absorb(state, obj)` acumula.
+// Reads only what was appended since last time; `absorb(state, obj)` accumulates.
 function incremental(newState, absorb) {
   const states = new Map();
   let lastSweep = Date.now();
@@ -72,7 +72,7 @@ function incremental(newState, absorb) {
     st.mtime = stat.mtimeMs; st.seen = now;
     if (stat.size === st.offset) return st;
     let start = st.offset;
-    // primeira leitura ou salto enorme: lê só o fim (o resto já não interessa à tela)
+    // first read or a huge jump: read only the tail (the rest no longer matters to the screen)
     if (stat.size - start > FIRST_READ_MAX) { start = stat.size - FIRST_READ_MAX; st.partial = ''; st.skipFirst = true; }
     const fd = fs.openSync(file, 'r');
     try {
@@ -93,7 +93,7 @@ function incremental(newState, absorb) {
   };
 }
 
-// Pendência mais recente (a ferramenta que está a correr agora).
+// Most recent pending call (the tool running right now).
 function newest(pending) {
   let best = null;
   for (const v of pending.values()) if (!best || v.ts > best.ts) best = v;
@@ -113,7 +113,7 @@ function track(st, item, filePath) {
   }
 }
 
-// Linha do tempo: cada ferramenta, cada mensagem sua e cada fim de turno vira um marco com hora.
+// Timeline: every tool call, every message of yours and every turn end becomes a timestamped marker.
 const EVENTS_MAX = 6000, EVENTS_AGE = 26 * 3600 * 1000;
 function event(st, ts, kind) {
   if (!ts) return;
@@ -131,7 +131,7 @@ function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + '-' + (d.
 function addTokens(st, ts, n) { if (ts && n) { const k = dayKey(ts); st.outByDay[k] = (st.outByDay[k] || 0) + n; } }
 
 function baseState() {
-  // contadores sem protótipo: nomes de ferramenta vindos do transcrito ("constructor", "__proto__") não colidem
+  // prototype-less counters: tool names from the transcript ("constructor", "__proto__") can't collide
   const bag = () => Object.create(null);
   return { title: '', cwd: '', branch: '', model: '', ctx: 0, ctxMax: 0, lastTs: 0, pending: new Map(), recent: [], tools: bag(), skills: bag(), mcps: bag(), edits: new Map(), turns: 0, events: [], files: new Map(), outByDay: bag() };
 }

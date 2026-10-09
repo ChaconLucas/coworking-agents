@@ -1,6 +1,6 @@
 'use strict';
-// "Ir para o terminal": traz para a frente a janela e a aba onde a sessão está a correr.
-// macOS: Terminal e iTerm2 por tty via AppleScript; outros apps só são ativados.
+// "Go to terminal": brings the window and tab where the session runs to the front.
+// macOS: Terminal and iTerm2 by tty via AppleScript; other apps are only activated.
 
 const { execFile } = require('child_process');
 
