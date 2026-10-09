@@ -29,8 +29,7 @@ function renderBar() {
     b.setAttribute('aria-pressed', on); b.title = label.replace(/^\S+\s/, ''); b.querySelector('.sr').textContent = b.title;
   }
   document.getElementById('btn-lang').textContent = T.lang;
-  const lb = document.getElementById('btn-lights');
-  lb.setAttribute('aria-pressed', lightsOn); lb.title = T.lights; lb.querySelector('.sr').textContent = T.lights;
+
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
 }
 
@@ -85,6 +84,4 @@ document.getElementById('btn-notify').onclick = async () => {
   notifyOn = !notifyOn; store.set('notify', notifyOn); renderBar();
 };
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
-// light switch: ceiling lights on (default) or only screens and lamps glowing
-document.getElementById('btn-lights').onclick = () => { lightsOn = !lightsOn; store.set('lights', lightsOn); renderBar(); };
 document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };

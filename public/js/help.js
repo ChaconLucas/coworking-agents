@@ -181,13 +181,13 @@ function showPop(d) {
 function hidePop() { popHide = setTimeout(() => { pop.hidden = true; popFor = null; }, 220); }
 dockCv.addEventListener('mousemove', e => { const d = slotAt(e); dockCv.style.cursor = d ? 'pointer' : 'default'; if (d && d.p.id !== popFor) showPop(d); else if (d) clearTimeout(popHide); });
 dockCv.addEventListener('mouseleave', hidePop);
-dockCv.addEventListener('click', e => { const d = slotAt(e); if (d) { pop.hidden = true; showPerson(d.p.id); } });
+dockCv.addEventListener('click', e => { const d = slotAt(e); if (d) { pop.hidden = true; openTalk(d.p.id); } });
 pop.addEventListener('mouseenter', () => clearTimeout(popHide));
 pop.addEventListener('mouseleave', hidePop);
 pop.addEventListener('click', async e => {
   const b = e.target.closest('[data-pop]');
   if (!b || !popFor) return;
-  if (b.dataset.pop === 'see') { pop.hidden = true; return showPerson(popFor); }
+  if (b.dataset.pop === 'see') { pop.hidden = true; return openTalk(popFor); }
   b.disabled = true;
   try { await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id: popFor }) }); } catch {}
   b.disabled = false;

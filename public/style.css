@@ -223,3 +223,27 @@ code.path { word-break: break-all; }
 .dpop-body small { color: #feae34; font-size: 12px; }
 .dpop-actions { grid-column: 2; display: flex; gap: 6px; }
 @media (max-width: 720px) { .dock { order: 3; margin: 4px auto -10px; } }
+
+/* ---- talk modal ---- */
+.talk { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(8, 6, 12, .62); }
+.talk-box { position: relative; width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #1f1a24; color: #f4ecd8; border: 3px solid #0b0a0e; outline: 2px solid #8f6a3a; outline-offset: -7px; border-radius: 8px; box-shadow: 6px 8px 0 rgba(0,0,0,.5); padding: 14px; animation: rise .25s cubic-bezier(.2,.9,.3,1.2) both; }
+.talk-x { position: absolute; top: 8px; right: 10px; z-index: 2; border: 0; background: none; color: #b9a88a; font-size: 22px; cursor: pointer; }
+.talk-stage { position: relative; border: 3px solid #0b0a0e; border-radius: 4px; overflow: hidden; }
+.talk-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.talk-say { position: absolute; left: 4%; right: 46%; top: 6%; }
+.talk-say p { margin: 0; background: #fff; color: #2a1d27; border: 3px solid #0b0a0e; border-radius: 4px; padding: 10px 12px; font-size: 14px; line-height: 1.4; box-shadow: 3px 3px 0 rgba(0,0,0,.35); max-height: 9.2em; overflow: auto; position: relative; }
+.talk-say p::after { content: ''; position: absolute; right: -14px; bottom: 14px; border: 8px solid transparent; border-left-color: #0b0a0e; border-right: 0; }
+.talk-info { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin: 12px 2px 8px; }
+.talk-info b { font: 700 14px/1.2 var(--pix); color: #fff; }
+.talk-info span { color: #b9a88a; font-size: 12px; }
+.talk-info small { color: #feae34; font-size: 12px; flex-basis: 100%; }
+.talk-info em { color: #b9a88a; font-size: 12px; flex-basis: 100%; font-style: italic; }
+.talk-reply textarea { width: 100%; resize: vertical; background: #14101a; color: #f4ecd8; border: 2px solid #3a3045; border-radius: 6px; padding: 10px; font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; }
+.talk-reply textarea:focus { outline: 2px solid #d97757; border-color: transparent; }
+.talk-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.talk-btns .btn { font: 700 11px/1 var(--pix); padding: 11px 14px; border: 2px solid #0b0a0e; box-shadow: 3px 3px 0 #0b0a0e; border-radius: 6px; }
+.talk .note { color: #b9a88a; font-size: 12px; margin: 8px 0 0; }
+@media (max-width: 560px) { .talk-say { right: 4%; top: 4%; } .talk-say p { font-size: 12px; } }
+.wall-switch { position: absolute; border: 0; background: transparent; cursor: pointer; padding: 0; }
+.wall-switch:hover { outline: 2px solid #feae34; outline-offset: 1px; }
+body.talk-open .help { display: none; }

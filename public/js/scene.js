@@ -19,8 +19,13 @@ function drawWall(t, sky) {
   Art.drawClock(RX + 58, 20);
   hallBox = { x: RX + 74, y: 7, w: 72, h: 32 };
   Art.drawCork(hallBox.x, hallBox.y, hallBox.w, hallBox.h, data ? Object.values(data.credentials || {}).flatMap(c => c.topSkills || []).sort((a, b) => b.count - a.count) : []);
+  // light switch on the wall, by the door: click it to turn the ceiling lights on/off
+  switchBox = { x: 4, y: 20, w: 8, h: 12 };
+  r(4, 20, 8, 12, PAL.ink); r(5, 21, 6, 10, '#f4ecd8'); r(5, 21, 6, 1, '#ffffff');
+  r(7, 22, 2, 8, '#c0cbdc'); r(7, lightsOn ? 22 : 26, 2, 4, lightsOn ? '#63c74d' : '#8b9bb4');
   return nWin;
 }
+let switchBox = null;
 
 function drawShafts(sky, nWin) {
   if (sky.phase === 'night') return;
@@ -136,6 +141,7 @@ function drawDevCorner(t, glows) {
   for (const draw of items) { if (x > CX - 40) break; x += draw(); }
 }
 
+let napBox = null;
 function drawWing(t, lights, glows, pingPlaying, meeting) {
   r(CX - 6, TOP, 1, H - TOP, '#00000018');
   // kitchen with tiled floor
@@ -163,12 +169,17 @@ function drawWing(t, lights, glows, pingPlaying, meeting) {
   Art.drawTV(RX + 8, my + 8, 18, 12, t, meeting);
   if (meeting) glows.push({ x: RX + 17, y: my + 14, r: 20, c: '#feae34' });
   lights.push({ x: RX + RW / 2, y: my + 46, r: 46 });
-  // nap corner
+  // rest room: closed, door on the corridor side, lights always off (see drawScene)
   const ny = wing.nap;
   Art.drawRug(RX + 2, ny + 22, RW - 4, 50);
-  Art.drawBookshelf(RX + 104, ny + 2, 40, 24);
+  Art.drawBookshelf(RX + 104, ny + 8, 40, 22);
   for (const [i, sp] of spots.nap.entries()) Art.drawBeanBag(sp.x - 2, sp.y + 2, ['#b55088', '#0099db', '#feae34'][i]);
-  Art.drawPrinter(RX + 60, ny + 4, t);
+  Art.drawPlant(RX + 4, ny + 6, false);
+  r(RX - 4, ny - 2, RW + 8, 3, PAL.ink); r(RX - 4, ny + 1, RW + 8, 5, PAL.wall); r(RX - 4, ny + 6, RW + 8, 1, PAL.wallShade); // top wall
+  r(RX - 4, ny - 2, 3, 30, PAL.ink); r(RX - 4, ny + 46, 3, 34, PAL.ink); // left wall, door gap at ny+28..46
+  r(RX - 4, ny + 28, 3, 1, '#8f553f'); r(RX - 4, ny + 45, 3, 1, '#8f553f');
+  r(RX + RW + 1, ny - 2, 3, 82, PAL.ink); r(RX - 4, ny + 78, RW + 8, 3, PAL.ink); // right and bottom walls
+  napBox = { x: RX - 1, y: ny + 1, w: RW + 2, h: 77 };
   // server corner under the nap area
   const sy = wing.servers;
   r(RX - 2, sy - 4, RW + 4, 58, '#1b1d2e');
@@ -248,6 +259,8 @@ function drawScene(t, dt) {
     if (devTop < H) lights.push({ x: CX / 2, y: devTop + 20, r: CX / 2 });
   }
   Art.applyLight(W, H, sky, lights, glows, lightsOn);
+  // the rest room keeps its lights off, day or night
+  if (napBox) { ctx.fillStyle = 'rgba(8, 8, 26, .55)'; ctx.fillRect(napBox.x, napBox.y, napBox.w, napBox.h); }
   for (const c of layout) {
     const st = c.p.state, a = c.actor;
     if (!a) continue;
