@@ -171,7 +171,8 @@ function plan(now) {
     let w = want.get(cell.p.id);
     if (!w) { w = { zone: z, since: 0, settled: z }; want.set(cell.p.id, w); }
     if (w.zone !== z) { w.zone = z; w.since = now; }
-    if (now - w.since >= DWELL_MS) w.settled = w.zone;
+    // voltar a trabalhar é na hora; sair da mesa espera uns segundos para não ir e voltar
+    if (z === 'desk' || now - w.since >= DWELL_MS) w.settled = w.zone;
     return w.settled;
   };
   const byZone = { lounge: [], nap: [], meet: [], desk: [] };
@@ -218,7 +219,7 @@ function updateActors(dt, now) {
     if (!a) { a = { x: t.x, y: t.y, mode: t.mode, spot: t.spot, key: t.key, path: [] }; actors.set(cell.p.id, a); }
     if (a.key !== t.key) { a.path = route({ x: a.x, y: a.y }, t, cell); a.key = t.key; a.next = t; a.mode = 'walk'; }
     if (a.mode === 'walk') {
-      let step = SPEED * dt;
+      let step = (a.next.mode === 'desk' ? SPEED * 2 : SPEED) * dt; // volta à mesa correndo
       while (step > 0 && a.path.length) {
         const w = a.path[0], dx = w.x - a.x, dy = w.y - a.y, d = Math.hypot(dx, dy);
         if (d <= step) { a.x = w.x; a.y = w.y; step -= d; a.path.shift(); }

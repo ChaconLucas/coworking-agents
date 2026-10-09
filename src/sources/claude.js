@@ -37,6 +37,10 @@ function summarize(name, input) {
   return '';
 }
 
+function isToolResult(content) {
+  return Array.isArray(content) && content.length > 0 && content.every(c => c.type === 'tool_result');
+}
+
 function absorb(st, d) {
   const ts = d.timestamp ? Date.parse(d.timestamp) : 0;
   if (ts) st.lastTs = Math.max(st.lastTs, ts);
@@ -44,7 +48,9 @@ function absorb(st, d) {
   if (d.gitBranch) st.branch = d.gitBranch;
   if (d.type === 'ai-title' && d.aiTitle) st.title = d.aiTitle;
   if (d.type === 'permission-mode' && d.permissionMode) st.permissionMode = d.permissionMode;
-  if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; }
+  if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; st.turnOpen = false; }
+  // a conversa é gravada na hora: mensagem nova sua ou resposta do modelo = turno aberto
+  if (d.type === 'assistant' || (d.type === 'user' && !d.isMeta && d.message && !isToolResult(d.message.content))) st.turnOpen = true;
   const m = d.message;
   if (!m) return;
   if (d.type === 'assistant') {
@@ -109,6 +115,17 @@ function subagentsOf(transcript, now) {
   return out.slice(0, 8);
 }
 
+// O registro de sessões às vezes atrasa; o transcrito é gravado no instante da mensagem.
+// Turno aberto no transcrito manda, a não ser que o registro diga parado e o ficheiro esteja quieto
+// (um turno interrompido nem sempre grava o fim).
+function statusOf(s, st, now) {
+  const reg = s.status === 'busy';
+  if (!st) return reg ? 'busy' : 'idle';
+  const fresh = now - st.mtime < 4000;
+  if (st.turnOpen) return reg || now - st.mtime < 15000 ? 'busy' : 'idle';
+  return reg && fresh ? 'busy' : 'idle';
+}
+
 function sessions(now) {
   const dir = path.join(DIR(), 'sessions');
   let files = [];
@@ -118,11 +135,12 @@ function sessions(now) {
     const s = safeJson(path.join(dir, f)); // os *.key ao lado nunca são lidos
     if (!s || !s.sessionId || !alive(s.pid)) continue;
     const tp = findTranscript(s.sessionId);
+    const st = tp ? read(tp) : null;
     out.push({
       agent: 'claude', id: s.sessionId, name: s.name || 'claude-' + s.pid, pid: s.pid,
-      kind: s.kind, version: s.version, status: s.status === 'busy' ? 'busy' : 'idle',
+      kind: s.kind, version: s.version, status: statusOf(s, st, now),
       since: s.statusUpdatedAt || s.updatedAt || s.startedAt, startedAt: s.startedAt,
-      cwd: s.cwd, st: tp ? read(tp) : null, subagents: tp ? subagentsOf(tp, now) : [],
+      cwd: s.cwd, st, subagents: tp ? subagentsOf(tp, now) : [],
     });
   }
   return out;

@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawn } = require('child_process');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coworks-test-'));
 const claude = path.join(root, '.claude');
@@ -52,6 +52,12 @@ session(process.ppid, 'C', 'busy', [
 // E: Bash parado há 10s em modo auto continua "terminal"; F: o mesmo em modo default vira "waiting"
 const staleBash = id => [use('b' + id, 'Bash', { command: 'npm test' }, now - 10000)];
 const permMode = m => ({ type: 'permission-mode', permissionMode: m });
+// G: o registro ainda diz "idle", mas você acabou de mandar mensagem: o transcrito manda
+const sleepG = spawn('sleep', ['30']);
+session(sleepG.pid, 'G', 'idle', [
+  { type: 'system', subtype: 'turn_duration', timestamp: iso(now - 60000) },
+  { type: 'user', timestamp: iso(now - 500), message: { content: 'nova pergunta' } },
+]);
 // D: processo morto não aparece
 session(999999, 'D', 'busy', []);
 
@@ -82,7 +88,6 @@ fs.writeFileSync(path.join(day, 'rollout-x2.jsonl'), [
 ].map(line).join(''));
 
 // sessões vivas extra usando pids de processos-filho que ficam a dormir durante o teste
-const { spawn } = require('child_process');
 const sleepers = [spawn('sleep', ['30']), spawn('sleep', ['30'])];
 session(sleepers[0].pid, 'E', 'busy', [permMode('auto'), ...staleBash('E')]);
 session(sleepers[1].pid, 'F', 'busy', [permMode('default'), ...staleBash('F')]);
@@ -93,7 +98,7 @@ const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
 // Codex
 assert.strictEqual(by('X1').agent, 'codex');
 assert.strictEqual(by('X1').title, 'Conversa do Codex');
@@ -113,6 +118,7 @@ assert.deepStrictEqual(by('A').mcps, { rea: 1 });
 assert.strictEqual(by('A').ctx, 1001);
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
+assert.strictEqual(by('G').status, 'busy', 'mensagem nova no transcrito vence o registro atrasado');
 assert.strictEqual(by('E').state, 'terminal', 'modo auto: Bash demorado é trabalho, não permissão');
 assert.strictEqual(by('F').state, 'waiting', 'modo default: Bash parado pode ser pedido de permissão');
 if (by('B')) {
@@ -134,6 +140,6 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
-sleepers.forEach(p => p.kill());
+sleepers.forEach(p => p.kill()); sleepG.kill();
 fs.rmSync(root, { recursive: true, force: true });
 console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
