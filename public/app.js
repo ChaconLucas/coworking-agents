@@ -807,11 +807,13 @@ function renderBar() {
     else if (p.state === 'asleep') c.sleep++;
     else c.work++;
   }
+  // stat tiles: the "needs you" one turns red and pulses when it isn't zero
+  const tile = (n, label, color, cls = '') => `<span class="stat ${cls}" style="--c:${color}"><i></i><b>${n}</b><small>${esc(label)}</small></span>`;
   document.getElementById('counts').innerHTML = [
-    `<span><i style="background:${KIND_COLOR.terminal}"></i>${c.work} ${T.working}</span>`,
-    c.need ? `<span class="need"><i style="background:${KIND_COLOR.needs_you}"></i>${c.need} ${T.needYou}</span>` : '',
-    `<span><i style="background:${KIND_COLOR.idle}"></i>${c.turn} ${T.yourTurn}</span>`,
-    c.sleep ? `<span><i style="background:${KIND_COLOR.asleep}"></i>${c.sleep} ${T.asleep}</span>` : '',
+    tile(c.work, T.working, KIND_COLOR.terminal),
+    tile(c.need, T.needYou, KIND_COLOR.needs_you, c.need ? 'need' : 'zero'),
+    tile(c.turn, T.yourTurn, KIND_COLOR.idle, c.turn ? '' : 'zero'),
+    tile(c.sleep, T.asleep, KIND_COLOR.asleep, c.sleep ? '' : 'zero'),
   ].join('');
   document.title = (c.need ? `(${c.need}) ` : '') + 'coworks-agents';
   const box = document.getElementById('clashes');
@@ -820,10 +822,10 @@ function renderBar() {
   box.hidden = !data.clashes.length;
   const empty = document.getElementById('empty');
   empty.innerHTML = T.empty; empty.hidden = data.people.length > 0;
-  document.getElementById('btn-notify').textContent = T.notify;
-  document.getElementById('btn-notify').setAttribute('aria-pressed', notifyOn);
-  document.getElementById('btn-sound').textContent = T.sound;
-  document.getElementById('btn-sound').setAttribute('aria-pressed', soundOn);
+  for (const [id, on, label] of [['btn-notify', notifyOn, T.notify], ['btn-sound', soundOn, T.sound]]) {
+    const b = document.getElementById(id);
+    b.setAttribute('aria-pressed', on); b.title = label.replace(/^\S+\s/, ''); b.querySelector('.sr').textContent = b.title;
+  }
   document.getElementById('btn-lang').textContent = T.lang;
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
 }

@@ -65,7 +65,7 @@ function absorb(st, d) {
     const u = m.usage;
     if (u) { st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); addTokens(st, ts, u.output_tokens || 0); }
     for (const c of Array.isArray(m.content) ? m.content : []) {
-      if (c.type === 'text' && c.text && c.text.trim()) { st.lastReply = short(c.text, 260); st.lastReplyAt = ts; }
+      if (c.type === 'text' && c.text && c.text.trim()) { st.lastReply = short(c.text.replace(/[*_`#>]+/g, ''), 260); st.lastReplyAt = ts; }
       if (c.type !== 'tool_use') continue;
       const name = c.name || '?', input = c.input || {};
       const item = { id: c.id, name, kind: activityOf(name), what: summarize(name, input), ts: ts || Date.now() };

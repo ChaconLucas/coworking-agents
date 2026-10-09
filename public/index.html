@@ -9,12 +9,15 @@
 </head>
 <body>
 <header class="bar">
-  <div class="brand"><span class="logo"></span><b>coworks-agents</b><span class="host" id="host"></span></div>
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="1" width="10" height="2" fill="#2a1d27"/><rect x="2" y="3" width="12" height="9" fill="#2a1d27"/><rect x="3" y="3" width="10" height="8" fill="#d97757"/><rect x="3" y="3" width="10" height="2" fill="#5d3a28"/><rect x="5" y="6" width="2" height="2" fill="#2a1d27"/><rect x="9" y="6" width="2" height="2" fill="#2a1d27"/><rect x="6" y="9" width="4" height="1" fill="#2a1d27"/><rect x="4" y="12" width="8" height="3" fill="#2a1d27"/><rect x="5" y="12" width="6" height="2" fill="#0099db"/></svg>
+    <div><b>coworks<span>·</span>agents</b><small id="host"></small></div>
+  </div>
   <div class="counts" id="counts"></div>
   <div class="tools">
-    <button id="btn-notify" class="chip" aria-pressed="false"></button>
-    <button id="btn-sound" class="chip" aria-pressed="false"></button>
-    <button id="btn-lang" class="chip"></button>
+    <button id="btn-notify" class="icon-btn" aria-pressed="false"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M7 1h2v1h2v1h1v5h1v2h1v2H2v-2h1V8h1V3h1V2h2zM6 13h4v1H9v1H7v-1H6z"/></svg><span class="sr"></span></button>
+    <button id="btn-sound" class="icon-btn" aria-pressed="false"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M2 6h3l4-4h1v12H9l-4-4H2zM12 5h1v1h1v4h-1v1h-1V5z"/></svg><span class="sr"></span></button>
+    <button id="btn-lang" class="icon-btn lang"></button>
   </div>
 </header>
 <div id="clashes" class="clashes" hidden></div>
