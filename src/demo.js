@@ -7,24 +7,25 @@ const REPOS = ['web-app', 'web-app', 'api', 'docs', 'api', 'design-system', 'mob
 const WHAT = { edit: 'Checkout.tsx', terminal: 'Run test suite', read: 'schema.sql', web: 'developer.mozilla.org', delegate: 'Map all call sites', needs_you: '', waiting: 'npm run build', thinking: '' };
 const TOOL = { edit: 'Edit', terminal: 'Bash', read: 'Read', web: 'WebFetch', delegate: 'Agent', needs_you: 'AskUserQuestion', waiting: 'Bash' };
 
+const COUNT = Number(process.env.COWORKS_DEMO_COUNT || 10);
 function demoSnapshot() {
   const now = Date.now();
-  const people = STATES.map((state, i) => {
+  const people = Array.from({ length: COUNT }, (_, i) => STATES[i % STATES.length]).map((state, i) => {
     const busy = !['idle', 'asleep'].includes(state);
     const doing = TOOL[state] ? { tool: TOOL[state], what: WHAT[state] || '', kind: state === 'needs_you' ? 'ask' : state === 'waiting' ? 'terminal' : state, for: state === 'waiting' ? 42000 : 3000 } : null;
     const agent = [1, 4, 8].includes(i) ? 'codex' : 'claude';
     return {
       agent, ctxMax: agent === 'codex' ? 258400 : 0,
-      id: `demo-${i}-${TITLES[i]}`, name: ['ada', 'grace', 'linus', 'alan', 'margaret', 'ken', 'barbara', 'dennis', 'radia', 'guido'][i],
+      id: `demo-${i}-${TITLES[i % TITLES.length]}`, name: ['ada', 'grace', 'linus', 'alan', 'margaret', 'ken', 'barbara', 'dennis', 'radia', 'guido'][i % 10] + (i >= 10 ? '-' + ((i / 10) | 0) : ''),
       pid: 1000 + i, kind: 'interactive', entrypoint: 'cli', version: 'demo', status: busy ? 'busy' : 'idle', state,
       since: now - (state === 'asleep' ? 3 * 36e5 : 4 * 6e4), startedAt: now - (i + 1) * 3.1 * 36e5,
-      title: TITLES[i], cwd: `/home/dev/${REPOS[i]}`, branch: i % 3 ? 'main' : `feat/${REPOS[i]}-${i}`,
-      repo: { name: REPOS[i], path: `/home/dev/${REPOS[i]}`, worktree: `/home/dev/${REPOS[i]}`, isWorktree: false },
-      model: agent === 'codex' ? 'gpt-5.5' : 'claude-opus-5-5', ctx: [42e3, 180e3, 610e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i],
+      title: TITLES[i % TITLES.length], cwd: `/home/dev/${REPOS[i % REPOS.length]}`, branch: i % 3 ? 'main' : `feat/${REPOS[i % REPOS.length]}-${i}`,
+      repo: { name: REPOS[i % REPOS.length], path: `/home/dev/${REPOS[i % REPOS.length]}`, worktree: `/home/dev/${REPOS[i % REPOS.length]}`, isWorktree: false },
+      model: agent === 'codex' ? 'gpt-5.5' : 'claude-opus-5-5', ctx: [42e3, 180e3, 610e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i % 10], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i % 10],
       doing, recent: doing ? [{ tool: doing.tool, what: doing.what, kind: doing.kind, ts: now - 3000 }, { tool: 'Read', what: 'README.md', kind: 'read', ts: now - 60000 }] : [],
       skills: i === 0 ? { 'frontend-design': 3, simplify: 1 } : i === 4 ? { 'web-research': 2 } : i === 2 ? { 'code-review': 1 } : {},
       mcps: i === 4 ? { playwright: 6 } : i === 1 ? { github: 4 } : {},
-      tools: { Bash: [20, 120, 8, 4, 30, 10, 3, 60, 1, 0][i], Edit: [80, 12, 40, 2, 5, 9, 0, 20, 0, 0][i], WebSearch: i === 4 ? 3 : 0, Agent: i === 5 ? 3 : 0 },
+      tools: { Bash: [20, 120, 8, 4, 30, 10, 3, 60, 1, 0][i % 10], Edit: [80, 12, 40, 2, 5, 9, 0, 20, 0, 0][i % 10], WebSearch: i === 4 ? 3 : 0, Agent: i === 5 ? 3 : 0 },
       editing: i === 0 || i === 7 ? [{ worktree: '/home/dev/web-app', repo: 'web-app', at: now - 60000 }] : [],
       subagents: i === 5 ? [
         { id: 'a1', type: 'Explore', description: 'Map all call sites', state: 'read', doing: 'Grep useCart' },

@@ -4,7 +4,7 @@
 // ---------------- textos ----------------
 const I18N = {
   pt: {
-    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo',
+    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`,
     notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
     offline: 'Sem conexão com o coworks-agents. Tentando de novo…',
@@ -45,7 +45,7 @@ const I18N = {
     ago: { s: 's', m: 'min', h: 'h', d: 'd' },
   },
   en: {
-    working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep',
+    working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`,
     notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
     offline: 'Lost connection to coworks-agents. Retrying…',
@@ -110,58 +110,123 @@ const CERT = { skill: '#e8b04b', mcp: '#2c9a8f', badge: '#e43b44' };
 const BADGE_COLOR = { tools100: '#e43b44', tools1000: '#b55088', marathon: '#f77622', immortal: '#68386c', boss: '#3b5dc9', elephant: '#8b9bb4', chat: '#3e8948', terminal: '#265c42', writer: '#b86f50', research: '#0099db' };
 
 // ---------------- planta do andar ----------------
-// Mapa fixo de 480px de largura: mesas à esquerda, copa e pingue-pongue à direita,
-// sala de reunião e canto da soneca embaixo. Cresce para baixo quando há mais de 6 sessões.
-const MW = 480, TOP = 58, CELL_W = 100, CELL_H = 96, DCOLS = 3, DX0 = 8, CX = 314, RX = 324, RW = 148, BH = 104;
+// Cada repositório é uma sala com as mesas dos seus agentes; as salas ficam em faixas à esquerda.
+// À direita, uma ala comum: copa, pingue-pongue, sala de reunião e canto da soneca.
+// Com muitas salas, o escritório ganha andares (cada andar tem a sua ala comum).
+const TOP = 58, CELL_W = 100, CELL_H = 96, RW = 148, ROOM_PAD = 6, ROOM_HEAD = 14, SHELF_GAP = 14, MAX_SHELVES = 3;
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 Art.setCtx(ctx);
 const overlay = document.getElementById('overlay');
-let S = 3, W = MW, H = 300;
-let data = null, selected = null, layout = [], desks = [], spots = null, hallBox = null, boardBox = null, y0 = 0;
+let S = 3, W = 480, H = 300, CX = 320, RX = 330;
+let data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null;
+
+function roomKey(p) {
+  if (p.repo && p.repo.name) return p.repo.name;
+  const base = (p.cwd || '').split('/').filter(Boolean).pop();
+  return base ? '~' + base : '—';
+}
+
+function planFloors(people, leftW) {
+  // agrupa por repositório; ordem estável pelo nome
+  const groups = new Map();
+  for (const p of people) { const k = roomKey(p); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
+  const maxCols = Math.max(1, Math.floor((leftW - ROOM_PAD * 2) / CELL_W));
+  const list = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, ps]) => {
+    const cols = Math.min(maxCols, Math.max(1, Math.min(3, ps.length)));
+    return { name, people: ps, cols, rows: Math.ceil(ps.length / cols), w: cols * CELL_W + ROOM_PAD * 2 };
+  });
+  // empacota em faixas (prateleiras) e as faixas em andares
+  const out = [];
+  let cur = { shelves: [] }, shelf = null;
+  for (const room of list) {
+    if (!shelf || shelf.used + room.w > leftW) {
+      if (cur.shelves.length >= MAX_SHELVES) { out.push(cur); cur = { shelves: [] }; }
+      shelf = { rooms: [], used: 0 };
+      cur.shelves.push(shelf);
+    }
+    shelf.rooms.push(room); shelf.used += room.w + 8;
+  }
+  if (cur.shelves.length || !out.length) out.push(cur);
+  return out;
+}
 
 function relayout() {
-  const n = data ? data.people.length : 0;
-  const capacity = Math.max(6, Math.ceil(n / DCOLS) * DCOLS);
-  const rows = capacity / DCOLS;
-  const deskBottom = TOP + rows * CELL_H;
-  y0 = Math.max(deskBottom, TOP + 184) + 6;
-  W = MW; H = y0 + BH;
-  desks = [];
-  for (let i = 0; i < capacity; i++) {
-    const x = DX0 + (i % DCOLS) * CELL_W, y = TOP + ((i / DCOLS) | 0) * CELL_H;
-    desks.push({ x, y, chair: { x: x + CELL_W / 2 - 8, y: y + 38 }, aisle: y + 70 });
+  const stage = document.getElementById('stage');
+  const availW = Math.min(stage.clientWidth - 4, 2400);
+  // com várias salas, encolhe a escala para caberem duas lado a lado; com uma só, fica grande
+  const groups = new Set((data ? data.people : []).map(roomKey)).size;
+  const s0 = Math.max(1.6, Math.min(3, availW / (groups > 1 ? 840 : 520)));
+  W = Math.max(480, Math.min(920, Math.floor(availW / s0)));
+  CX = W - RW - 14; RX = CX + 10;
+  const leftW = CX - 12;
+  floors = planFloors(data ? data.people : [], leftW);
+  if (floor >= floors.length) floor = floors.length - 1;
+  // salas do andar atual
+  rooms = []; desks = [];
+  let y = TOP + 4;
+  for (const shelf of floors[floor].shelves) {
+    let x = 8, shelfH = 0;
+    for (const room of shelf.rooms) {
+      const h = ROOM_HEAD + room.rows * CELL_H + 4;
+      const R = { ...room, x, y, h, doorX: x + Math.round(room.w / 2) - 9 };
+      R.people.forEach((p, i) => {
+        const dx = x + ROOM_PAD + (i % room.cols) * CELL_W, dy = y + ROOM_HEAD + ((i / room.cols) | 0) * CELL_H;
+        desks.push({ p, room: R, x: dx, y: dy, chair: { x: dx + CELL_W / 2 - 8, y: dy + 38 }, aisle: dy + 72 });
+      });
+      rooms.push(R);
+      x += room.w + 8; shelfH = Math.max(shelfH, h);
+    }
+    y += shelfH + SHELF_GAP;
   }
-  layout = (data ? data.people : []).map((p, i) => Object.assign({ p }, desks[i]));
-  desks.forEach((d, i) => { d.p = layout[i] ? layout[i].p : null; });
-  // lugares de cada zona
+  layout = desks.map(d => Object.assign({}, d));
+  layout.forEach((c, i) => { desks[i].cell = c; });
+  // ala comum
+  wing = { copa: TOP, ping: TOP + 112, meet: TOP + 184, nap: TOP + 290, bottom: TOP + 372 };
   spots = {
     sofa: [0, 1, 2, 3].map(i => ({ x: RX + 12 + i * 19, y: TOP + 50, zone: 'lounge', pose: 'sit' })),
     stools: [{ x: RX + 104, y: TOP + 56, zone: 'lounge', pose: 'stand' }, { x: RX + 126, y: TOP + 56, zone: 'lounge', pose: 'stand' }],
     coffee: [{ x: RX + 48, y: TOP + 14, zone: 'lounge', pose: 'stand' }, { x: RX + 66, y: TOP + 16, zone: 'lounge', pose: 'stand' }],
-    ping: [{ x: RX + 8, y: TOP + 128, zone: 'ping', pose: 'stand' }, { x: RX + RW - 22, y: TOP + 128, zone: 'ping', pose: 'stand', flip: true }],
-    meetTop: [0, 1, 2, 3].map(i => ({ x: 52 + i * 30, y: y0 + 20, zone: 'meet', pose: 'sit' })),
-    meetBot: [0, 1, 2, 3].map(i => ({ x: 52 + i * 30, y: y0 + 58, zone: 'meet', pose: 'back' })),
-    nap: [{ x: 214, y: y0 + 34, zone: 'nap' }, { x: 244, y: y0 + 64, zone: 'nap' }, { x: 336, y: y0 + 70, zone: 'nap' }],
+    ping: [{ x: RX + 8, y: wing.ping + 16, zone: 'ping', pose: 'stand' }, { x: RX + RW - 22, y: wing.ping + 16, zone: 'ping', pose: 'stand', flip: true }],
+    meetTop: [0, 1, 2].map(i => ({ x: RX + 32 + i * 32, y: wing.meet + 16, zone: 'meet', pose: 'sit' })),
+    meetBot: [0, 1, 2].map(i => ({ x: RX + 32 + i * 32, y: wing.meet + 54, zone: 'meet', pose: 'back' })),
+    nap: [{ x: RX + 8, y: wing.nap + 30 }, { x: RX + 46, y: wing.nap + 46 }, { x: RX + 84, y: wing.nap + 30 }].map(p => ({ ...p, zone: 'nap' })),
   };
+  H = Math.max(y, wing.bottom) + 6;
   fitScale();
+  renderFloors();
 }
 
 function fitScale() {
   const stage = document.getElementById('stage');
-  const availW = Math.min(stage.clientWidth - 4, 2000);
-  const availH = window.innerHeight - stage.getBoundingClientRect().top - 24;
-  let s = Math.max(1.6, Math.min(availW / W, 4));
-  if (H * s > availH && availH / H >= 2.25) s = availH / H; // só encolhe para caber na altura se continuar grande
-  S = Math.floor(s * 4) / 4;
+  const availW = Math.min(stage.clientWidth - 4, 2400);
+  S = Math.max(1.5, Math.floor(Math.min(availW / W, 4) * 4) / 4);
   cv.width = W; cv.height = H;
   cv.style.width = W * S + 'px'; cv.style.height = H * S + 'px';
   ctx.imageSmoothingEnabled = false;
+  // escala pequena: o crachá mostra nome e estado; o título fica no tooltip
+  document.getElementById('office').classList.toggle('compact', S < 2.25);
 }
+
+// seletor de andares (só aparece com mais de um)
+function renderFloors() {
+  let bar = document.getElementById('floors');
+  if (!bar) { bar = document.createElement('nav'); bar.id = 'floors'; bar.className = 'floors'; document.getElementById('stage').before(bar); bar.addEventListener('click', e => { const b = e.target.closest('[data-floor]'); if (b) goFloor(+b.dataset.floor); }); }
+  if (floors.length < 2) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.innerHTML = floors.map((f, i) => {
+    const ps = f.shelves.flatMap(s => s.rooms.flatMap(r => r.people));
+    const need = ps.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
+    const names = f.shelves.flatMap(s => s.rooms.map(r => r.name));
+    return `<button class="floor ${i === floor ? 'on' : ''}" data-floor="${i}" title="${esc(names.join(', '))}"><b>${esc(T.floor(i + 1))}</b> <span>${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' +' + (names.length - 3) : ''}</span>${need ? ` <i class="dot">${need}</i>` : ''}</button>`;
+  }).join('');
+}
+function goFloor(i) { if (i === floor || i < 0 || i >= floors.length) return; floor = i; actors.clear(); want.clear(); lastLayoutKey = ''; renderAll(); }
+function floorOf(id) { return floors.findIndex(f => f.shelves.some(s => s.rooms.some(r => r.people.some(p => p.id === id)))); }
 
 // ---------------- para onde cada pessoa vai ----------------
 const ZONE_OF = { idle: 'lounge', asleep: 'nap', delegate: 'meet' };
-const DWELL_MS = 3500; // só troca de zona depois de alguns segundos no mesmo estado
+const DWELL_MS = 3500;
 const want = new Map();
 
 function plan(now) {
@@ -171,19 +236,17 @@ function plan(now) {
     let w = want.get(cell.p.id);
     if (!w) { w = { zone: z, since: 0, settled: z }; want.set(cell.p.id, w); }
     if (w.zone !== z) { w.zone = z; w.since = now; }
-    // voltar a trabalhar é na hora; sair da mesa espera uns segundos para não ir e voltar
     if (z === 'desk' || now - w.since >= DWELL_MS) w.settled = w.zone;
     return w.settled;
   };
   const byZone = { lounge: [], nap: [], meet: [], desk: [] };
   for (const c of layout) byZone[zoneFor(c)].push(c);
-  // copa: os dois primeiros jogam pingue-pongue se houver pelo menos dois; o resto senta ou fica no café
   const lounge = byZone.lounge, free = [];
   if (lounge.length >= 2) { assign.set(lounge[0].p.id, spots.ping[0]); assign.set(lounge[1].p.id, spots.ping[1]); free.push(...lounge.slice(2)); }
   else free.push(...lounge);
   const seats = [...spots.sofa, ...spots.stools, ...spots.coffee];
   free.forEach((c, i) => assign.set(c.p.id, seats[i] || null));
-  byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 4] || null));
+  byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 3] || null));
   byZone.nap.forEach((c, i) => assign.set(c.p.id, spots.nap[i] || null));
   return assign;
 }
@@ -193,19 +256,17 @@ const actors = new Map();
 const cat = { x: 0, y: 0, tx: 0, ty: 0, mode: 'sit', until: 0, flip: false, ready: false };
 const SPEED = 52;
 
-function zoneAt(pt) {
-  if (pt.y >= y0) return pt.x < 204 ? 'meetRoom' : 'bottom';
-  return pt.x < CX ? 'desks' : 'right';
-}
+// cada lugar sabe sair até o corredor vertical (CX); o caminho é: sair, corredor, entrar
 function exitPath(pt, cell) {
-  const z = zoneAt(pt);
-  if (z === 'desks') return [{ x: pt.x, y: cell && Math.abs(pt.x - cell.chair.x) < 1 ? cell.aisle : TOP + Math.floor((pt.y - TOP) / CELL_H) * CELL_H + 70 }];
-  if (z === 'right') return [{ x: pt.x, y: pt.y + 22 }];
-  if (z === 'meetRoom') return [{ x: pt.x, y: y0 + 42 }, { x: 108, y: y0 + 42 }, { x: 108, y: y0 - 4 }];
-  return [{ x: pt.x, y: y0 - 4 }];
+  if (pt.x < CX && cell) {
+    const R = cell.room;
+    return [{ x: pt.x, y: cell.aisle }, { x: R.doorX + 9, y: cell.aisle }, { x: R.doorX + 9, y: R.y + R.h + 6 }];
+  }
+  if (pt.y >= wing.meet && pt.y < wing.nap) return [{ x: pt.x, y: wing.meet + 40 }, { x: RX + 2, y: wing.meet + 40 }];
+  return [{ x: pt.x, y: pt.y + 22 }];
 }
 function route(from, to, cell) {
-  const out = exitPath(from, cell), inn = exitPath(to, cell).reverse();
+  const out = exitPath(from, from.x < CX ? cell : null), inn = exitPath(to, to.x < CX ? cell : null).reverse();
   const a = out[out.length - 1], b = inn[0];
   return [...out, { x: CX, y: a.y }, { x: CX, y: b.y }, ...inn, { x: to.x, y: to.y }];
 }
@@ -219,7 +280,7 @@ function updateActors(dt, now) {
     if (!a) { a = { x: t.x, y: t.y, mode: t.mode, spot: t.spot, key: t.key, path: [] }; actors.set(cell.p.id, a); }
     if (a.key !== t.key) { a.path = route({ x: a.x, y: a.y }, t, cell); a.key = t.key; a.next = t; a.mode = 'walk'; }
     if (a.mode === 'walk') {
-      let step = (a.next.mode === 'desk' ? SPEED * 2 : SPEED) * dt; // volta à mesa correndo
+      let step = (a.next.mode === 'desk' ? SPEED * 2 : SPEED) * dt;
       while (step > 0 && a.path.length) {
         const w = a.path[0], dx = w.x - a.x, dy = w.y - a.y, d = Math.hypot(dx, dy);
         if (d <= step) { a.x = w.x; a.y = w.y; step -= d; a.path.shift(); }
@@ -239,8 +300,8 @@ function updateCat(dt, t) {
     if (d <= step) { cat.x = cat.tx; cat.y = cat.ty; cat.mode = Math.random() < .5 ? 'sit' : 'sleep'; cat.until = t + (cat.mode === 'sleep' ? 15000 : 4000) + Math.random() * 6000; }
     else { cat.x += dx / d * step; cat.y += dy / d * step; cat.flip = dx < 0; }
   } else if (t > cat.until) {
-    const places = [{ x: RX + 40, y: TOP + 90 }, { x: RX + 100, y: TOP + 96 }, { x: 260, y: y0 + 18 }, { x: CX - 4, y: TOP + 40 + Math.random() * (y0 - TOP - 50) }, { x: 380, y: y0 + 50 }];
-    const sleeper = layout.find(c => c.p.state === 'asleep' && c.actor && c.actor.mode === 'nap');
+    const places = [{ x: RX + 40, y: TOP + 90 }, { x: RX + 100, y: TOP + 96 }, { x: CX - 4, y: TOP + 40 + Math.random() * (H - TOP - 60) }, { x: RX + 60, y: wing.nap + 66 }];
+    const sleeper = layout.find(c => c.actor && c.actor.mode === 'nap');
     const p = sleeper && Math.random() < .5 ? { x: sleeper.actor.x + 22, y: sleeper.actor.y + 10 } : places[(Math.random() * places.length) | 0];
     cat.tx = p.x; cat.ty = p.y; cat.mode = 'walk';
   }
@@ -289,29 +350,49 @@ function drawWall(t, sky) {
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
   r(0, 0, W, 3, PAL.wallTrim); r(0, 3, W, 1, PAL.ink2);
   r(0, TOP - 8, W, 2, PAL.wallShade); r(0, TOP - 6, W, 5, PAL.base); r(0, TOP - 6, W, 1, '#8f553f'); r(0, TOP - 1, W, 1, PAL.ink);
-  // janelas sobre as mesas; mural, relógio e quadro sobre a copa
-  for (let i = 0; i < 4; i++) Art.drawWindow(16 + i * 74, 9, 48, 30, sky, t, i);
+  const nWin = Math.max(1, Math.floor((CX - 30) / 74));
+  for (let i = 0; i < nWin; i++) Art.drawWindow(16 + i * 74, 9, 48, 30, sky, t, i);
   boardBox = { x: RX - 14, y: 8, w: 56, h: 30 };
   Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);
   Art.drawClock(RX + 58, 20);
   hallBox = { x: RX + 74, y: 7, w: 72, h: 32 };
   Art.drawCork(hallBox.x, hallBox.y, hallBox.w, hallBox.h, data ? Object.values(data.credentials || {}).flatMap(c => c.topSkills || []).sort((a, b) => b.count - a.count) : []);
+  return nWin;
 }
 
-function drawShafts(sky) {
+function drawShafts(sky, nWin) {
   if (sky.phase === 'night') return;
   ctx.save();
-  ctx.fillStyle = sky.phase === 'day' ? 'rgba(255,246,214,0.10)' : 'rgba(255,180,120,0.10)';
-  for (let i = 0; i < 4; i++) {
+  ctx.fillStyle = sky.phase === 'day' ? 'rgba(255,246,214,0.08)' : 'rgba(255,180,120,0.08)';
+  for (let i = 0; i < nWin; i++) {
     const x = 16 + i * 74;
     ctx.beginPath(); ctx.moveTo(x, TOP); ctx.lineTo(x + 48, TOP); ctx.lineTo(x + 80, TOP + 80); ctx.lineTo(x + 32, TOP + 80); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
 }
 
+// sala de um repositório vista de cima: carpete com a cor do repo, paredes, porta e placa
+function drawRoom(R, t) {
+  const h = hash(R.name), hue = ['#6b5a7a', '#5a6b7a', '#5a7a6b', '#7a6b5a', '#7a5a62', '#5f6f8a', '#6f8a5f'][h % 7];
+  r(R.x, R.y, R.w, R.h, hue);
+  for (let yy = 2; yy < R.h; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < R.w; xx += 4) r(R.x + xx, R.y + yy, 1, 1, shade(hue, .9));
+  // paredes: a de cima com face (dá altura), laterais e de baixo finas, porta no meio de baixo
+  r(R.x - 2, R.y - 2, R.w + 4, 3, PAL.ink); r(R.x - 2, R.y + 1, R.w + 4, 6, PAL.wall); r(R.x - 2, R.y + 7, R.w + 4, 1, PAL.wallShade);
+  r(R.x - 2, R.y, 3, R.h + 2, PAL.ink); r(R.x + R.w - 1, R.y, 3, R.h + 2, PAL.ink);
+  r(R.x - 2, R.y + R.h, R.doorX - R.x + 2, 3, PAL.ink); r(R.doorX + 18, R.y + R.h, R.x + R.w - R.doorX - 16, 3, PAL.ink);
+  r(R.doorX, R.y + R.h, 18, 3, '#8f553f'); r(R.doorX, R.y + R.h, 1, 3, PAL.ink2); r(R.doorX + 17, R.y + R.h, 1, 3, PAL.ink2);
+  // placa (o texto vem por HTML, nítido)
+  r(R.x + 4, R.y + 1, 6, 5, agentRoomColor(R)); 
+}
+function agentRoomColor(R) {
+  if (R.people.some(p => p.state === 'needs_you' || p.state === 'waiting')) return PAL.red;
+  if (R.people.some(p => !['idle', 'asleep'].includes(p.state))) return PAL.green;
+  return '#8b9bb4';
+}
+
 function drawDesk(d, t, clashing, lights, glows, sky) {
-  const { x, y } = d, p = d.p, f = (t / 140) | 0, seed = hash(p ? p.id : 'empty' + x + y) % 997;
-  const cell = p ? layout.find(c => c.p.id === p.id) : null;
+  const { x, y } = d, p = d.cell ? d.cell.p : d.p, f = (t / 140) | 0, seed = hash(p ? p.id : 'empty' + x + y) % 997;
+  const cell = d.cell;
   const a = cell && cell.actor;
   const atDesk = !!(a && a.mode === 'desk');
   const st = p ? p.state : 'asleep';
@@ -376,10 +457,10 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
   });
 }
 
-function drawRightZone(t, lights, glows, pingPlaying) {
+function drawWing(t, lights, glows, pingPlaying, meeting) {
+  r(CX - 6, TOP, 1, H - TOP, '#00000018');
   // copa com piso de ladrilho
   Art.drawTile(RX - 4, TOP, RW + 8, 104, '#e8dcc8', '#d9c9ae');
-  r(RX - 5, TOP, 1, 104, '#00000020');
   Art.drawCounter(RX + 22, TOP - 8, 60);
   Art.drawCoffeeMachine(RX + 2, TOP - 16, t, true);
   Art.drawFridge(RX + RW - 20, TOP - 22);
@@ -390,33 +471,29 @@ function drawRightZone(t, lights, glows, pingPlaying) {
   Art.drawRoundTable(RX + 108, TOP + 70);
   Art.drawStool(RX + 100, TOP + 82); Art.drawStool(RX + 126, TOP + 82);
   // pingue-pongue
-  Art.drawPingPong(RX + 34, TOP + 132, 80, 30, t, pingPlaying);
-  Art.drawPlant(RX + RW - 12, TOP + 112, true);
-}
-
-function drawBottomZone(t, lights, glows, meeting) {
-  // sala de reunião: carpete, vidro, mesa e TV
-  r(8, y0, 196, BH - 6, '#4f5c7a');
-  for (let yy = 2; yy < BH - 6; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < 196; xx += 4) r(8 + xx, y0 + yy, 1, 1, '#465270');
-  Art.drawGlassWall(8, y0, 196, BH - 6, 100);
-  Art.drawTV(16, y0 + 16, 22, 14, t, meeting);
-  r(26, y0 + 31, 2, 10, PAL.ink); r(20, y0 + 40, 14, 2, PAL.ink);
-  if (meeting) glows.push({ x: 27, y: y0 + 22, r: 22, c: '#feae34' });
-  lights.push({ x: 106, y: y0 + 46, r: 50 });
-  // canto da soneca, estante, impressora
-  Art.drawBookshelf(212, y0 + 4, 40, 24);
-  Art.drawPlant(292, y0 + 4, true);
+  Art.drawPingPong(RX + 34, wing.ping + 20, 80, 30, t, pingPlaying);
+  // sala de reunião de vidro
+  const my = wing.meet;
+  r(RX - 2, my, RW + 4, 98, '#4f5c7a');
+  for (let yy = 2; yy < 98; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < RW + 4; xx += 4) r(RX - 2 + xx, my + yy, 1, 1, '#465270');
+  Art.drawGlassWall(RX - 2, my, RW + 4, 98, null);
+  r(RX - 2, my + 32, 4, 18, '#4f5c7a'); // porta do lado do corredor
+  Art.drawTV(RX + 8, my + 8, 18, 12, t, meeting);
+  if (meeting) glows.push({ x: RX + 17, y: my + 14, r: 20, c: '#feae34' });
+  lights.push({ x: RX + RW / 2, y: my + 46, r: 46 });
+  // canto da soneca
+  const ny = wing.nap;
+  Art.drawRug(RX + 2, ny + 22, RW - 4, 50);
+  Art.drawBookshelf(RX + 104, ny + 2, 40, 24);
   for (const [i, sp] of spots.nap.entries()) Art.drawBeanBag(sp.x - 2, sp.y + 2, ['#b55088', '#0099db', '#feae34'][i]);
-  Art.drawBookshelf(RX + 8, y0 + 4, 52, 24);
-  Art.drawPrinter(RX + 72, y0 + 12, t);
-  Art.drawPlant(RX + RW - 14, y0 + 6, true);
+  Art.drawPrinter(RX + 60, ny + 4, t);
+  Art.drawPlant(RX + 4, ny - 2, false);
 }
 
 function drawMeeting(t, meetPeople) {
-  // primeiro quem senta do lado de lá (de frente), depois a mesa, depois quem senta de costas
   const top = meetPeople.filter(m => m.spot.pose === 'sit'), bot = meetPeople.filter(m => m.spot.pose === 'back');
   for (const m of top) { Art.drawChairBack(m.spot.x, m.spot.y + 8); Art.drawFront(m.spot.x, m.spot.y - 2, m.lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit' }); }
-  Art.drawMeetingTable(44, y0 + 40, 132, 16);
+  Art.drawMeetingTable(RX + 24, wing.meet + 38, 104, 14);
   for (const m of bot) { Art.drawSeatedBack(m.spot.x, m.spot.y, m.lk, t, {}); Art.drawChairBack(m.spot.x, m.spot.y + 14); }
 }
 
@@ -439,23 +516,19 @@ function drawScene(t, dt) {
   updateCat(dt, t);
   const lights = [], glows = [];
   Art.drawFloor(W, H, TOP);
-  drawWall(t, sky);
-  drawShafts(sky);
-  if (sky.phase !== 'night') for (let i = 0; i < 4; i++) lights.push({ x: 40 + i * 74, y: TOP + 20, r: 60 });
-  // quem está em cada zona (já chegou)
+  const nWin = drawWall(t, sky);
+  drawShafts(sky, nWin);
+  if (sky.phase !== 'night') for (let i = 0; i < nWin; i++) lights.push({ x: 40 + i * 74, y: TOP + 20, r: 60 });
   const arrived = z => layout.filter(c => c.actor && c.actor.mode === z);
-  const pingers = arrived('ping');
-  // na reunião: quem delega e os seus subagentes ocupam as cadeiras livres
   const meet = arrived('meet').map(c => ({ spot: c.actor.spot, lk: look(c.p.id) }));
   const used = new Set(meet.map(m => m.spot));
   const freeSeats = [...spots.meetTop, ...spots.meetBot].filter(s => !used.has(s));
   for (const c of arrived('meet')) for (const s of c.p.subagents || []) { const seat = freeSeats.shift(); if (seat) meet.push({ spot: seat, lk: look(s.id + c.p.id) }); }
-  drawRightZone(t, lights, glows, pingers.length >= 2);
-  drawBottomZone(t, lights, glows, meet.length > 0);
+  drawWing(t, lights, glows, arrived('ping').length >= 2, meet.length > 0);
   drawMeeting(t, meet);
+  for (const R of rooms) drawRoom(R, t);
   const cs = clashSet();
-  for (const d of desks) drawDesk(d, t, d.p && cs.has(d.p.id), lights, glows, sky);
-  // pessoas fora da mesa, gato, por profundidade
+  for (const d of desks) drawDesk(d, t, cs.has(d.p.id), lights, glows, sky);
   const movers = [];
   for (const c of layout) {
     const a = c.actor;
@@ -527,6 +600,12 @@ function renderOverlay() {
     // quem foi para a copa continua clicável lá
     const a = cell.actor;
     if (a && a.mode !== 'desk' && a.mode !== 'walk') parts.push(`<div class="desk-hit" data-id="${esc(p.id)}" title="${esc(p.name)} · ${esc(T.states[p.state] || '')}" style="left:${Math.round(a.x) * S}px;top:${Math.round(a.y - 2) * S}px;width:${18 * S}px;height:${24 * S}px"></div>`);
+  }
+  // placas das salas e nomes de quem está fora da mesa
+  for (const R of rooms) tags.push(`<span class="room-sign" style="left:${(R.x + 12) * S}px;top:${(R.y - 1) * S}px;max-width:${(R.w - 16) * S}px" title="${esc(R.name)}">${esc(R.name)} <em>${R.people.length}</em></span>`);
+  for (const cell of layout) {
+    const a = cell.actor;
+    if (a && a.mode !== 'desk' && a.mode !== 'walk') tags.push(`<span class="away" style="left:${(a.x + 8) * S}px;top:${(a.y - (a.mode === 'nap' ? 6 : 10)) * S}px">${esc(cell.p.name)}</span>`);
   }
   if (boardBox && data) { const c = counts(); parts.push(`<div class="hit" title="${c.work} ${esc(T.working)} · ${c.need} ${esc(T.needYou)} · ${c.turn} ${esc(T.yourTurn)} · ${c.sleep} ${esc(T.asleep)}" style="left:${boardBox.x * S}px;top:${boardBox.y * S}px;width:${boardBox.w * S}px;height:${boardBox.h * S}px"></div>`); }
   if (hallBox) parts.push(`<div class="desk-hit" data-hall="1" title="${esc(T.panel.hall)}" style="left:${hallBox.x * S}px;top:${hallBox.y * S}px;width:${hallBox.w * S}px;height:${hallBox.h * S}px"></div>`);
@@ -681,13 +760,15 @@ document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en
 let lastLayoutKey = '';
 function renderAll() {
   if (!data) return;
-  const key = data.people.map(p => p.id).join(',') + '|' + document.getElementById('stage').clientWidth;
+  const key = data.people.map(p => p.id + ':' + roomKey(p)).join(',') + '|' + floor + '|' + document.getElementById('stage').clientWidth;
   if (key !== lastLayoutKey) { lastLayoutKey = key; relayout(); }
   else {
     // mesmas pessoas: troca só os dados de cada mesa, senão o desenho fica preso ao estado antigo
     const byId = new Map(data.people.map(p => [p.id, p]));
     for (const c of layout) c.p = byId.get(c.p.id) || c.p;
-    for (const d of desks) if (d.p) d.p = byId.get(d.p.id) || d.p;
+    for (const d of desks) d.p = byId.get(d.p.id) || d.p;
+    for (const f of floors) for (const sh of f.shelves) for (const R of sh.rooms) R.people = R.people.map(p => byId.get(p.id) || p);
+    renderFloors();
   }
   renderOverlay(); renderBar(); renderPanel();
 }
@@ -705,7 +786,7 @@ function loop(t) {
   }
 }
 requestAnimationFrame(loop);
-window.addEventListener('resize', () => { if (data) { fitScale(); renderOverlay(); } });
+window.addEventListener('resize', () => { if (data) { lastLayoutKey = ''; renderAll(); } });
 setInterval(() => { if (data) renderOverlay(); }, 500);
 
 // ---------------- dados ----------------
