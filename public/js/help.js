@@ -21,37 +21,87 @@ function helpText(p) {
 const HELP_MAX = 3, HELP_TTL = 12000; // after 12s without an answer the card shrinks into a face in the top bar
 const helpSeen = new Map();
 
-// faces of everyone still waiting on you, in the top bar, until they're answered
+// everyone still waiting on you sits on a wooden shelf in the top bar until you answer them
 const dock = document.createElement('div');
 dock.className = 'dock';
 document.querySelector('.bar .counts').after(dock);
 const dockFaces = new Map();
-dock.addEventListener('click', e => { const f = e.target.closest('[data-id]'); if (f) showPerson(f.dataset.id); });
+dock.addEventListener('click', e => { const f = e.target.closest('.dface[data-id]'); if (f) showPerson(f.dataset.id); });
+
+// hover card: big portrait, name, what they said, how long they've waited, go to terminal
+const pop = document.createElement('div');
+pop.className = 'dpop'; pop.hidden = true;
+document.body.appendChild(pop);
+let popFor = null, popHide = 0;
+function showPop(el) {
+  clearTimeout(popHide);
+  const p = data && data.people.find(x => x.id === el.dataset.id);
+  if (!p) return;
+  popFor = p.id;
+  const urgent = p.state === 'needs_you' || p.state === 'waiting';
+  const quote = urgent ? helpText(p) : p.lastReply ? `“${p.lastReply}”` : T.states[p.state];
+  const status = urgent ? T.help.waitingYou : p.state === 'asleep' ? `${T.states.asleep} · ${ago(data.now - (p.since || p.lastActivity))}` : `${T.states.idle} · ${ago(data.now - (p.since || p.lastActivity))}`;
+  pop.innerHTML = `<div class="dpop-face"></div><div class="dpop-body"><b>${esc(p.name)}</b><span class="dpop-repo">${esc(p.repo ? p.repo.name : '')}</span><p>${esc(quote)}</p><small>⌛ ${esc(status)}</small></div>
+    <div class="dpop-actions"><button class="hb main" data-pop="goto">${esc(p.agent === 'codex' && !p.pid ? T.panel.gotoCodex : T.panel.goto)} →</button><button class="hb" data-pop="see">${esc(T.help.see)}</button></div>`;
+  pop.querySelector('.dpop-face').appendChild(Art.portrait(p.id, p.state === 'needs_you' ? 'open' : null));
+  pop.hidden = false;
+  const r = el.getBoundingClientRect(), w = pop.offsetWidth;
+  pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  pop.style.top = (r.bottom + 10) + 'px';
+  pop.style.setProperty('--arrow', (r.left + r.width / 2 - parseFloat(pop.style.left)) + 'px');
+}
+function hidePop() { popHide = setTimeout(() => { pop.hidden = true; popFor = null; }, 220); }
+dock.addEventListener('mouseover', e => { const f = e.target.closest('.dface[data-id]'); if (f && f.dataset.id !== popFor) showPop(f); else if (f) clearTimeout(popHide); });
+dock.addEventListener('mouseleave', hidePop);
+pop.addEventListener('mouseenter', () => clearTimeout(popHide));
+pop.addEventListener('mouseleave', hidePop);
+pop.addEventListener('click', async e => {
+  const b = e.target.closest('[data-pop]');
+  if (!b || !popFor) return;
+  if (b.dataset.pop === 'see') { pop.hidden = true; return showPerson(popFor); }
+  b.disabled = true;
+  try { await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id: popFor }) }); } catch {}
+  b.disabled = false;
+});
 
 function renderDock() {
-  // folder tabs: newest in front and brightest, older ones step back, smaller and dimmer
   const since = p => helpSeen.get(p.id + ':' + p.state) || 0;
-  const list = data.people.filter(p => ['needs_you', 'waiting', 'idle'].includes(p.state))
-    .sort((a, b) => (a.state === 'idle') - (b.state === 'idle') || since(b) - since(a));
+  const rank = p => p.state === 'needs_you' || p.state === 'waiting' ? 0 : p.state === 'idle' ? 1 : 2;
+  // asleep sessions are still waiting on you: they stay (at the end) until you send them something
+  const list = data.people.filter(p => ['needs_you', 'waiting', 'idle', 'asleep'].includes(p.state))
+    .sort((a, b) => rank(a) - rank(b) || since(b) - since(a));
   const keep = new Set(list.map(p => p.id));
-  for (const [id, el] of dockFaces) if (!keep.has(id)) { el.remove(); dockFaces.delete(id); }
+  for (const [id, el] of dockFaces) {
+    if (keep.has(id)) continue;
+    dockFaces.delete(id);
+    // answered (back to work): a happy little jump with a note and a heart, then gone
+    const p = data.people.find(x => x.id === id);
+    if (p && !el.classList.contains('happy')) {
+      el.classList.add('happy');
+      el.insertAdjacentHTML('beforeend', '<i class="fx note">♪</i><i class="fx heart">♥</i>');
+      setTimeout(() => el.remove(), 1500);
+    } else el.remove();
+    if (popFor === id) { pop.hidden = true; popFor = null; }
+  }
   list.forEach((p, i) => {
     let el = dockFaces.get(p.id);
     if (!el) {
       el = document.createElement('button');
       el.className = 'dface'; el.dataset.id = p.id;
-      el.innerHTML = '<span class="dname"></span>';
-      el.prepend(Art.portrait(p.id));
+      el.innerHTML = '<span class="bub"></span><span class="fizz"><i></i><i></i><i></i></span><span class="tag"></span>';
+      el.insertBefore(Art.portrait(p.id), el.querySelector('.tag'));
       dockFaces.set(p.id, el);
     }
-    const urgent = p.state !== 'idle';
+    const urgent = p.state === 'needs_you' || p.state === 'waiting';
     el.classList.toggle('urgent', urgent);
-    el.querySelector('.dname').textContent = shortName(p.name);
-    el.title = `${p.name} — ${urgent ? helpText(p) : T.states.idle}`;
-    el.style.setProperty('--i', i);
-    el.style.zIndex = String(100 - i);
-    if (dock.children[i] !== el) dock.insertBefore(el, dock.children[i] || null);
+    el.classList.toggle('sleepy', p.state === 'asleep');
+    el.querySelector('.bub').textContent = p.state === 'asleep' ? 'zZ' : '...'; // the pixel font has no ellipsis glyph
+    el.querySelector('.tag').textContent = shortName(p.name);
+    el.setAttribute('aria-label', `${p.name} — ${urgent ? helpText(p) : T.states[p.state]}`);
+    const at = [...dock.children].filter(c => !c.classList.contains('happy'))[i];
+    if (at !== el) dock.insertBefore(el, at || null);
   });
+  if (popFor && !pop.hidden) { const el = dockFaces.get(popFor); if (el) showPop(el); }
 }
 
 let helpOpen = false;
