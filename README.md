@@ -1,4 +1,4 @@
-# coworks-agents
+# coworking-agents
 
 **A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
 
@@ -8,17 +8,17 @@
 
 ## Why
 
-When you run several AI sessions at once, you lose track of which one stopped to ask you something, which one finished, and which two are touching the same repository. coworks-agents puts all of them on one screen that you actually want to leave open.
+When you run several AI sessions at once, you lose track of which one stopped to ask you something, which one finished, and which two are touching the same repository. coworking-agents puts all of them on one screen that you actually want to leave open.
 
 ## Quick start
 
 ```bash
-npx coworks-agents              # opens http://127.0.0.1:4777 in your browser
-npx coworks-agents --demo       # a fake office showing every state (no sessions needed)
-npx coworks-agents --private    # hide names, branches, repos, titles and paths (screen sharing)
-npx coworks-agents --port 5000  # pick a port (default 4777; falls back to a free one if taken)
-npx coworks-agents --no-open    # don't open the browser
-npx coworks-agents --json       # print one snapshot of the state as JSON and exit
+npx coworking-agents              # opens http://127.0.0.1:4777 in your browser
+npx coworking-agents --demo       # a fake office showing every state (no sessions needed)
+npx coworking-agents --private    # hide names, branches, repos, titles and paths (screen sharing)
+npx coworking-agents --port 5000  # pick a port (default 4777; falls back to a free one if taken)
+npx coworking-agents --no-open    # don't open the browser
+npx coworking-agents --json       # print one snapshot of the state as JSON and exit
 ```
 
 Requires Node 18+. Zero dependencies.
@@ -27,17 +27,17 @@ Requires Node 18+. Zero dependencies.
 
 The server only answers requests that carry a random per-run token. The CLI prints (and opens) a link like `http://127.0.0.1:4777/?t=…`; on first visit the token becomes an `HttpOnly`, `SameSite=Strict` cookie and the URL is cleaned up. Any other page, or a request without the cookie, gets a "locked" page.
 
-Running `npx coworks-agents` a second time reuses the office that is already running instead of starting another: the link is stored in `~/.config/coworks-agents/session.json` (mode `0600`, readable only by you) and checked with a ping before reuse. `--demo`, `--private` and `--port` always start a fresh server.
+Running `npx coworking-agents` a second time reuses the office that is already running instead of starting another: the link is stored in `~/.config/coworking-agents/session.json` (mode `0600`, readable only by you) and checked with a ping before reuse. `--demo`, `--private` and `--port` always start a fresh server.
 
 ### As a Claude Code plugin
 
 ```
-/plugin marketplace add ChaconLucas/coworks-agents
-/plugin install coworks-agents@coworks-agents
-/coworks
+/plugin marketplace add ChaconLucas/coworking-agents
+/plugin install coworking-agents@coworking-agents
+/coworking
 ```
 
-`/coworks` starts the office in the background and replies with the URL. It accepts the same flags, e.g. `/coworks --private`.
+`/coworking` starts the office in the background and replies with the URL. It accepts the same flags, e.g. `/coworking --private`.
 
 ## Supported AIs
 
@@ -141,7 +141,7 @@ module.exports = {
 npm test             # builds fake ~/.claude and ~/.codex folders and checks the collector and the server
 npm run demo         # the fake office with every state
 npm run screenshots  # regenerates docs/*.png from demo mode (needs agent-browser on PATH)
-node bin/coworks-agents.js --json   # one snapshot of the state, as JSON
+node bin/coworking-agents.js --json   # one snapshot of the state, as JSON
 ```
 
 The server also exposes `/api/state` (the snapshot, including a per-session timeline and recently edited files) and `/api/report` (today's sessions, active time, tool calls, files and output tokens).

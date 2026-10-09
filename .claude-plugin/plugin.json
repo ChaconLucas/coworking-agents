@@ -1,5 +1,5 @@
 {
-  "name": "coworks-agents",
+  "name": "coworking-agents",
   "description": "Open a pixel-art coworking office that shows every AI coding session on this machine (Claude Code, Codex, …) as a person at a desk.",
   "version": "0.1.0",
   "author": { "name": "Lucas Chacon" },

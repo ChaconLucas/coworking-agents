@@ -6,7 +6,7 @@ const path = require('path');
 const assert = require('assert');
 const { execFileSync, spawn } = require('child_process');
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coworks-test-'));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coworking-test-'));
 const claude = path.join(root, '.claude');
 process.env.CLAUDE_CONFIG_DIR = claude;
 fs.mkdirSync(path.join(claude, 'sessions'), { recursive: true });
@@ -64,7 +64,7 @@ session(999999, 'D', 'busy', []);
 // Codex: one conversation from today running a command and another that edited the worktree (clashes with B)
 const codex = path.join(root, '.codex');
 process.env.CODEX_HOME = codex;
-process.env.COWORKS_CODEX_RUNNING = '1';
+process.env.COWORKING_CODEX_RUNNING = '1';
 const d = new Date(now);
 const day = path.join(codex, 'sessions', String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0'));
 fs.mkdirSync(day, { recursive: true });
@@ -189,7 +189,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(JSON.parse(ok.body).people.length > 0);
   assert.strictEqual((await req(port, '/api/state', { headers: { ...ck, Host: 'evil.example:' + port } })).code, 421, 'DNS rebinding');
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus without the custom header');
-  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworks': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');
+  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');
   assert.ok([403, 404].includes((await req(port, '/../src/server.js', { headers: ck })).code), 'path traversal');
   assert.ok([403, 404].includes((await req(port, '/%2e%2e/package.json', { headers: ck })).code), 'encoded path traversal');
   const csp = (await req(port, '/', { headers: ck })).headers['content-security-policy'] || '';

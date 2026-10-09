@@ -1,4 +1,4 @@
-# coworks-agents — rules for AI sessions
+# coworking-agents — rules for AI sessions
 
 - **English everywhere:** code, comments, docs and commit messages. UI strings live in `public/app.js` `I18N` with `pt` and `en`; add both when you add one.
 - **Zero runtime dependencies.** Plain Node and browser APIs only.

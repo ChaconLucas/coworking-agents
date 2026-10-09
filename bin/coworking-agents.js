@@ -5,14 +5,14 @@ const { start } = require('../src/server');
 
 const args = process.argv.slice(2);
 // `--demo 40` = fake office with 40 agents
-{ const i = args.indexOf('--demo'); if (i >= 0 && /^\d+$/.test(args[i + 1] || '')) process.env.COWORKS_DEMO_COUNT = args.splice(i + 1, 1)[0]; }
+{ const i = args.indexOf('--demo'); if (i >= 0 && /^\d+$/.test(args[i + 1] || '')) process.env.COWORKING_DEMO_COUNT = args.splice(i + 1, 1)[0]; }
 const flag = n => args.includes(n);
 const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 
 if (flag('-h') || flag('--help')) {
-  console.log(`coworks-agents — a pixel office for your AI coding agents (Claude Code, Codex, …)
+  console.log(`coworking-agents — a pixel office for your AI coding agents (Claude Code, Codex, …)
 
-  npx coworks-agents [--port 4777] [--no-open] [--private]
+  npx coworking-agents [--port 4777] [--no-open] [--private]
 
   --port      port to listen on (default 4777, falls back to a free one)
   --no-open   don't open the browser
@@ -37,7 +37,7 @@ function open(url) {
 // The token link lives in a file only you can read (0600): a second run reopens the same
 // office, and a foreign program on port 4777 can't impersonate it (it doesn't have the token).
 const os = require('os'), fs = require('fs'), path = require('path');
-const STATE_DIR = path.join(os.homedir(), '.config', 'coworks-agents');
+const STATE_DIR = path.join(os.homedir(), '.config', 'coworking-agents');
 const STATE_FILE = path.join(STATE_DIR, 'session.json');
 
 async function reuse() {
@@ -53,7 +53,7 @@ async function reuse() {
   const privacy = flag('--private'), demo = flag('--demo');
   if (!demo && !privacy && !flag('--port')) {
     const s = await reuse();
-    if (s) { console.log(`coworks-agents already running → ${s.base}/?t=${s.token}`); if (!flag('--no-open')) open(`${s.base}/?t=${s.token}`); return; }
+    if (s) { console.log(`coworking-agents already running → ${s.base}/?t=${s.token}`); if (!flag('--no-open')) open(`${s.base}/?t=${s.token}`); return; }
   }
   // keep the same token across restarts so an open tab keeps working (file is 0600, only yours)
   let token;
@@ -73,6 +73,6 @@ async function reuse() {
       process.on('SIGINT', bye); process.on('SIGTERM', bye);
     } catch {}
   }
-  console.log(`coworks-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
+  console.log(`coworking-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
   if (!flag('--no-open')) open(hq.url);
 })();

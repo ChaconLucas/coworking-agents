@@ -3,7 +3,7 @@
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Claude Code collector + SSE server + basic office | done |
-| 2 | Per-AI sources (Codex) and the coworks-agents name | done |
+| 2 | Per-AI sources (Codex) and the coworking-agents name | done |
 | 3 | Art: sprites, time-of-day lighting, kitchen, cat | done |
 | 4 | Floor with zones (desks, kitchen, ping-pong, meeting room, nap corner) | done |
 | 5 | State truth: live transcript, child shell for Bash, permission mode | done |

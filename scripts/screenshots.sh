@@ -9,7 +9,7 @@ command -v agent-browser >/dev/null || { echo "agent-browser not found"; exit 1;
 shot() { # count, query, output, js-before-shot, viewport
   local count=$1 query=$2 out=$3 js=${4:-} vp=${5:-"1440 900"}
   local log; log=$(mktemp)
-  COWORKS_DEMO_COUNT=$count node bin/coworks-agents.js --demo --no-open --port 0 >"$log" 2>&1 &
+  COWORKING_DEMO_COUNT=$count node bin/coworking-agents.js --demo --no-open --port 0 >"$log" 2>&1 &
   local pid=$!
   for _ in $(seq 1 50); do grep -q "http://" "$log" && break; sleep 0.1; done
   local url; url=$(grep -o "http://[^ ]*" "$log" | head -1)

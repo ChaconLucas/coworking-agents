@@ -1,5 +1,5 @@
 'use strict';
-// coworks-agents — draws each AI session (Claude Code, Codex, …) as a person in a pixel-art office.
+// coworking-agents — draws each AI session (Claude Code, Codex, …) as a person in a pixel-art office.
 
 // ---------------- strings ----------------
 const I18N = {
@@ -8,7 +8,7 @@ const I18N = {
     help: { question: 'Tenho uma pergunta para você.', plan: 'Meu plano está pronto. Pode revisar?', run: c => `Posso rodar “${c}”?`, edit: f => `Posso editar ${f}?`, tool: t => `Posso usar ${t}? Está esperando a sua aprovação.`, done: t => `Pronto! ${t}`, see: 'Ver', more: n => `+${n} precisam de você`, less: 'Mostrar menos' },
     notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
-    offline: 'Sem conexão com o coworks-agents. Tentando de novo…',
+    offline: 'Sem conexão com o coworking-agents. Tentando de novo…',
     clash: (who, repo) => `<b>Atenção:</b> ${who} estão editando o mesmo clone <b>${repo}</b>. Commitem cedo ou usem worktrees.`,
     and: ' e ',
     states: {
@@ -53,7 +53,7 @@ const I18N = {
     help: { question: 'I have a question for you.', plan: 'My plan is ready. Can you review it?', run: c => `Can I run “${c}”?`, edit: f => `Can I edit ${f}?`, tool: t => `Can I use ${t}? Waiting for your approval.`, done: t => `Done! ${t}`, see: 'Show', more: n => `+${n} more need you`, less: 'Show less' },
     notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
-    offline: 'Lost connection to coworks-agents. Retrying…',
+    offline: 'Lost connection to coworking-agents. Retrying…',
     clash: (who, repo) => `<b>Heads up:</b> ${who} are editing the same checkout <b>${repo}</b>. Commit early or use worktrees.`,
     and: ' and ',
     states: {
@@ -96,8 +96,8 @@ const I18N = {
 };
 
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('coworks.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('coworks.' + k, JSON.stringify(v)); } catch {} },
+  get(k, d) { try { const v = localStorage.getItem('coworking.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('coworking.' + k, JSON.stringify(v)); } catch {} },
 };
 const qs = new URLSearchParams(location.search);
 let lang = qs.get('lang') || store.get('lang', (navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
@@ -790,7 +790,7 @@ panelBody.addEventListener('click', async e => {
   b.disabled = true;
   const msg = document.getElementById('goto-msg'), F = T.panel.focus;
   let out = { ok: false, reason: 'gone' };
-  try { out = await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworks': '1' }, body: JSON.stringify({ id: b.dataset.id }) }).then(r => r.json()); } catch {}
+  try { out = await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id: b.dataset.id }) }).then(r => r.json()); } catch {}
   b.disabled = false;
   if (msg) msg.textContent = out.ok ? (out.exact ? F.ok(out.app) : F.app(out.app)) : typeof F[out.reason] === 'function' ? F[out.reason](out.app || '') : (F[out.reason] || F.unknown);
 });
@@ -815,7 +815,7 @@ function renderBar() {
     tile(c.turn, T.yourTurn, KIND_COLOR.idle, c.turn ? '' : 'zero'),
     tile(c.sleep, T.asleep, KIND_COLOR.asleep, c.sleep ? '' : 'zero'),
   ].join('');
-  document.title = (c.need ? `(${c.need}) ` : '') + 'coworks-agents';
+  document.title = (c.need ? `(${c.need}) ` : '') + 'coworking-agents';
   const box = document.getElementById('clashes');
   const names = id => (data.people.find(p => p.id === id) || {}).name || id.slice(0, 6);
   box.innerHTML = data.clashes.map(cl => `<div>${T.clash(cl.who.map(names).map(esc).join(T.and), esc(cl.repo))}</div>`).join('');
@@ -930,7 +930,7 @@ helpEl.addEventListener('click', async e => {
   if (b.dataset.act === 'close') { doneUntil.delete(id); card.classList.add('out'); setTimeout(() => card.remove(), 250); helpCards.delete(id); dismissed.add(id + ':' + ((data.people.find(p => p.id === id) || {}).state)); return; }
   if (b.dataset.act === 'see') return showPerson(id);
   b.disabled = true;
-  try { await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworks': '1' }, body: JSON.stringify({ id }) }); } catch {}
+  try { await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id }) }); } catch {}
   b.disabled = false;
 });
 const dismissed = new Set();

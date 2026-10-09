@@ -1,4 +1,4 @@
-# coworks-agents
+# coworking-agents
 
 A live pixel-art office for the AI coding sessions (Claude Code, Codex, …) on one machine.
 

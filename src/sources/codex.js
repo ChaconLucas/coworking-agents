@@ -97,7 +97,7 @@ const read = incremental(() => Object.assign(baseState(), { explicitApprovals: t
 
 let procCache = { at: 0, v: false };
 function codexRunning() {
-  if (process.env.COWORKS_CODEX_RUNNING) return process.env.COWORKS_CODEX_RUNNING === '1'; // tests
+  if (process.env.COWORKING_CODEX_RUNNING) return process.env.COWORKING_CODEX_RUNNING === '1'; // tests
   if (Date.now() - procCache.at < 5000) return procCache.v;
   let v = false;
   try {

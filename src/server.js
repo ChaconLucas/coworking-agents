@@ -23,10 +23,10 @@ function cookie(req, name) {
 }
 function send(res, code, type, body) { res.writeHead(code, { 'Content-Type': type }); res.end(body); }
 
-const LOCKED = `<!doctype html><meta charset="utf-8"><title>coworks-agents</title>
+const LOCKED = `<!doctype html><meta charset="utf-8"><title>coworking-agents</title>
 <body style="font:15px system-ui;background:#17151a;color:#ece7df;display:grid;place-items:center;min-height:100vh;margin:0">
-<p style="max-width:420px;text-align:center">Abra o escritório pelo link que o <code>coworks-agents</code> mostrou no terminal.<br><br>
-<span style="color:#9a9187">Open the office using the link printed by <code>coworks-agents</code> in your terminal.</span></p>`;
+<p style="max-width:420px;text-align:center">Abra o escritório pelo link que o <code>coworking-agents</code> mostrou no terminal.<br><br>
+<span style="color:#9a9187">Open the office using the link printed by <code>coworking-agents</code> in your terminal.</span></p>`;
 
 function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token } = {}) {
   token = token || crypto.randomBytes(24).toString('hex');
@@ -84,7 +84,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/focus' && req.method === 'POST') {
       // on top of the cookie: a custom header (forces a CORS preflight, never approved) and a local origin
       const origin = req.headers.origin || '';
-      if (req.headers['x-coworks'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
       let body = '';
       req.on('data', c => { body += c; if (body.length > 1e4) req.destroy(); });
       req.on('end', async () => {
