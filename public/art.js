@@ -433,14 +433,15 @@ function drawFloor(W, H, top) {
 
 // ---------------- lighting ----------------
 let lightCv = null;
-function applyLight(W, H, sky, lights, glows) {
+function applyLight(W, H, sky, lights, glows, lit) {
   if (sky.phase === 'day') return;
   if (!lightCv) lightCv = document.createElement('canvas');
   if (lightCv.width !== W || lightCv.height !== H) { lightCv.width = W; lightCv.height = H; }
   const l = lightCv.getContext('2d');
   l.globalCompositeOperation = 'source-over';
   l.clearRect(0, 0, W, H);
-  l.fillStyle = sky.phase === 'night' ? 'rgba(14,16,48,0.55)' : 'rgba(90,30,70,0.18)';
+  // lights on: the night only tints the room a little; lights off: dark, only screens and lamps
+  l.fillStyle = sky.phase === 'night' ? (lit ? 'rgba(14,16,48,0.42)' : 'rgba(14,16,48,0.55)') : 'rgba(90,30,70,0.18)';
   l.fillRect(0, 0, W, H);
   l.globalCompositeOperation = 'destination-out';
   for (const L of lights) {

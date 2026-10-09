@@ -200,37 +200,18 @@ code.path { word-break: break-all; }
 @media (prefers-reduced-motion: reduce) { .stat.need { animation: none; } }
 @media (max-width: 720px) { .stat small { display: none; } .stat { grid-template-columns: auto auto; } .brand small { display: none; } }
 
-/* ---- waiting agents sitting on a wooden shelf in the top bar ---- */
-.dock { position: relative; display: flex; align-items: flex-end; align-self: flex-end; justify-content: center; gap: 6px; flex: 0 1 auto; min-width: 0; padding: 14px 12px 8px; margin: 0 auto -10px; }
-.dock::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; border: 2px solid var(--edge); border-radius: 3px;
-  background: linear-gradient(180deg, #a86a52 0 3px, #8f553f 3px 7px, #6e3f31 7px); box-shadow: 0 2px 0 rgba(0,0,0,.35); pointer-events: none; }
-.dock:empty::after { display: none; }
-.dface { position: relative; z-index: 1; flex: none; width: 50px; height: 64px; padding: 0; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; transition: transform .14s ease; }
-.dface canvas { display: block; width: 48px; height: 54px; image-rendering: pixelated; margin-bottom: 2px; }
-.dface:hover, .dface:focus-visible { transform: translateY(-3px); }
-.dface.sleepy canvas { filter: brightness(.75) saturate(.7); }
-/* name tag pinned to the shelf */
-.dface .tag { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%) rotate(-2deg); z-index: 2; font: 700 7px/1 var(--pix); color: #2a1d27; background: #f4ecd8; border: 1px solid var(--edge); padding: 2px 3px; white-space: nowrap; max-width: 48px; overflow: hidden; text-overflow: ellipsis; }
-/* speech bubble */
-.dface .bub { position: absolute; top: -8px; right: -8px; z-index: 2; font: 700 9px/1 var(--pix); color: #2a1d27; background: #fff; border: 2px solid var(--edge); border-radius: 3px; padding: 1px 4px 3px; }
-.dface .bub::after { content: ''; position: absolute; left: 3px; bottom: -6px; border: 4px solid transparent; border-top-color: var(--edge); border-bottom: 0; }
-.dface:not(.urgent):not(.sleepy) .bub { opacity: .7; }
-.dface.sleepy .bub { color: #5a6988; }
-/* urgent: little yellow excitement marks above the head */
-.dface .fizz { display: none; position: absolute; top: -10px; left: 6px; width: 24px; height: 10px; }
-.dface.urgent .fizz { display: block; }
-.dface .fizz i { position: absolute; bottom: 0; width: 2px; height: 6px; background: #feae34; animation: fizz .9s steps(2) infinite; }
-.dface .fizz i:nth-child(1) { left: 2px; transform: rotate(-30deg); } .dface .fizz i:nth-child(2) { left: 11px; height: 8px; animation-delay: .15s; } .dface .fizz i:nth-child(3) { left: 20px; transform: rotate(30deg); animation-delay: .3s; }
-@keyframes fizz { 50% { opacity: 0; } }
-.dface.urgent canvas { animation: hop 1.4s steps(2) infinite; }
-@keyframes hop { 50% { transform: translateY(-2px); } }
-/* answered: happy jump, a note and a heart float up, then it leaves */
-.dface.happy { pointer-events: none; animation: happy 1.5s ease forwards; }
-.dface.happy .bub, .dface.happy .fizz { display: none; }
-.dface .fx { position: absolute; top: 0; font-style: normal; font-weight: 700; animation: floatup 1.2s ease-out forwards; }
-.dface .fx.note { left: 0; color: #feae34; } .dface .fx.heart { right: 2px; color: #e43b44; animation-delay: .2s; }
-@keyframes floatup { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-22px); opacity: 0; } }
-@keyframes happy { 0% { transform: none; } 15% { transform: translateY(-6px); } 30% { transform: none; } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(4px); } }
+/* ---- the top bar is a pixel dev office (canvas behind), controls float on top ---- */
+.bar { min-height: 114px; overflow: hidden; align-items: flex-end; padding-bottom: 14px; }
+.bar-scene { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; z-index: 0; }
+.bar > :not(.bar-scene) { position: relative; z-index: 1; }
+.bar .brand, .bar .counts { background: rgba(20, 16, 26, .78); border: 2px solid var(--edge); border-radius: 10px; padding: 7px 10px; }
+.bar .brand b, .bar .brand small { color: #f4ecd8; }
+.bar .counts .stat { background: #2a2333; color: #f4ecd8; }
+.bar .counts .stat small { color: #b9a88a; }
+.bar .counts .stat.need { background: #e43b44; }
+.scene-more { position: absolute !important; top: 50%; transform: translateY(-30%); width: 38px; height: 38px; border: 2px solid #2ce8f5; border-radius: 8px; background: rgba(20, 16, 26, .85); color: #2ce8f5; font: 700 12px/1 var(--pix); cursor: pointer; box-shadow: 0 0 10px rgba(44, 232, 245, .45); }
+.scene-more:hover { background: #2ce8f5; color: #14101a; }
+.bar .tools .icon-btn { background: rgba(20, 16, 26, .8); color: #f4ecd8; }
 /* hover card */
 .dpop { position: fixed; z-index: 40; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; width: min(420px, calc(100vw - 16px)); padding: 12px 14px; color: #f4ecd8; background: #1f1a24; border: 3px solid #0b0a0e; outline: 2px solid #8f6a3a; outline-offset: -6px; border-radius: 6px; box-shadow: 4px 6px 0 rgba(0,0,0,.45); }
 .dpop::before { content: ''; position: absolute; top: -11px; left: calc(var(--arrow, 50%) - 8px); border: 8px solid transparent; border-bottom-color: #0b0a0e; border-top: 0; }
@@ -241,5 +222,4 @@ code.path { word-break: break-all; }
 .dpop-body p { margin: 6px 0; font-size: 13px; line-height: 1.4; color: #f4ecd8; max-height: 5.6em; overflow: hidden; }
 .dpop-body small { color: #feae34; font-size: 12px; }
 .dpop-actions { grid-column: 2; display: flex; gap: 6px; }
-@media (prefers-reduced-motion: reduce) { .dface .fizz i, .dface.urgent canvas, .dface.happy, .dface .fx { animation: none; } }
-@media (max-width: 720px) { .dock { order: 3; flex-basis: 100%; margin: 4px 0 -6px; } .dface { width: 38px; height: 50px; } .dface canvas { width: 32px; height: 36px; } }
+@media (max-width: 720px) { .dock { order: 3; margin: 4px auto -10px; } }

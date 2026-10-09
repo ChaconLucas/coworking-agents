@@ -5,8 +5,8 @@
 const I18N = {
   pt: {
     working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`, building: 'Ver prédio', agents: 'agentes', moreCerts: n => `+${n} certificado${n > 1 ? 's' : ''} — clique para ver todos`, subagents: n => `${n} subagente${n > 1 ? 's' : ''}`,
-    help: { question: 'Tenho uma pergunta para você.', plan: 'Meu plano está pronto. Pode revisar?', run: c => `Posso rodar “${c}”?`, edit: f => `Posso editar ${f}?`, tool: t => `Posso usar ${t}? Está esperando a sua aprovação.`, done: t => `Pronto! ${t}`, see: 'Ver', waitingYou: 'Aguardando sua resposta', more: n => `+${n} precisam de você`, less: 'Mostrar menos' },
-    notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
+    help: { question: 'Tenho uma pergunta para você.', plan: 'Meu plano está pronto. Pode revisar?', run: c => `Posso rodar “${c}”?`, edit: f => `Posso editar ${f}?`, tool: t => `Posso usar ${t}? Está esperando a sua aprovação.`, done: t => `Pronto! ${t}`, see: 'Ver', waitingYou: 'Aguardando sua resposta', nextOffice: 'Ver os próximos pedidos', more: n => `+${n} precisam de você`, less: 'Mostrar menos' },
+    notify: '🔔 Avisos', sound: '🔊 Som', lights: 'Luzes do escritório', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
     offline: 'Sem conexão com o coworking-agents. Tentando de novo…',
     clash: (who, repo) => `<b>Atenção:</b> ${who} estão editando o mesmo clone <b>${repo}</b>. Commitem cedo ou usem worktrees.`,
@@ -50,8 +50,8 @@ const I18N = {
   },
   en: {
     working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`, building: 'Building view', agents: 'agents', moreCerts: n => `+${n} more certificate${n > 1 ? 's' : ''} — click to see all`, subagents: n => `${n} subagent${n > 1 ? 's' : ''}`,
-    help: { question: 'I have a question for you.', plan: 'My plan is ready. Can you review it?', run: c => `Can I run “${c}”?`, edit: f => `Can I edit ${f}?`, tool: t => `Can I use ${t}? Waiting for your approval.`, done: t => `Done! ${t}`, see: 'Show', waitingYou: 'Waiting for your reply', more: n => `+${n} more need you`, less: 'Show less' },
-    notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
+    help: { question: 'I have a question for you.', plan: 'My plan is ready. Can you review it?', run: c => `Can I run “${c}”?`, edit: f => `Can I edit ${f}?`, tool: t => `Can I use ${t}? Waiting for your approval.`, done: t => `Done! ${t}`, see: 'Show', waitingYou: 'Waiting for your reply', nextOffice: 'Show the next requests', more: n => `+${n} more need you`, less: 'Show less' },
+    notify: '🔔 Alerts', sound: '🔊 Sound', lights: 'Office lights', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
     offline: 'Lost connection to coworking-agents. Retrying…',
     clash: (who, repo) => `<b>Heads up:</b> ${who} are editing the same checkout <b>${repo}</b>. Commit early or use worktrees.`,
@@ -105,4 +105,5 @@ if (!Object.prototype.hasOwnProperty.call(I18N, lang)) lang = 'pt';
 let T = I18N[lang];
 // sound is on by default; alerts follow the browser permission (asked on open). Only the buttons turn them off.
 let soundOn = store.get('sound', true);
+let lightsOn = store.get('lights', true);
 let notifyOn = store.get('notify', null);

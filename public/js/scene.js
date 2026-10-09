@@ -239,7 +239,15 @@ function drawScene(t, dt) {
   }
   movers.push({ y: cat.y, draw: () => Art.drawCat(cat.x, cat.y, cat.mode, t, cat.flip) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
-  Art.applyLight(W, H, sky, lights, glows);
+  // ceiling lights: every room and shared area is lit, except the nap corner (it's a rest room)
+  if (lightsOn) {
+    for (const R of rooms) lights.push({ x: R.x + R.w / 2, y: R.y + R.h / 2, r: Math.max(R.w, R.h) * .8 });
+    for (const zy of [wing.copa + 50, wing.ping + 35, wing.meet + 48, wing.servers + 24]) lights.push({ x: RX + RW / 2, y: zy, r: 90 });
+    for (let y = TOP + 40; y < H; y += 120) lights.push({ x: CX, y, r: 70 });
+    const devTop = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 30;
+    if (devTop < H) lights.push({ x: CX / 2, y: devTop + 20, r: CX / 2 });
+  }
+  Art.applyLight(W, H, sky, lights, glows, lightsOn);
   for (const c of layout) {
     const st = c.p.state, a = c.actor;
     if (!a) continue;
