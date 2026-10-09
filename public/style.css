@@ -133,14 +133,6 @@ body.panel-open .help { right: calc(min(420px, 100vw) + 16px); }
 .away.intern { background: rgba(254, 174, 52, .92); color: #2a1d27; font-size: 8px; max-width: 54px; overflow: hidden; text-overflow: ellipsis; }
 .tv-count { position: absolute; transform: translate(-50%, 0); font: 700 9px/1 var(--pix); color: #feae34; background: #262b44; border: 1px solid #feae34; border-radius: 2px; padding: 2px 4px; white-space: nowrap; pointer-events: none; }
 
-.dock { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.dface { width: 30px; height: 34px; padding: 2px; border: 2px solid #3b5dc9; border-radius: 8px; background: var(--surface); cursor: pointer; display: grid; place-items: center; transition: transform .12s ease; }
-.dface canvas { width: 22px; height: 25px; image-rendering: pixelated; }
-.dface:hover { transform: translateY(-2px); }
-.dface.urgent { border-color: var(--bad); animation: ring 1.2s ease-in-out infinite; }
-@keyframes ring { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 35%, transparent); } }
-@media (prefers-reduced-motion: reduce) { .dface.urgent { animation: none; } }
-
 /* ---- side panel, pixel style ---- */
 .panel { border-left: 3px solid var(--edge); }
 .ph { display: flex; gap: 12px; align-items: flex-start; padding-right: 26px; }
@@ -207,3 +199,18 @@ code.path { word-break: break-all; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @media (prefers-reduced-motion: reduce) { .stat.need { animation: none; } }
 @media (max-width: 720px) { .stat small { display: none; } .stat { grid-template-columns: auto auto; } .brand small { display: none; } }
+
+/* ---- waiting agents as stacked folder tabs on the top bar ---- */
+.dock { display: flex; align-items: flex-end; align-self: flex-end; justify-content: center; flex: 1; min-width: 0; height: 58px; margin-bottom: -13px; padding-left: 18px; }
+.dface { --tint: #3b5dc9; position: relative; flex: none; width: 54px; height: calc(56px - var(--i) * 3px); margin-left: -12px; padding: 4px 0 0; border: 2px solid var(--edge); border-bottom: 0; border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 75%, #fff) 0 14px, var(--tint) 14px); cursor: pointer; overflow: hidden;
+  filter: brightness(calc(1 - var(--i) * .12)) saturate(calc(1 - var(--i) * .1)); box-shadow: -3px 0 0 rgba(0,0,0,.25); transition: transform .14s ease, filter .14s ease, height .14s ease; }
+.dface canvas { display: block; width: 40px; height: 45px; margin: 0 auto; image-rendering: pixelated; }
+.dface .dname { position: absolute; left: 0; right: 0; top: 2px; font: 700 8px/1 var(--pix); color: #fff; text-align: center; text-shadow: 1px 1px 0 var(--edge); white-space: nowrap; overflow: hidden; }
+.dface.urgent { --tint: #e43b44; }
+.dface:hover, .dface:focus-visible { filter: none; transform: translateY(-5px); z-index: 200 !important; height: 56px; }
+.dface:nth-child(n+9) { display: none; }
+.dock .dface:first-child.urgent { animation: tabnudge 1.6s ease-in-out infinite; }
+@keyframes tabnudge { 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .dock .dface:first-child.urgent { animation: none; } }
+@media (max-width: 720px) { .dock { order: 3; flex-basis: 100%; height: 50px; margin-bottom: -10px; } }

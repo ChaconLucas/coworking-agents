@@ -149,6 +149,14 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
+// the stylesheet must have balanced braces (one stray "@media {" silently breaks everything after it)
+{
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  let depth = 0;
+  for (const ch of css) { if (ch === '{') depth++; if (ch === '}') depth--; assert.ok(depth >= 0, 'style.css closes a brace it never opened'); }
+  assert.strictEqual(depth, 0, 'style.css has an unclosed block');
+}
+
 // the browser art module must load and export only real functions (node --check can't see a missing name)
 {
   global.window = {}; global.document = { createElement: () => ({ getContext: () => ({}) }) };

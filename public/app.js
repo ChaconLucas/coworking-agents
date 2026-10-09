@@ -902,8 +902,10 @@ const dockFaces = new Map();
 dock.addEventListener('click', e => { const f = e.target.closest('[data-id]'); if (f) showPerson(f.dataset.id); });
 
 function renderDock() {
-  const rank = p => p.state === 'needs_you' ? 0 : p.state === 'waiting' ? 1 : 2;
-  const list = data.people.filter(p => ['needs_you', 'waiting', 'idle'].includes(p.state)).sort((a, b) => rank(a) - rank(b));
+  // folder tabs: newest in front and brightest, older ones step back, smaller and dimmer
+  const since = p => helpSeen.get(p.id + ':' + p.state) || 0;
+  const list = data.people.filter(p => ['needs_you', 'waiting', 'idle'].includes(p.state))
+    .sort((a, b) => (a.state === 'idle') - (b.state === 'idle') || since(b) - since(a));
   const keep = new Set(list.map(p => p.id));
   for (const [id, el] of dockFaces) if (!keep.has(id)) { el.remove(); dockFaces.delete(id); }
   list.forEach((p, i) => {
@@ -911,12 +913,16 @@ function renderDock() {
     if (!el) {
       el = document.createElement('button');
       el.className = 'dface'; el.dataset.id = p.id;
-      el.appendChild(Art.portrait(p.id));
+      el.innerHTML = '<span class="dname"></span>';
+      el.prepend(Art.portrait(p.id));
       dockFaces.set(p.id, el);
     }
     const urgent = p.state !== 'idle';
     el.classList.toggle('urgent', urgent);
+    el.querySelector('.dname').textContent = shortName(p.name);
     el.title = `${p.name} — ${urgent ? helpText(p) : T.states.idle}`;
+    el.style.setProperty('--i', i);
+    el.style.zIndex = String(100 - i);
     if (dock.children[i] !== el) dock.insertBefore(el, dock.children[i] || null);
   });
 }
