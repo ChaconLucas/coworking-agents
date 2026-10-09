@@ -134,3 +134,5 @@ main { padding: 16px; display: flex; justify-content: center; overflow-x: auto; 
 @media (prefers-reduced-motion: reduce) { .hcard, .hcard .face { animation: none; } }
 .help.open { max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
 .hmore { pointer-events: auto; order: -1; border: 2px solid #2a1d27; background: #e43b44; color: #fff; border-radius: 999px; padding: 6px 12px; font: 700 11px/1 var(--pix); cursor: pointer; box-shadow: 3px 3px 0 rgba(42,29,39,.35); }
+body.panel-open .help { right: calc(min(420px, 100vw) + 16px); }
+@media (max-width: 720px) { body.panel-open .help { display: none; } }

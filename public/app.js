@@ -683,6 +683,7 @@ function fmtK(n) { return n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Mat
 const KIND_ICON = { edit: '✎', read: '👁', terminal: '›_', web: '🌐', delegate: '👥', skill: '✦', mcp: '🔌', other: '•', ask: '?' };
 
 function renderPanel() {
+  document.body.classList.toggle('panel-open', !!(selected && data));
   if (!selected || !data) { panel.hidden = true; return; }
   panel.hidden = false;
   const P = T.panel;
