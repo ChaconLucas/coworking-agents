@@ -94,14 +94,33 @@ function track(st, item, filePath) {
   st.recent.push(item);
   if (st.recent.length > 12) st.recent.shift();
   st.tools[item.name] = (st.tools[item.name] || 0) + 1;
+  event(st, item.ts, item.kind);
   if (filePath && item.kind === 'edit') {
+    st.files.set(filePath, item.ts);
     const r = resolveRepo(path.dirname(filePath));
     if (r) st.edits.set(r.worktree, { at: item.ts, repo: r });
   }
 }
 
-function baseState() {
-  return { title: '', cwd: '', branch: '', model: '', ctx: 0, ctxMax: 0, lastTs: 0, pending: new Map(), recent: [], tools: {}, skills: {}, mcps: {}, edits: new Map(), turns: 0 };
+// Linha do tempo: cada ferramenta, cada mensagem sua e cada fim de turno vira um marco com hora.
+const EVENTS_MAX = 6000, EVENTS_AGE = 26 * 3600 * 1000;
+function event(st, ts, kind) {
+  if (!ts) return;
+  const ev = st.events;
+  const last = ev[ev.length - 1];
+  if (last && last.kind === kind && ts - last.ts < 1000) return;
+  ev.push({ ts, kind });
+  if (ev.length > EVENTS_MAX || ts - ev[0].ts > EVENTS_AGE) {
+    const cut = ev.findIndex(e => ts - e.ts <= EVENTS_AGE);
+    ev.splice(0, Math.max(cut, ev.length - EVENTS_MAX));
+  }
 }
 
-module.exports = { safeJson, alive, short, resolveRepo, incremental, newest, track, baseState };
+function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function addTokens(st, ts, n) { if (ts && n) { const k = dayKey(ts); st.outByDay[k] = (st.outByDay[k] || 0) + n; } }
+
+function baseState() {
+  return { title: '', cwd: '', branch: '', model: '', ctx: 0, ctxMax: 0, lastTs: 0, pending: new Map(), recent: [], tools: {}, skills: {}, mcps: {}, edits: new Map(), turns: 0, events: [], files: new Map(), outByDay: {} };
+}
+
+module.exports = { safeJson, alive, short, resolveRepo, incremental, newest, track, baseState, event, addTokens, dayKey };

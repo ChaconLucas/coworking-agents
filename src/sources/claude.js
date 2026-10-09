@@ -4,7 +4,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { safeJson, alive, short, incremental, newest, track, baseState } = require('../util');
+const { safeJson, alive, short, incremental, newest, track, baseState, event, addTokens } = require('../util');
 
 const DIR = () => process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const SUBAGENT_ACTIVE_MS = 45 * 1000;
@@ -48,19 +48,25 @@ function absorb(st, d) {
   if (d.gitBranch) st.branch = d.gitBranch;
   if (d.type === 'ai-title' && d.aiTitle) st.title = d.aiTitle;
   if (d.type === 'permission-mode' && d.permissionMode) st.permissionMode = d.permissionMode;
-  if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; st.turnOpen = false; }
+  if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; st.turnOpen = false; event(st, ts, 'idle'); }
   // a conversa é gravada na hora: mensagem nova sua ou resposta do modelo = turno aberto
-  if (d.type === 'assistant' || (d.type === 'user' && !d.isMeta && d.message && !isToolResult(d.message.content))) st.turnOpen = true;
+  const prompt = d.type === 'user' && !d.isMeta && d.message && !isToolResult(d.message.content);
+  if (prompt) event(st, ts, 'thinking');
+  if (d.type === 'assistant' || prompt) st.turnOpen = true;
   const m = d.message;
   if (!m) return;
   if (d.type === 'assistant') {
     if (m.model && !m.model.startsWith('<')) st.model = m.model;
     const u = m.usage;
-    if (u) st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+    if (u) { st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); addTokens(st, ts, u.output_tokens || 0); }
     for (const c of Array.isArray(m.content) ? m.content : []) {
       if (c.type !== 'tool_use') continue;
       const name = c.name || '?', input = c.input || {};
-      track(st, { id: c.id, name, kind: activityOf(name), what: summarize(name, input), ts: ts || Date.now() }, input.file_path || input.notebook_path);
+      const item = { id: c.id, name, kind: activityOf(name), what: summarize(name, input), ts: ts || Date.now() };
+      // o que a sessão está a perguntar, para o aviso de "precisa de você"
+      if (name === 'AskUserQuestion') item.ask = short(((input.questions || [])[0] || {}).question || '', 140);
+      if (name === 'ExitPlanMode') item.ask = 'plan';
+      track(st, item, input.file_path || input.notebook_path);
       if (name === 'Skill' && input.skill) st.skills[input.skill] = (st.skills[input.skill] || 0) + 1;
       if (name.startsWith('mcp__')) { const s = name.split('__')[1]; st.mcps[s] = (st.mcps[s] || 0) + 1; }
     }
@@ -146,6 +152,25 @@ function sessions(now) {
   return out;
 }
 
+// Todas as conversas mexidas desde a meia-noite (abertas ou já fechadas), para o relatório do dia.
+function today(since) {
+  const root = path.join(DIR(), 'projects');
+  const out = [];
+  let dirs = [];
+  try { dirs = fs.readdirSync(root); } catch { return out; }
+  for (const d of dirs) {
+    let files = [];
+    try { files = fs.readdirSync(path.join(root, d)).filter(f => f.endsWith('.jsonl')); } catch { continue; }
+    for (const f of files) {
+      const full = path.join(root, d, f);
+      try { if (fs.statSync(full).mtimeMs < since) continue; } catch { continue; }
+      const st = read(full);
+      if (st) out.push({ agent: 'claude', id: f.replace(/\.jsonl$/, ''), st });
+    }
+  }
+  return out;
+}
+
 function credentials() {
   const cj = safeJson(path.join(os.homedir(), '.claude.json')) || {};
   const topSkills = Object.entries(cj.skillUsage || {})
@@ -159,4 +184,4 @@ function credentials() {
   };
 }
 
-module.exports = { id: 'claude', label: 'Claude Code', sessions, credentials };
+module.exports = { id: 'claude', label: 'Claude Code', sessions, credentials, today };

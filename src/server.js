@@ -2,7 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { snapshot: real } = require('./collect');
+const { snapshot: real, report } = require('./collect');
 const { demoSnapshot } = require('./demo');
 const { focus } = require('./focus');
 
@@ -26,6 +26,12 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   const timer = setInterval(() => { if (clients.size) tick(); }, interval);
 
   const server = http.createServer((req, res) => {
+    // DNS rebinding: um site externo que aponte o seu domínio para 127.0.0.1 chega aqui com outro Host
+    if (!/^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(req.headers.host || '')) { res.writeHead(421); return res.end(); }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'");
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -49,6 +55,10 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
         res.end(JSON.stringify(out));
       });
       return;
+    }
+    if (url.pathname === '/api/report') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(demo ? require('./demo').demoReport() : report({ privacy })));
     }
     if (url.pathname === '/api/state') {
       res.writeHead(200, { 'Content-Type': 'application/json' });

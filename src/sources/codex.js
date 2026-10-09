@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { short, incremental, newest, track, baseState } = require('../util');
+const { short, incremental, newest, track, baseState, event, addTokens } = require('../util');
 
 const DIR = () => process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
 const OPEN_MS = 3 * 60 * 60 * 1000; // conversa sem mexer há mais que isto sai do escritório
@@ -54,12 +54,13 @@ function absorb(st, d) {
     if (p.model) st.model = p.model;
   } else if (d.type === 'event_msg') {
     const t = p.type;
-    if (t === 'task_started') { st.busy = true; st.since = ts; if (p.model_context_window) st.ctxMax = Number(p.model_context_window) || 0; }
-    else if (t === 'task_complete' || t === 'turn_aborted') { st.busy = false; st.since = ts; st.pending.clear(); st.turns++; }
+    if (t === 'task_started') { st.busy = true; st.since = ts; event(st, ts, 'thinking'); if (p.model_context_window) st.ctxMax = Number(p.model_context_window) || 0; }
+    else if (t === 'task_complete' || t === 'turn_aborted') { st.busy = false; st.since = ts; st.pending.clear(); st.turns++; event(st, ts, 'idle'); }
     else if (t === 'thread_settings_applied' && p.thread_settings && p.thread_settings.model) st.model = p.thread_settings.model;
     else if (t === 'token_count' && p.info) {
       const u = p.info.last_token_usage || p.info.total_token_usage;
       if (u) st.ctx = u.input_tokens || 0;
+      if (p.info.last_token_usage) addTokens(st, ts, p.info.last_token_usage.output_tokens || 0);
       if (p.info.model_context_window) st.ctxMax = p.info.model_context_window;
     } else if (/approval_request$/.test(t || '')) {
       // pedido de aprovação explícito: precisa de você até a ferramenta responder
@@ -71,7 +72,9 @@ function absorb(st, d) {
       const name = p.name || (p.type === 'local_shell_call' ? 'local_shell' : '?');
       const args = p.type === 'custom_tool_call' ? { raw: p.input } : parseArgs(p.arguments || p.action);
       const s = summarize(name, args, p.input);
-      track(st, { id: p.call_id || p.id, name, kind: activityOf(name), what: s.what, ts: ts || Date.now() }, s.file);
+      const item = { id: p.call_id || p.id, name, kind: activityOf(name), what: s.what, ts: ts || Date.now() };
+      if (item.kind === 'ask') item.ask = short(args.prompt || args.question || args.message || '', 140);
+      track(st, item, s.file);
       // as skills do Codex são lidas como ficheiros: ler um SKILL.md conta como usar a skill
       const sk = /skills\/(?:\.system\/)?([^/\s'"]+)\/SKILL\.md/.exec(JSON.stringify(args));
       if (sk) st.skills[sk[1]] = (st.skills[sk[1]] || 0) + 1;
@@ -113,7 +116,7 @@ function titles() {
   return out;
 }
 
-function recentRollouts(now) {
+function recentRollouts(now, since) {
   // só as pastas de hoje e ontem (sessions/AAAA/MM/DD)
   const files = [];
   for (const back of [0, 1]) {
@@ -124,7 +127,7 @@ function recentRollouts(now) {
     for (const f of list) {
       if (!f.endsWith('.jsonl')) continue;
       const full = path.join(dir, f);
-      try { if (now - fs.statSync(full).mtimeMs < OPEN_MS) files.push(full); } catch {}
+      try { const mt = fs.statSync(full).mtimeMs; if (since ? mt >= since : now - mt < OPEN_MS) files.push(full); } catch {}
     }
   }
   return files;
@@ -148,6 +151,15 @@ function sessions(now) {
   return out;
 }
 
+function today(since) {
+  const out = [];
+  for (const f of recentRollouts(Date.now(), since)) {
+    const st = read(f);
+    if (st && st.id) out.push({ agent: 'codex', id: st.id, st, title: titles().get(st.id) || st.firstPrompt || '' });
+  }
+  return out;
+}
+
 function credentials() {
   let skills = [];
   for (const sub of ['skills', path.join('skills', '.system')]) {
@@ -156,4 +168,4 @@ function credentials() {
   return { topSkills: [], skills: [...new Set(skills)], mcps: [], plugins: [] };
 }
 
-module.exports = { id: 'codex', label: 'Codex', sessions, credentials };
+module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today };
