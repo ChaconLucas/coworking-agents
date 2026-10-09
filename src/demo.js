@@ -7,8 +7,8 @@ const REPOS = ['web-app', 'web-app', 'api', 'docs', 'api', 'design-system', 'mob
 const WHAT = { edit: 'Checkout.tsx', terminal: 'Run test suite', read: 'schema.sql', web: 'developer.mozilla.org', delegate: 'Map all call sites', needs_you: '', waiting: 'npm run build', thinking: '' };
 const TOOL = { edit: 'Edit', terminal: 'Bash', read: 'Read', web: 'WebFetch', delegate: 'Agent', needs_you: 'AskUserQuestion', waiting: 'Bash' };
 
-const COUNT = Number(process.env.COWORKS_DEMO_COUNT || 10);
 function demoSnapshot() {
+  const COUNT = Math.max(1, Math.min(500, Number(process.env.COWORKS_DEMO_COUNT) || 10)); // read per call: `--demo N` sets it after require
   const now = Date.now();
   const people = Array.from({ length: COUNT }, (_, i) => STATES[i % STATES.length]).map((state, i) => {
     const busy = !['idle', 'asleep'].includes(state);

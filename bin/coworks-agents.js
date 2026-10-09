@@ -4,6 +4,8 @@ const { execFile } = require('child_process');
 const { start } = require('../src/server');
 
 const args = process.argv.slice(2);
+// `--demo 40` = fake office with 40 agents
+{ const i = args.indexOf('--demo'); if (i >= 0 && /^\d+$/.test(args[i + 1] || '')) process.env.COWORKS_DEMO_COUNT = args.splice(i + 1, 1)[0]; }
 const flag = n => args.includes(n);
 const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 
@@ -15,7 +17,7 @@ if (flag('-h') || flag('--help')) {
   --port      port to listen on (default 4777, falls back to a free one)
   --no-open   don't open the browser
   --private   hide session titles, paths and file names (screen sharing)
-  --demo      show a fake office with every state (no sessions needed)
+  --demo [N]  show a fake office with every state and N agents (default 10)
   --json      print one snapshot and exit`);
   process.exit(0);
 }

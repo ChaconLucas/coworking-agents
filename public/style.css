@@ -136,3 +136,16 @@ main { padding: 16px; display: flex; justify-content: center; overflow-x: auto; 
 .hmore { pointer-events: auto; order: -1; border: 2px solid #2a1d27; background: #e43b44; color: #fff; border-radius: 999px; padding: 6px 12px; font: 700 11px/1 var(--pix); cursor: pointer; box-shadow: 3px 3px 0 rgba(42,29,39,.35); }
 body.panel-open .help { right: calc(min(420px, 100vw) + 16px); }
 @media (max-width: 720px) { body.panel-open .help { display: none; } }
+
+.more-certs { position: absolute; transform: translate(-50%, 0); font: 700 10px/1 var(--pix); color: #2a1d27; background: #e8b04b; border: 2px solid #2a1d27; border-radius: 3px; padding: 3px 5px; cursor: pointer; box-shadow: 2px 2px 0 #2a1d27, 4px 4px 0 #c0453f; }
+.more-certs:hover { transform: translate(-50%, -1px); }
+.away.intern { background: rgba(254, 174, 52, .92); color: #2a1d27; font-size: 8px; max-width: 54px; overflow: hidden; text-overflow: ellipsis; }
+.tv-count { position: absolute; transform: translate(-50%, 0); font: 700 9px/1 var(--pix); color: #feae34; background: #262b44; border: 1px solid #feae34; border-radius: 2px; padding: 2px 4px; white-space: nowrap; pointer-events: none; }
+
+.dock { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dface { width: 30px; height: 34px; padding: 2px; border: 2px solid #3b5dc9; border-radius: 8px; background: var(--surface); cursor: pointer; display: grid; place-items: center; transition: transform .12s ease; }
+.dface canvas { width: 22px; height: 25px; image-rendering: pixelated; }
+.dface:hover { transform: translateY(-2px); }
+.dface.urgent { border-color: var(--bad); animation: ring 1.2s ease-in-out infinite; }
+@keyframes ring { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .dface.urgent { animation: none; } }

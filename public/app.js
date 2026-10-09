@@ -4,7 +4,7 @@
 // ---------------- strings ----------------
 const I18N = {
   pt: {
-    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`, building: 'Ver prédio', agents: 'agentes',
+    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`, building: 'Ver prédio', agents: 'agentes', moreCerts: n => `+${n} certificado${n > 1 ? 's' : ''} — clique para ver todos`, subagents: n => `${n} subagente${n > 1 ? 's' : ''}`,
     help: { question: 'Tenho uma pergunta para você.', plan: 'Meu plano está pronto. Pode revisar?', run: c => `Posso rodar “${c}”?`, edit: f => `Posso editar ${f}?`, tool: t => `Posso usar ${t}? Está esperando a sua aprovação.`, done: t => `Pronto! ${t}`, see: 'Ver', more: n => `+${n} precisam de você`, less: 'Mostrar menos' },
     notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
@@ -46,7 +46,7 @@ const I18N = {
     ago: { s: 's', m: 'min', h: 'h', d: 'd' },
   },
   en: {
-    working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`, building: 'Building view', agents: 'agents',
+    working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`, building: 'Building view', agents: 'agents', moreCerts: n => `+${n} more certificate${n > 1 ? 's' : ''} — click to see all`, subagents: n => `${n} subagent${n > 1 ? 's' : ''}`,
     help: { question: 'I have a question for you.', plan: 'My plan is ready. Can you review it?', run: c => `Can I run “${c}”?`, edit: f => `Can I edit ${f}?`, tool: t => `Can I use ${t}? Waiting for your approval.`, done: t => `Done! ${t}`, see: 'Show', more: n => `+${n} more need you`, less: 'Show less' },
     notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
@@ -183,6 +183,8 @@ function relayout() {
     ping: [{ x: RX + 8, y: wing.ping + 16, zone: 'ping', pose: 'stand' }, { x: RX + RW - 22, y: wing.ping + 16, zone: 'ping', pose: 'stand', flip: true }],
     meetTop: [0, 1, 2].map(i => ({ x: RX + 32 + i * 32, y: wing.meet + 16, zone: 'meet', pose: 'sit' })),
     meetBot: [0, 1, 2].map(i => ({ x: RX + 32 + i * 32, y: wing.meet + 54, zone: 'meet', pose: 'back' })),
+    // overflow: standing along the walls of the glass room
+    meetStand: [[RX + 4, 40], [RX + 128, 40], [RX + 4, 66], [RX + 128, 66], [RX + 16, 76], [RX + 116, 76], [RX + 66, 2], [RX + 92, 2]].map(([x, dy]) => ({ x, y: wing.meet + dy, zone: 'meet', pose: 'stand' })),
     nap: [{ x: RX + 8, y: wing.nap + 30 }, { x: RX + 46, y: wing.nap + 46 }, { x: RX + 84, y: wing.nap + 30 }].map(p => ({ ...p, zone: 'nap' })),
   };
   for (const f of floorStates) f.H = Math.max(f.bottom, wing.bottom) + 6;
@@ -295,7 +297,9 @@ const want = new Map();
 function plan(now) {
   const assign = new Map();
   const zoneFor = cell => {
-    const z = ZONE_OF[cell.p.state] || 'desk';
+    const p = cell.p, asking = p.state === 'needs_you' || p.state === 'waiting';
+    // anyone with subagents takes the whole team to the meeting room (unless they're asking you something)
+    const z = asking ? 'desk' : (p.subagents && p.subagents.length) || p.state === 'delegate' ? 'meet' : ZONE_OF[p.state] || 'desk';
     let w = want.get(cell.p.id);
     if (!w) { w = { zone: z, since: 0, settled: z }; want.set(cell.p.id, w); }
     if (w.zone !== z) { w.zone = z; w.since = now; }
@@ -309,7 +313,7 @@ function plan(now) {
   else free.push(...lounge);
   const seats = [...spots.sofa, ...spots.stools, ...spots.coffee];
   free.forEach((c, i) => assign.set(c.p.id, seats[i] || null));
-  byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 3] || null));
+  byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 3] || spots.meetStand[i - 6] || null));
   byZone.nap.forEach((c, i) => assign.set(c.p.id, spots.nap[i] || null));
   return assign;
 }
@@ -511,13 +515,7 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
     Art.drawFront(cx, cy - 2, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', wave: st === 'needs_you', mouth: st === 'needs_you' ? 'open' : 'flat' });
   } else if (st === 'asleep') { Art.drawSleeping(cx, cy, lk, t); Art.drawChairBack(cx, cy + 14); }
   else { Art.drawSeatedBack(cx, cy, lk, t, { typing: st === 'edit' || st === 'terminal', reading: st === 'read' }); Art.drawChairBack(cx, cy + 14); }
-  // subagents that haven't gone to the meeting yet stand next to the desk
-  cell.interns = p.subagents || [];
-  cell.interns.slice(0, 2).forEach((s, i) => {
-    const ix = i ? x + 1 : x + CELL_W - 17, iy = y + 40;
-    Art.drawStanding(ix, iy, look(s.id + p.id), t, false);
-    r(ix + (i ? 12 : -2), iy + 12, 6, 7, PAL.ink); r(ix + (i ? 13 : -1), iy + 13, 4, 5, KIND_COLOR[s.state] || '#c0cbdc');
-  });
+  cell.interns = [];
 }
 
 function drawWing(t, lights, glows, pingPlaying, meeting) {
@@ -553,8 +551,10 @@ function drawWing(t, lights, glows, pingPlaying, meeting) {
   Art.drawPlant(RX + 4, ny - 2, false);
 }
 
+let meetInfo = { people: [], subTotal: 0, shown: 0 };
 function drawMeeting(t, meetPeople) {
-  const top = meetPeople.filter(m => m.spot.pose === 'sit'), bot = meetPeople.filter(m => m.spot.pose === 'back');
+  const top = meetPeople.filter(m => m.spot.pose === 'sit'), bot = meetPeople.filter(m => m.spot.pose === 'back'), standing = meetPeople.filter(m => m.spot.pose === 'stand');
+  for (const m of standing) Art.drawStanding(m.spot.x, m.spot.y, m.lk, t, false);
   for (const m of top) { Art.drawChairBack(m.spot.x, m.spot.y + 8); Art.drawFront(m.spot.x, m.spot.y - 2, m.lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit' }); }
   Art.drawMeetingTable(RX + 24, wing.meet + 38, 104, 14);
   for (const m of bot) { Art.drawSeatedBack(m.spot.x, m.spot.y, m.lk, t, {}); Art.drawChairBack(m.spot.x, m.spot.y + 14); }
@@ -583,10 +583,16 @@ function drawScene(t, dt) {
   drawShafts(sky, nWin);
   if (sky.phase !== 'night') for (let i = 0; i < nWin; i++) lights.push({ x: 40 + i * 74, y: TOP + 20, r: 60 });
   const arrived = z => layout.filter(c => c.actor && c.actor.mode === z);
-  const meet = arrived('meet').map(c => ({ spot: c.actor.spot, lk: look(c.p.id) }));
+  const meet = arrived('meet').map(c => ({ spot: c.actor.spot, lk: look(c.p.id), label: c.p.name, lead: true }));
   const used = new Set(meet.map(m => m.spot));
-  const freeSeats = [...spots.meetTop, ...spots.meetBot].filter(s => !used.has(s));
-  for (const c of arrived('meet')) for (const s of c.p.subagents || []) { const seat = freeSeats.shift(); if (seat) meet.push({ spot: seat, lk: look(s.id + c.p.id) }); }
+  const freeSeats = [...spots.meetTop, ...spots.meetBot, ...spots.meetStand].filter(s => !used.has(s));
+  let subTotal = 0;
+  for (const c of arrived('meet')) for (const s of c.p.subagents || []) {
+    subTotal++;
+    const seat = freeSeats.shift();
+    if (seat) meet.push({ spot: seat, lk: look(s.id + c.p.id), label: s.type, title: `${s.type}${s.description ? ': ' + s.description : ''}${s.doing ? ' — ' + s.doing : ''} (${c.p.name})` });
+  }
+  meetInfo = { people: meet, subTotal, shown: meet.filter(m => !m.lead).length };
   drawWing(t, lights, glows, arrived('ping').length >= 2, meet.length > 0);
   drawMeeting(t, meet);
   for (const R of rooms) drawRoom(R, t);
@@ -633,6 +639,8 @@ function stateText(p) {
   return base;
 }
 
+function shortName(n) { const parts = String(n).split('-'); return parts.length > 1 && parts[parts.length - 1].length >= 2 ? parts[parts.length - 1] : String(n).slice(0, 10); }
+
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 let lastHits = '', lastTags = '';
@@ -654,12 +662,11 @@ function renderOverlay() {
       const label = c.c.kind === 'badge' ? `${T.kinds.badge}: ${c.c.name} — ${c.c.desc}` : `${T.kinds[c.c.kind]}: ${c.c.name} (${c.c.n}×)`;
       parts.push(`<div class="hit" title="${esc(label)}" style="left:${c.x * S}px;top:${c.y * S}px;width:${c.w * S}px;height:${c.h * S}px"></div>`);
     }
-    if (cell.extraCerts) parts.push(`<span class="more" style="left:${(x + CELL_W - 22) * S}px;top:${(y + 20) * S}px">+${cell.extraCerts}</span>`);
+    if (cell.extraCerts) parts.push(`<button class="more-certs" data-certs="${esc(p.id)}" title="${esc(T.moreCerts(cell.extraCerts))}" style="left:${(x + CELL_W - 26) * S}px;top:${(y + 4) * S}px">+${cell.extraCerts}</button>`);
     (cell.interns || []).slice(0, 2).forEach((a, i) => {
       const ix = i ? x + 1 : x + CELL_W - 17;
       parts.push(`<div class="hit" title="${esc(a.type)}${a.description ? ': ' + esc(a.description) : ''}${a.doing ? ' — ' + esc(a.doing) : ''}" style="left:${ix * S}px;top:${(y + 40) * S}px;width:${16 * S}px;height:${24 * S}px"></div>`);
     });
-    if ((cell.interns || []).length > 2) parts.push(`<span class="more" style="left:${(x + CELL_W - 12) * S}px;top:${(y + 64) * S}px">+${cell.interns.length - 2}</span>`);
     // whoever went to the kitchen stays clickable there
     const a = cell.actor;
     if (a && a.mode !== 'desk' && a.mode !== 'walk') parts.push(`<div class="desk-hit" data-id="${esc(p.id)}" title="${esc(p.name)} · ${esc(T.states[p.state] || '')}" style="left:${Math.round(a.x) * S}px;top:${Math.round(a.y - 2) * S}px;width:${18 * S}px;height:${24 * S}px"></div>`);
@@ -668,8 +675,20 @@ function renderOverlay() {
   for (const R of rooms) tags.push(`<span class="room-sign" style="left:${(R.x + 12) * S}px;top:${(R.y - 1) * S}px;max-width:${(R.w - 16) * S}px" title="${esc(R.name)}">${esc(R.name)} <em>${R.people.length}</em></span>`);
   for (const cell of layout) {
     const a = cell.actor;
-    if (a && a.mode !== 'desk' && a.mode !== 'walk') tags.push(`<span class="away" style="left:${(a.x + 8) * S}px;top:${(a.y - (a.mode === 'nap' ? 6 : 10)) * S}px">${esc(cell.p.name)}</span>`);
+    if (!a || a.mode === 'desk' || a.mode === 'walk' || a.mode === 'meet') continue;
+    // side by side on the sofa the labels would overlap: short name, alternating heights
+    const seat = a.spot && spots.sofa.indexOf(a.spot);
+    const lift = seat >= 0 ? (seat % 2 ? 19 : 10) : a.mode === 'nap' ? 6 : 10;
+    const label = seat >= 0 ? shortName(cell.p.name) : cell.p.name;
+    tags.push(`<span class="away" title="${esc(cell.p.name)}" style="left:${(a.x + 8) * S}px;top:${(a.y - lift) * S}px">${esc(label)}</span>`);
   }
+  // meeting room: who leads, which subagents, and the total on the TV
+  meetInfo.people.forEach((m, i) => {
+    // neighbours sit 32px apart: alternate the label height so they never touch
+    const lift = (m.spot.pose === 'back' ? -26 : m.spot.pose === 'stand' ? 4 : 6) + (i % 2 ? (m.spot.pose === 'back' ? -9 : 9) : 0);
+    tags.push(`<span class="away ${m.lead ? '' : 'intern'}" title="${esc(m.title || m.label)}" style="left:${(m.spot.x + 8) * S}px;top:${(m.spot.y - lift) * S}px">${esc(m.lead ? shortName(m.label) : m.label)}</span>`);
+  });
+  if (meetInfo.subTotal) tags.push(`<span class="tv-count" style="left:${(RX + 17) * S}px;top:${(wing.meet + 34) * S}px">${esc(T.subagents(meetInfo.subTotal))}${meetInfo.subTotal > meetInfo.shown ? ' · +' + (meetInfo.subTotal - meetInfo.shown) : ''}</span>`);
   if (boardBox && data) { const c = counts(); parts.push(`<div class="hit" title="${c.work} ${esc(T.working)} · ${c.need} ${esc(T.needYou)} · ${c.turn} ${esc(T.yourTurn)} · ${c.sleep} ${esc(T.asleep)}" style="left:${boardBox.x * S}px;top:${boardBox.y * S}px;width:${boardBox.w * S}px;height:${boardBox.h * S}px"></div>`); }
   if (hallBox) parts.push(`<div class="desk-hit" data-hall="1" title="${esc(T.panel.hall)}" style="left:${hallBox.x * S}px;top:${hallBox.y * S}px;width:${hallBox.w * S}px;height:${hallBox.h * S}px"></div>`);
   const h = parts.join(''), g = tags.join('');
@@ -725,12 +744,14 @@ function renderPanel() {
     ${p.ctx ? `<h3>${P.context}</h3><div>${esc(P.tokens(fmtK(p.ctx)))}</div><div class="meter"><i style="width:${Math.min(100, p.ctx / ctxMax * 100)}%"></i></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
     ${p.subagents.length ? `<h3>${P.team}</h3><ul class="list">${p.subagents.map(a => `<li><span class="k">${KIND_ICON[a.state] || '•'}</span><span><b>${esc(a.type)}</b> ${esc(a.description)}${a.doing ? `<br><span class="note">${esc(a.doing)}</span>` : ''}</span></li>`).join('')}</ul>` : ''}
     <h3>${P.recent}</h3><ul class="list">${p.recent.map(a => `<li><span class="k">${KIND_ICON[a.kind] || '•'}</span><span><code>${esc(a.tool)}</code> ${esc(a.what)}</span><span class="t">${esc(ago(data.now - a.ts))}</span></li>`).join('') || '<li>—</li>'}</ul>
-    <h3>${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${Number(c.n) || 0}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
+    <h3 id="certs-h">${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${Number(c.n) || 0}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
     ${tools.length ? `<h3>${P.tools}</h3><ul class="list">${tools.map(([k, n]) => `<li><code>${esc(k)}</code><span class="t">${Number(n) || 0}×</span></li>`).join('')}</ul>` : ''}
     <p class="note" style="margin-top:18px">${P.session}: <code>${esc(p.id)}</code></p>`;
 }
 
 overlay.addEventListener('click', e => {
+  const mc = e.target.closest('[data-certs]');
+  if (mc) { showPerson(mc.dataset.certs); setTimeout(() => { const h = document.getElementById('certs-h'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); return; }
   const el = e.target.closest('[data-id],[data-hall]');
   if (!el) return;
   const id = el.dataset.hall ? '__hall' : el.dataset.id;
@@ -800,7 +821,36 @@ function helpText(p) {
   return H.done(p.title || '');
 }
 
-const HELP_MAX = 3;
+const HELP_MAX = 3, HELP_TTL = 12000; // after 12s without an answer the card shrinks into a face in the top bar
+const helpSeen = new Map();
+
+// faces of everyone still waiting on you, in the top bar, until they're answered
+const dock = document.createElement('div');
+dock.className = 'dock';
+document.querySelector('.bar .counts').after(dock);
+const dockFaces = new Map();
+dock.addEventListener('click', e => { const f = e.target.closest('[data-id]'); if (f) showPerson(f.dataset.id); });
+
+function renderDock() {
+  const rank = p => p.state === 'needs_you' ? 0 : p.state === 'waiting' ? 1 : 2;
+  const list = data.people.filter(p => ['needs_you', 'waiting', 'idle'].includes(p.state)).sort((a, b) => rank(a) - rank(b));
+  const keep = new Set(list.map(p => p.id));
+  for (const [id, el] of dockFaces) if (!keep.has(id)) { el.remove(); dockFaces.delete(id); }
+  list.forEach((p, i) => {
+    let el = dockFaces.get(p.id);
+    if (!el) {
+      el = document.createElement('button');
+      el.className = 'dface'; el.dataset.id = p.id;
+      el.appendChild(Art.portrait(p.id));
+      dockFaces.set(p.id, el);
+    }
+    const urgent = p.state !== 'idle';
+    el.classList.toggle('urgent', urgent);
+    el.title = `${p.name} — ${urgent ? helpText(p) : T.states.idle}`;
+    if (dock.children[i] !== el) dock.insertBefore(el, dock.children[i] || null);
+  });
+}
+
 let helpOpen = false;
 const helpMore = document.createElement('button');
 helpMore.className = 'hmore'; helpMore.hidden = true;
@@ -809,7 +859,11 @@ helpMore.onclick = () => { helpOpen = !helpOpen; renderHelp(); };
 function renderHelp() {
   const now = Date.now();
   const rank = p => p.state === 'needs_you' ? 0 : p.state === 'waiting' ? 1 : 2;
-  const all = data.people.filter(p => p.state === 'needs_you' || p.state === 'waiting' || (doneUntil.get(p.id) || 0) > now).sort((a, b) => rank(a) - rank(b));
+  // a card lives HELP_TTL ms per (person, state); after that only the face in the top bar remains
+  for (const p of data.people) { const k = p.id + ':' + p.state; if (!helpSeen.has(k)) helpSeen.set(k, now); }
+  const fresh = p => now - helpSeen.get(p.id + ':' + p.state) < HELP_TTL && !dismissed.has(p.id + ':' + p.state);
+  const all = data.people.filter(p => ((p.state === 'needs_you' || p.state === 'waiting') && fresh(p)) || (doneUntil.get(p.id) || 0) > now).sort((a, b) => rank(a) - rank(b));
+  renderDock();
   // a few cards at a time; the rest go behind an expand button
   const list = helpOpen ? all : all.slice(0, HELP_MAX);
   helpMore.hidden = all.length <= HELP_MAX;
