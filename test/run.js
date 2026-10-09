@@ -123,6 +123,8 @@ assert.strictEqual(by('A').doing.what, 'a.txt');
 assert.deepStrictEqual({ ...by('A').skills }, { impeccable: 1 });
 assert.deepStrictEqual({ ...by('A').mcps }, { rea: 1 });
 assert.strictEqual(by('A').ctx, 1001);
+assert.ok(by('A').today && by('A').today.tools >= 2, 'today stats count tools');
+assert.strictEqual(by('G').lastPrompt, 'new question', 'last prompt comes from the transcript');
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
 assert.strictEqual(by('G').status, 'busy', 'a new message in the transcript beats the lagging registry');
@@ -158,6 +160,7 @@ const pv = snapshot({ privacy: true }), pvJson = JSON.stringify(pv);
 assert.ok(pv.people.every(p => !p.branch && /^(claude|codex)-\d+$/.test(p.name)), 'private: no branch or name');
 assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') && !pvJson.includes('Codex conversation'), 'private: repo aliased, no skills, no titles');
 assert.deepStrictEqual(pv.credentials, {});
+assert.ok(pv.people.every(p => !p.lastPrompt && !p.lastReply), 'private: no prompt or reply text');
 
 // server: attempts to get in other than through the page itself
 const http = require('http');

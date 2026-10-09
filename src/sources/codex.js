@@ -82,9 +82,12 @@ function absorb(st, d) {
     } else if (/_output$/.test(p.type || '')) {
       st.pending.delete(p.call_id);
       st.pending.delete('approval');
-    } else if (p.type === 'message' && p.role === 'user' && !st.title) {
-      const txt = (p.content || []).map(c => c.text || '').join(' ');
-      if (txt && !txt.startsWith('<')) st.firstPrompt = short(txt, 60);
+    } else if (p.type === 'message' && p.role === 'user') {
+      const txt = (p.content || []).map(c => c.text || '').join(' ').trim();
+      if (txt && !txt.startsWith('<') && !txt.startsWith('#')) { if (!st.firstPrompt) st.firstPrompt = short(txt, 60); st.lastPrompt = short(txt, 220); st.lastPromptAt = ts; }
+    } else if (p.type === 'message' && p.role === 'assistant') {
+      const txt = (p.content || []).map(c => c.text || '').join(' ').trim();
+      if (txt) { st.lastReply = short(txt, 260); st.lastReplyAt = ts; }
     }
   }
 }

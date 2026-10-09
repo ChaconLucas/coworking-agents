@@ -48,10 +48,15 @@ function absorb(st, d) {
   if (d.gitBranch) st.branch = d.gitBranch;
   if (d.type === 'ai-title' && d.aiTitle) st.title = d.aiTitle;
   if (d.type === 'permission-mode' && d.permissionMode) st.permissionMode = d.permissionMode;
+  if (d.type === 'last-prompt' && d.lastPrompt && !st.lastPrompt) st.lastPrompt = short(d.lastPrompt, 220); // fallback only: the user message itself is richer
   if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; st.turnOpen = false; event(st, ts, 'idle'); }
   // the conversation is written immediately: a new message of yours or a model reply = turn open
   const prompt = d.type === 'user' && !d.isMeta && d.message && !isToolResult(d.message.content);
-  if (prompt) event(st, ts, 'thinking');
+  if (prompt) {
+    event(st, ts, 'thinking');
+    const c = d.message.content, text = typeof c === 'string' ? c : Array.isArray(c) ? c.filter(x => x.type === 'text').map(x => x.text).join(' ') : '';
+    if (text && !text.startsWith('<') && !/^\[Request interrupted/.test(text)) { st.lastPrompt = short(text, 220); st.lastPromptAt = ts; }
+  }
   if (d.type === 'assistant' || prompt) st.turnOpen = true;
   const m = d.message;
   if (!m) return;
@@ -60,6 +65,7 @@ function absorb(st, d) {
     const u = m.usage;
     if (u) { st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); addTokens(st, ts, u.output_tokens || 0); }
     for (const c of Array.isArray(m.content) ? m.content : []) {
+      if (c.type === 'text' && c.text && c.text.trim()) { st.lastReply = short(c.text, 260); st.lastReplyAt = ts; }
       if (c.type !== 'tool_use') continue;
       const name = c.name || '?', input = c.input || {};
       const item = { id: c.id, name, kind: activityOf(name), what: summarize(name, input), ts: ts || Date.now() };

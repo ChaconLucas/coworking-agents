@@ -55,18 +55,22 @@ async function reuse() {
     const s = await reuse();
     if (s) { console.log(`coworks-agents already running → ${s.base}/?t=${s.token}`); if (!flag('--no-open')) open(`${s.base}/?t=${s.token}`); return; }
   }
+  // keep the same token across restarts so an open tab keeps working (file is 0600, only yours)
+  let token;
+  if (!demo && !privacy) { try { const prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (/^[0-9a-f]{48}$/.test(prev.token)) token = prev.token; } catch {} }
   let hq;
-  try { hq = await start({ port, privacy, demo }); }
+  try { hq = await start({ port, privacy, demo, token }); }
   catch (e) {
     if (e.code !== 'EADDRINUSE') throw e;
-    hq = await start({ port: 0, privacy, demo }); // port taken by something else: use a free one
+    hq = await start({ port: 0, privacy, demo, token }); // port taken by something else: use a free one
   }
   if (!demo && !privacy) {
     try {
       fs.mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 });
       fs.writeFileSync(STATE_FILE, JSON.stringify({ pid: process.pid, base: hq.base, token: hq.token }), { mode: 0o600 });
-      const cleanup = () => { try { const s = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (s.pid === process.pid) fs.unlinkSync(STATE_FILE); } catch {} process.exit(0); };
-      process.on('SIGINT', cleanup); process.on('SIGTERM', cleanup);
+      // the file stays on exit: it keeps the token for the next run (reuse() pings before trusting it)
+      const bye = () => process.exit(0);
+      process.on('SIGINT', bye); process.on('SIGTERM', bye);
     } catch {}
   }
   console.log(`coworks-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);

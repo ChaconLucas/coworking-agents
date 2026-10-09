@@ -28,7 +28,8 @@ const LOCKED = `<!doctype html><meta charset="utf-8"><title>coworks-agents</titl
 <p style="max-width:420px;text-align:center">Abra o escritório pelo link que o <code>coworks-agents</code> mostrou no terminal.<br><br>
 <span style="color:#9a9187">Open the office using the link printed by <code>coworks-agents</code> in your terminal.</span></p>`;
 
-function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token = crypto.randomBytes(24).toString('hex') } = {}) {
+function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token } = {}) {
+  token = token || crypto.randomBytes(24).toString('hex');
   const snapshot = demo ? demoSnapshot : real;
   const clients = new Set();
   let last = '', lastPush = 0;

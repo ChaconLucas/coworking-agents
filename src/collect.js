@@ -76,6 +76,20 @@ function segments(events, from, to, open) {
   return out;
 }
 
+// today's numbers for one session (same math as the daily report)
+function todayStats(st, now) {
+  const d = new Date(now), since = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const segs = segments(st.events, since, now, true);
+  const evs = st.events.filter(e => e.ts >= since);
+  return {
+    activeMs: segs.filter(x => x.kind !== 'idle').reduce((a, x) => a + (x.to - x.from), 0),
+    tools: evs.filter(e => !['idle', 'thinking'].includes(e.kind)).length,
+    prompts: evs.filter(e => e.kind === 'thinking').length,
+    files: [...st.files.values()].filter(at => at >= since).length,
+    outTokens: st.outByDay[dayKey(now)] || 0,
+  };
+}
+
 function relFile(f) {
   const r = resolveRepo(path.dirname(f));
   return r ? { repo: r.name, rel: path.relative(r.worktree, f), abs: f } : { repo: '', rel: path.basename(f), abs: f };
@@ -97,6 +111,9 @@ function person(s, now) {
     timeline: st ? segments(st.events, now - 3600 * 1000, now, true) : [],
     files: st ? [...st.files.entries()].filter(([, at]) => now - at < EDIT_WINDOW_MS).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([f, at]) => ({ ...relFile(f), at })) : [],
     permissionMode: st ? st.permissionMode || '' : '',
+    lastPrompt: st ? st.lastPrompt || '' : '', lastPromptAt: st ? st.lastPromptAt || 0 : 0,
+    lastReply: st ? st.lastReply || '' : '', lastReplyAt: st ? st.lastReplyAt || 0 : 0,
+    today: st ? todayStats(st, now) : null,
     recent: st ? st.recent.slice(-8).reverse().map(r => ({ tool: r.name, what: r.what, kind: r.kind, ts: r.ts })) : [],
     skills: st ? st.skills : {}, mcps: st ? st.mcps : {}, tools: st ? st.tools : {},
     editing: edits.map(e => ({ worktree: e.repo.worktree, repo: e.repo.name, at: e.at })),
@@ -156,6 +173,7 @@ function snapshot({ privacy = false } = {}) {
     p.recent = p.recent.map(r => ({ ...r, what: '' }));
     p.subagents = p.subagents.map(a => ({ ...a, description: '', doing: '' }));
     p.files = p.files.map(f => ({ ...f, rel: '' }));
+    p.lastPrompt = ''; p.lastReply = '';
     if (p.doing) p.doing.ask = '';
   }
   const hn = os.hostname().replace(/\.local$/, '');
