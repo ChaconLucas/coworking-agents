@@ -4,6 +4,7 @@
 
 const os = require('os');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { resolveRepo, newest, dayKey } = require('./util');
 
 const SOURCES = [require('./sources/claude'), require('./sources/codex')];
@@ -12,25 +13,53 @@ const PENDING_STALE_MS = 6000;           // ferramenta parada há isto = rodando
 const ASLEEP_MS = 20 * 60 * 1000;
 const EDIT_WINDOW_MS = 15 * 60 * 1000;   // janela para "duas sessões editando o mesmo clone"
 
-// Ferramenta parada há mais de uns segundos pode ser só demorada ou um pedido de permissão.
-// Só vira "waiting" quando o modo de permissão pergunta mesmo por aquela ferramenta.
-function mayAskPermission(st, kind) {
-  if (st.explicitApprovals) return false;
-  const mode = st.permissionMode || 'default';
-  if (mode === 'auto' || mode === 'bypassPermissions' || mode === 'plan') return false;
-  if (mode === 'acceptEdits' && kind === 'edit') return false;
-  return true;
+// Tabela de processos (uma chamada por retrato): quem é filho de quem e há quanto tempo começou.
+let procCache = { at: 0, kids: new Map() };
+function processTable(now) {
+  if (now - procCache.at < 900) return procCache.kids;
+  const kids = new Map();
+  try {
+    const out = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,etime=,command='], { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' }, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 8 * 1024 * 1024 });
+    for (const line of out.split('\n')) {
+      const m = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(line);
+      if (!m) continue;
+      const [, pid, ppid, et, cmd] = m;
+      const t = et.split(/[-:]/).map(Number); // [[dd-]hh:]mm:ss
+      const secs = t.length === 4 ? ((t[0] * 24 + t[1]) * 60 + t[2]) * 60 + t[3] : t.length === 3 ? (t[0] * 60 + t[1]) * 60 + t[2] : t[0] * 60 + t[1];
+      if (!kids.has(+ppid)) kids.set(+ppid, []);
+      kids.get(+ppid).push({ pid: +pid, start: now - secs * 1000, cmd });
+    }
+  } catch {}
+  procCache = { at: now, kids };
+  return kids;
 }
 
-function stateOf(status, st, now) {
+// Um Bash do Claude Code corre num shell filho ("zsh -c source …/shell-snapshots/…").
+// Shell aberto depois do pedido = o comando está a correr; nenhum = ainda à espera de aprovação.
+function shellRunning(pid, since, now) {
+  const kids = processTable(now).get(pid) || [];
+  return kids.some(k => k.start >= since - 2000 && /shell-snapshots|^\/bin\/(ba|z)?sh -c|^(ba|z)?sh -c/.test(k.cmd));
+}
+
+// Ferramenta parada: instantâneas (editar, ler) só param se esperam aprovação; Bash mede-se pelo processo;
+// as lentas por natureza (web, MCP, subagentes) contam como trabalho, salvo modo que pergunta sempre.
+const INSTANT = new Set(['edit', 'read']);
+function stalledState(st, pend, pid, now) {
+  if (st.explicitApprovals) return pend.kind;
+  if (pend.kind === 'terminal' && pid) return shellRunning(pid, pend.ts, now) ? 'terminal' : 'waiting';
+  if (INSTANT.has(pend.kind)) return st.permissionMode === 'bypassPermissions' ? pend.kind : 'waiting';
+  const mode = st.permissionMode || 'default';
+  return mode === 'default' && now - pend.ts > 30000 ? 'waiting' : pend.kind;
+}
+
+function stateOf(status, st, now, pid) {
   if (!st) return status === 'busy' ? 'thinking' : 'idle';
   if (status !== 'busy') return now - Math.max(st.lastTs, st.mtime) > ASLEEP_MS ? 'asleep' : 'idle';
   const pend = newest(st.pending);
   if (!pend) return 'thinking';
   if (pend.kind === 'ask') return 'needs_you';
   const stale = !['delegate', 'thinking'].includes(pend.kind) && now - pend.ts > PENDING_STALE_MS && now - st.mtime > PENDING_STALE_MS;
-  if (stale && mayAskPermission(st, pend.kind)) return 'waiting';
-  return pend.kind;
+  return stale ? stalledState(st, pend, pid, now) : pend.kind;
 }
 
 // Junta os marcos em faixas contínuas [de, até, tipo] dentro da janela pedida.
@@ -60,7 +89,7 @@ function person(s, now) {
   const edits = st ? [...st.edits.values()].filter(e => now - e.at < EDIT_WINDOW_MS) : [];
   return {
     agent: s.agent, id: s.id, name: s.name, pid: s.pid, kind: s.kind, version: s.version,
-    status: s.status, state: stateOf(s.status, st, now), since: s.since, startedAt: s.startedAt,
+    status: s.status, state: stateOf(s.status, st, now, s.pid), since: s.since, startedAt: s.startedAt,
     title: st ? st.title : '', cwd, branch: st ? st.branch : '',
     repo: repo ? { name: repo.name, path: repo.repo, worktree: repo.worktree, isWorktree: repo.isWorktree } : null,
     model: st ? st.model : '', ctx: st ? st.ctx : 0, ctxMax: st ? st.ctxMax : 0, turns: st ? st.turns : 0,

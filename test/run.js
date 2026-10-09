@@ -94,11 +94,18 @@ session(sleepers[1].pid, 'F', 'busy', [permMode('default'), ...staleBash('F')]);
 // o ficheiro só conta como "parado" se não mexeu há mais de 6s
 for (const id of ['E', 'F']) { const f = path.join(claude, 'projects', 'p', id + '.jsonl'); fs.utimesSync(f, new Date(now - 10000), new Date(now - 10000)); }
 
+// H: um "Claude" (este processo de teste) com um shell filho aberto depois do pedido do Bash
+// o processo "Claude" de H é um sh que abre outro sh (o do comando) como filho
+const shellH = spawn('/bin/sh', ['-c', '/bin/sh -c "sleep 20; : shell-snapshots"; :'], { stdio: 'ignore' });
+execFileSync('sleep', ['0.3']);
+session(shellH.pid, 'H', 'busy', [permMode('auto'), use('bH', 'Bash', { command: 'npm test' }, now - 9000)]);
+fs.utimesSync(path.join(claude, 'projects', 'p', 'H.jsonl'), new Date(now - 9000), new Date(now - 9000));
+
 const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H'].filter(id => id !== 'B' || by('B')).sort(), 'só sessões vivas');
 // Codex
 assert.strictEqual(by('X1').agent, 'codex');
 assert.strictEqual(by('X1').title, 'Conversa do Codex');
@@ -119,8 +126,9 @@ assert.strictEqual(by('A').ctx, 1001);
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
 assert.strictEqual(by('G').status, 'busy', 'mensagem nova no transcrito vence o registro atrasado');
-assert.strictEqual(by('E').state, 'terminal', 'modo auto: Bash demorado é trabalho, não permissão');
-assert.strictEqual(by('F').state, 'waiting', 'modo default: Bash parado pode ser pedido de permissão');
+assert.strictEqual(by('E').state, 'waiting', 'Bash parado sem shell aberto = esperando aprovação, mesmo em modo auto');
+assert.strictEqual(by('F').state, 'waiting', 'modo default: Bash parado sem shell = esperando aprovação');
+assert.strictEqual(by('H').state, 'terminal', 'Bash parado com shell aberto depois do pedido = comando a correr');
 if (by('B')) {
   assert.strictEqual(by('B').state, 'idle');
   assert.strictEqual(by('B').doing, null, 'turno encerrado limpa a pendência');
@@ -140,6 +148,6 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
-sleepers.forEach(p => p.kill()); sleepG.kill();
+sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill();
 fs.rmSync(root, { recursive: true, force: true });
 console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
