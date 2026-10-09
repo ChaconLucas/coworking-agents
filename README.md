@@ -133,7 +133,7 @@ module.exports = {
 };
 ```
 
-`st` comes from `incremental()` in `src/util.js`: you write only an `absorb(state, line)` that understands your AI's transcript format and call `track()` for each tool call (and `event()` for turn starts and ends). Then register the file in `SOURCES` in `src/collect.js`, give it a color in `AGENT` in `public/app.js`, and add a case to `test/run.js`.
+`st` comes from `incremental()` in `src/util.js`: you write only an `absorb(state, line)` that understands your AI's transcript format and call `track()` for each tool call (and `event()` for turn starts and ends). Then register the file in `SOURCES` in `src/collect.js`, give it a color in `AGENT` in `public/js/palette.js`, and add a case to `test/run.js`.
 
 ## Development
 

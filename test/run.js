@@ -166,6 +166,29 @@ assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
   delete global.window; delete global.document;
 }
 
+// the front-end scripts: every one listed in index.html exists, no top-level name is declared twice
+// (a SyntaxError across classic scripts) and they all load in order against a minimal fake DOM
+{
+  const pub = path.join(__dirname, '..', 'public');
+  const srcs = [...fs.readFileSync(path.join(pub, 'index.html'), 'utf8').matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
+  assert.strictEqual(srcs[0], 'art.js', 'art.js loads first');
+  assert.strictEqual(srcs[srcs.length - 1], 'js/main.js', 'main.js loads last');
+  const code = srcs.map(s => [s, fs.readFileSync(path.join(pub, s), 'utf8')]);
+  // top-level declarations start at column 0; `let a = 1, b = 2` declares every name before an `=`
+  const seen = new Map();
+  for (const [s, c] of code.slice(1)) for (const m of c.matchAll(/^(?:const|let|var|(?:async )?function|class)\s+(.*)$/gm)) {
+    const decl = m[1].startsWith('{') ? m[1].slice(1, m[1].indexOf('}')).split(',').map(x => x.split(':').pop()) : /^[\w$]+\s*\(/.test(m[1]) ? [m[1]] : m[1].split(/,(?=\s*[\w$]+\s*=)/);
+    for (const n of decl.map(x => x.trim().match(/^[\w$]+/)[0])) { assert.ok(!seen.has(n), `${n} declared in both ${seen.get(n)} and ${s}`); seen.set(n, s); }
+  }
+  const vm = require('vm');
+  const el = () => new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => '' : ['clientWidth', 'width', 'height', 'length'].includes(k) ? 0 : k === 'children' ? [] : el(), set: () => true, apply: () => el(), construct: () => el() });
+  const sandbox = { console, Map, Set, URLSearchParams, setTimeout, setInterval: () => 0, clearInterval() {}, requestAnimationFrame: () => 0, location: { search: '' }, navigator: { language: 'en' }, localStorage: { getItem: () => null, setItem() {} }, document: el(), EventSource: function () {}, CSS: { escape: s => s }, addEventListener() {} };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  for (const [s, c] of code) vm.runInContext(c, sandbox, { filename: s });
+  assert.strictEqual(vm.runInContext('typeof drawScene + typeof renderAll + typeof I18N.en.working', sandbox), 'functionfunctionstring', 'front-end scripts share their names');
+}
+
 // secrets in commands never show up
 const { short } = require('../src/util');
 assert.ok(!short('export GITHUB_TOKEN=ghp_abc123 && x').includes('ghp_abc123'));
@@ -196,7 +219,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
 (async () => {
   const hq = await start({ port: 0 });
   const port = hq.server.address().port, ck = { Cookie: 'cw=' + hq.token };
-  for (const pth of ['/api/state', '/api/report', '/events', '/app.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'no token: ' + pth);
+  for (const pth of ['/api/state', '/api/report', '/events', '/js/main.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'no token: ' + pth);
   assert.strictEqual((await req(port, '/?t=wrong')).code, 401, 'wrong token');
   const login = await req(port, '/?t=' + hq.token);
   assert.strictEqual(login.code, 302);
