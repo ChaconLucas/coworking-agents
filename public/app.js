@@ -103,8 +103,9 @@ const qs = new URLSearchParams(location.search);
 let lang = qs.get('lang') || store.get('lang', (navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
 if (!Object.prototype.hasOwnProperty.call(I18N, lang)) lang = 'pt';
 let T = I18N[lang];
-let notifyOn = store.get('notify', false);
-let soundOn = store.get('sound', false);
+// sound is on by default; alerts follow the browser permission (asked on open). Only the buttons turn them off.
+let soundOn = store.get('sound', true);
+let notifyOn = store.get('notify', null);
 
 // ---------------- state colors and certificates ----------------
 const { PAL, hash, shade, look, r } = Art;
@@ -181,7 +182,7 @@ function relayout() {
   // every floor (the building view draws the others as thumbnails)
   floorStates = floors.map((_, i) => buildFloor(i));
   // shared wing
-  wing = { copa: TOP, ping: TOP + 112, meet: TOP + 184, nap: TOP + 290, bottom: TOP + 372 };
+  wing = { copa: TOP, ping: TOP + 112, meet: TOP + 184, nap: TOP + 290, servers: TOP + 378, bottom: TOP + 434 };
   spots = {
     sofa: [0, 1, 2, 3].map(i => ({ x: RX + 12 + i * 19, y: TOP + 50, zone: 'lounge', pose: 'sit' })),
     stools: [{ x: RX + 104, y: TOP + 56, zone: 'lounge', pose: 'stand' }, { x: RX + 126, y: TOP + 56, zone: 'lounge', pose: 'stand' }],
@@ -418,13 +419,20 @@ function counts() {
 }
 
 // ---------------- scene ----------------
+let wallGlows = [];
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
   r(0, 0, W, 3, PAL.wallTrim); r(0, 3, W, 1, PAL.ink2);
   r(0, TOP - 8, W, 2, PAL.wallShade); r(0, TOP - 6, W, 5, PAL.base); r(0, TOP - 6, W, 1, '#8f553f'); r(0, TOP - 1, W, 1, PAL.ink);
   const nWin = Math.max(1, Math.floor((CX - 30) / 74));
-  for (let i = 0; i < nWin; i++) Art.drawWindow(16 + i * 74, 9, 48, 30, sky, t, i);
+  // the third window slot becomes the dev corner of the wall: neon </> and two posters
+  for (let i = 0; i < nWin; i++) {
+    const wx = 16 + i * 74;
+    if (i === 2 && nWin >= 4) { Art.drawNeon(wx + 9, 10, t, wallGlows); Art.drawPoster(wx - 4, 28 - 8, 0); Art.drawPoster(wx + 34, 28 - 8, 2); }
+    else if (i === 5) Art.drawPoster(wx + 14, 12, 1);
+    else Art.drawWindow(wx, 9, 48, 30, sky, t, i);
+  }
   boardBox = { x: RX - 14, y: 8, w: 56, h: 30 };
   Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);
   Art.drawClock(RX + 58, 20);
@@ -502,6 +510,10 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
   r(dx + 3, dy + 18, 3, 6, PAL.ink); r(dx + dw - 6, dy + 18, 3, 6, PAL.ink);
   r(x + CELL_W / 2 - 10, dy + 2, 20, 4, PAL.ink); r(x + CELL_W / 2 - 9, dy + 2, 18, 3, '#c0cbdc'); r(x + CELL_W / 2 - 9, dy + 4, 18, 1, '#8b9bb4');
   r(x + CELL_W / 2 + 13, dy + 3, 3, 3, PAL.ink); r(x + CELL_W / 2 + 13, dy + 3, 2, 2, '#c0cbdc');
+  // dev desk extras, fixed per person: side monitor, rubber duck, sticky notes on the partition
+  if (p && seed % 4 === 1) Art.drawSideMonitor(mx + mw + 6, my + 2, t, seed);
+  if (p && seed % 5 === 0) Art.drawDuck(x + CELL_W / 2 + 18, dy + 1);
+  if (seed % 3 !== 2) Art.drawStickies(px + pw - 22, py + 18, seed);
   const item = seed % 3;
   if (item === 0) { const on = !!p && sky.phase !== 'day'; Art.drawLamp(dx + 2, dy - 10, on); if (on) lights.push({ x: dx + 6, y: dy + 2, r: 40 }); }
   else if (item === 1) Art.drawPlant(dx + 1, dy - 12, false);
@@ -524,6 +536,25 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
   cell.interns = [];
 }
 
+// fills the floor left empty under the rooms: arcade, bookshelves, an architecture board, plants
+function drawDevCorner(t, glows) {
+  const top = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 18;
+  if (H - top < 50) return;
+  const y = top + Math.min(20, (H - top - 46) / 2);
+  let x = 16;
+  const items = [
+    w => { Art.drawArcade(x, y, t, glows); return 26; },
+    w => { Art.drawArcade(x, y, t, glows); return 30; },
+    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
+    w => { Art.drawDiagramBoard(x, y + 2); return 40; },
+    w => { Art.drawPlant(x, y + 12, true); return 26; },
+    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
+    w => { Art.drawBeanBag(x, y + 16, '#3b5dc9'); return 30; },
+    w => { Art.drawPlant(x, y + 12, true); return 26; },
+  ];
+  for (const draw of items) { if (x > CX - 40) break; x += draw(); }
+}
+
 function drawWing(t, lights, glows, pingPlaying, meeting) {
   r(CX - 6, TOP, 1, H - TOP, '#00000018');
   // kitchen with tiled floor
@@ -536,6 +567,9 @@ function drawWing(t, lights, glows, pingPlaying, meeting) {
   Art.drawRug(RX + 4, TOP + 70, 92, 26);
   Art.drawSofa(RX + 10, TOP + 46, 78);
   Art.drawRoundTable(RX + 108, TOP + 70);
+  Art.drawPizza(RX + 111, TOP + 70);
+  Art.drawBeanSack(RX + 84, TOP + 18);
+  Art.drawCupStack(RX + 74, TOP - 6);
   Art.drawStool(RX + 100, TOP + 82); Art.drawStool(RX + 126, TOP + 82);
   // ping-pong
   Art.drawPingPong(RX + 34, wing.ping + 20, 80, 30, t, pingPlaying);
@@ -554,6 +588,12 @@ function drawWing(t, lights, glows, pingPlaying, meeting) {
   Art.drawBookshelf(RX + 104, ny + 2, 40, 24);
   for (const [i, sp] of spots.nap.entries()) Art.drawBeanBag(sp.x - 2, sp.y + 2, ['#b55088', '#0099db', '#feae34'][i]);
   Art.drawPrinter(RX + 60, ny + 4, t);
+  // server corner under the nap area
+  const sy = wing.servers;
+  r(RX - 2, sy - 4, RW + 4, 58, '#1b1d2e');
+  for (let yy = 0; yy < 58; yy += 4) for (let xx = (yy % 8) ? 0 : 2; xx < RW + 4; xx += 4) r(RX - 2 + xx, sy - 4 + yy, 1, 1, '#23263a');
+  for (let k = 0; k < 5; k++) Art.drawServerRack(RX + 4 + k * 28, sy, t, glows, 'rack' + k);
+  lights.push({ x: RX + RW / 2, y: sy + 22, r: 50 });
   Art.drawPlant(RX + 4, ny - 2, false);
 }
 
@@ -585,6 +625,7 @@ function drawScene(t, dt) {
   updateCat(dt, t);
   const lights = [], glows = [];
   Art.drawFloor(W, H, TOP);
+  wallGlows = glows;
   const nWin = drawWall(t, sky);
   drawShafts(sky, nWin);
   if (sky.phase !== 'night') for (let i = 0; i < nWin; i++) lights.push({ x: 40 + i * 74, y: TOP + 20, r: 60 });
@@ -602,6 +643,7 @@ function drawScene(t, dt) {
   drawWing(t, lights, glows, arrived('ping').length >= 2, meet.length > 0);
   drawMeeting(t, meet);
   for (const R of rooms) drawRoom(R, t);
+  drawDevCorner(t, glows);
   const cs = clashSet();
   for (const d of desks) drawDesk(d, t, cs.has(d.p.id), lights, glows, sky);
   const movers = [];
@@ -822,7 +864,7 @@ function renderBar() {
   box.hidden = !data.clashes.length;
   const empty = document.getElementById('empty');
   empty.innerHTML = T.empty; empty.hidden = data.people.length > 0;
-  for (const [id, on, label] of [['btn-notify', notifyOn, T.notify], ['btn-sound', soundOn, T.sound]]) {
+  for (const [id, on, label] of [['btn-notify', !!notifyOn, T.notify], ['btn-sound', soundOn, T.sound]]) {
     const b = document.getElementById(id);
     b.setAttribute('aria-pressed', on); b.title = label.replace(/^\S+\s/, ''); b.querySelector('.sr').textContent = b.title;
   }
@@ -974,6 +1016,19 @@ function notifyChanges() {
   }
   prevStates = new Map(data.people.map(p => [p.id, p.state]));
 }
+
+// ask for notification permission right away; browsers that need a gesture get asked on the first click
+async function askNotify() {
+  if (!('Notification' in window) || notifyOn === false) return;
+  if (Notification.permission === 'default') { try { await Notification.requestPermission(); } catch {} }
+  if (notifyOn === null && Notification.permission === 'granted') { notifyOn = true; store.set('notify', true); }
+  if (data) renderBar();
+}
+askNotify();
+document.addEventListener('pointerdown', () => {
+  askNotify();
+  try { audio = audio || new AudioContext(); if (audio.state === 'suspended') audio.resume(); } catch {} // unlock sound
+}, { once: true });
 
 document.getElementById('btn-notify').onclick = async () => {
   if (!notifyOn && 'Notification' in window && Notification.permission !== 'granted') {

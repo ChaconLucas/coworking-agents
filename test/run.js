@@ -149,6 +149,15 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
+// the browser art module must load and export only real functions (node --check can't see a missing name)
+{
+  global.window = {}; global.document = { createElement: () => ({ getContext: () => ({}) }) };
+  require('../public/art.js');
+  const bad = Object.entries(window.Art).filter(([k, v]) => v === undefined).map(([k]) => k);
+  assert.deepStrictEqual(bad, [], 'art.js exports undefined names');
+  delete global.window; delete global.document;
+}
+
 // secrets in commands never show up
 const { short } = require('../src/util');
 assert.ok(!short('export GITHUB_TOKEN=ghp_abc123 && x').includes('ghp_abc123'));

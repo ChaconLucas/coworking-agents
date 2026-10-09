@@ -587,8 +587,117 @@ function portrait(id, mood) {
   return cv;
 }
 
+// ---------------- tech & coffee props ----------------
+// neon "</>" on the wall; flickers now and then and lights the wall at night
+function drawNeon(x, y, t, glows) {
+  const f = (t / 120) | 0, on = !(f % 47 === 0 || f % 53 === 0);
+  const c = on ? '#2ce8f5' : '#1a5a66', c2 = on ? '#ff6ec7' : '#5a2a48';
+  r(x - 2, y - 2, 34, 18, '#1b1d2e'); r(x - 1, y - 1, 32, 16, '#23263a');
+  // <
+  r(x + 2, y + 6, 2, 2, c); r(x + 4, y + 4, 2, 2, c); r(x + 6, y + 2, 2, 2, c); r(x + 4, y + 8, 2, 2, c); r(x + 6, y + 10, 2, 2, c);
+  // /
+  r(x + 18, y + 1, 2, 3, c2); r(x + 16, y + 4, 2, 3, c2); r(x + 14, y + 7, 2, 3, c2); r(x + 12, y + 10, 2, 3, c2);
+  // >
+  r(x + 26, y + 6, 2, 2, c); r(x + 24, y + 4, 2, 2, c); r(x + 22, y + 2, 2, 2, c); r(x + 24, y + 8, 2, 2, c); r(x + 22, y + 10, 2, 2, c);
+  if (on && glows) { glows.push({ x: x + 15, y: y + 7, r: 30, c: '#2ce8f5' }); glows.push({ x: x + 15, y: y + 7, r: 18, c: '#ff6ec7' }); }
+}
+
+// small framed posters: rocket (ship it), coffee cup, git branches
+function drawPoster(x, y, kind) {
+  r(x - 1, y - 1, 22, 28, PAL.ink); r(x, y, 20, 26, '#f4ecd8');
+  if (kind === 0) { // rocket
+    r(x + 2, y + 2, 16, 22, '#1b1f3b');
+    for (let k = 0; k < 6; k++) r(x + 3 + (hash('s' + k) % 14), y + 3 + (hash('t' + k) % 18), 1, 1, '#fff');
+    r(x + 9, y + 6, 3, 9, '#e8ecf4'); r(x + 10, y + 5, 1, 1, '#e8ecf4'); r(x + 10, y + 9, 1, 2, '#0099db');
+    r(x + 8, y + 13, 1, 3, PAL.red); r(x + 12, y + 13, 1, 3, PAL.red); r(x + 10, y + 16, 1, 3, PAL.amber); r(x + 9, y + 17, 3, 1, '#f77622');
+  } else if (kind === 1) { // coffee
+    r(x + 2, y + 2, 16, 22, '#be4a2f');
+    r(x + 5, y + 11, 9, 8, '#f4ecd8'); r(x + 14, y + 13, 2, 3, '#f4ecd8'); r(x + 6, y + 12, 7, 2, '#5d3a28');
+    r(x + 7, y + 6, 1, 3, '#f4ecd8'); r(x + 10, y + 5, 1, 4, '#f4ecd8'); r(x + 4, y + 20, 12, 1, '#f4ecd8');
+  } else { // git branches
+    r(x + 2, y + 2, 16, 22, '#262b44');
+    r(x + 6, y + 4, 1, 18, '#63c74d'); r(x + 7, y + 9, 5, 1, '#feae34'); r(x + 12, y + 9, 1, 8, '#feae34'); r(x + 7, y + 17, 5, 1, '#feae34');
+    for (const yy of [5, 9, 14, 20]) r(x + 5, y + yy, 3, 3, '#63c74d');
+    for (const yy of [11, 14]) r(x + 11, y + yy, 3, 3, '#feae34');
+  }
+}
+
+// server rack: rows of blinking LEDs, a little cyan glow at night
+function drawServerRack(x, y, t, glows, seed) {
+  const f = (t / 160) | 0;
+  r(x + 2, y + 44, 20, 3, '#00000033');
+  r(x - 1, y - 1, 24, 46, PAL.ink); r(x, y, 22, 44, '#262b44'); r(x, y, 22, 2, '#3a4466');
+  for (let u = 0; u < 7; u++) {
+    const uy = y + 4 + u * 6;
+    r(x + 2, uy, 18, 5, '#1b1d2e'); r(x + 2, uy, 18, 1, '#3a4466');
+    for (let k = 0; k < 4; k++) {
+      const h = hash(seed + ':' + u + ':' + k + ':' + ((f + k * 3 + u) >> (k % 3)));
+      r(x + 4 + k * 3, uy + 2, 2, 1, h % 5 === 0 ? '#feae34' : h % 3 ? '#63c74d' : '#1f3a24');
+    }
+    r(x + 16, uy + 2, 3, 1, '#0099db');
+  }
+  if (glows) glows.push({ x: x + 11, y: y + 22, r: 18, c: '#63c74d' });
+}
+
+function drawDuck(x, y) {
+  r(x, y + 3, 6, 3, PAL.ink); r(x + 3, y, 4, 4, PAL.ink);
+  r(x + 1, y + 3, 4, 2, '#ffd23f'); r(x + 4, y + 1, 2, 2, '#ffd23f'); r(x + 6, y + 2, 2, 1, '#f77622'); r(x + 5, y + 1, 1, 1, PAL.ink);
+}
+
+// vertical side monitor with code
+function drawSideMonitor(x, y, t, seed) {
+  const f = (t / 260) | 0;
+  r(x - 1, y - 1, 13, 18, PAL.ink); r(x, y, 11, 16, '#1e2233');
+  for (let i = 0; i < 7; i++) { const h = hash(seed + 'm' + (i + f)); r(x + 1 + (h % 3), y + 1 + i * 2, 3 + (h >>> 4) % 6, 1, ['#7aa2f7', '#9ece6a', '#bb9af7', '#e0af68'][h % 4]); }
+  r(x + 4, y + 17, 3, 2, PAL.ink);
+}
+
+function drawStickies(x, y, seed) {
+  const cols = ['#ffd23f', '#ff6ec7', '#63c74d', '#2ce8f5'];
+  for (let k = 0; k < 3; k++) { const h = hash(seed + 'st' + k); r(x + k * 6, y + (h % 3), 5, 5, cols[h % 4]); r(x + k * 6 + 1, y + (h % 3) + 2, 3, 1, '#00000030'); }
+}
+
+function drawBeanSack(x, y) {
+  r(x + 1, y + 13, 14, 2, '#00000030');
+  r(x, y + 2, 16, 12, PAL.ink); r(x + 1, y + 3, 14, 10, '#b97c48'); r(x + 3, y, 10, 4, PAL.ink); r(x + 4, y + 1, 8, 3, '#a86a52');
+  r(x + 4, y + 6, 8, 5, '#f4ecd8'); r(x + 6, y + 7, 4, 3, '#5d3a28'); r(x + 7, y + 8, 2, 1, '#8f553f');
+}
+
+function drawPizza(x, y) {
+  r(x, y, 14, 8, PAL.ink); r(x + 1, y + 1, 12, 6, '#d9b380'); r(x + 2, y + 2, 10, 4, '#e8b04b');
+  r(x + 4, y + 3, 2, 1, PAL.red); r(x + 8, y + 4, 2, 1, PAL.red); r(x + 6, y + 2, 1, 1, '#3e8948');
+}
+
+function drawCupStack(x, y) {
+  for (let k = 0; k < 3; k++) { r(x, y - k * 3, 6, 4, PAL.ink); r(x + 1, y - k * 3 + 1, 4, 2, '#f4ecd8'); }
+}
+
+
+// arcade cabinet with an attract-mode screen
+function drawArcade(x, y, t, glows) {
+  const f = (t / 180) | 0;
+  r(x + 2, y + 34, 16, 3, '#00000033');
+  r(x - 1, y - 1, 20, 36, PAL.ink); r(x, y, 18, 34, '#68386c'); r(x, y, 18, 4, '#b55088'); r(x + 2, y + 1, 14, 2, '#feae34');
+  r(x + 2, y + 6, 14, 11, '#0b0a0e');
+  const px = x + 3 + (f % 10);
+  r(px, y + 10, 3, 3, '#ffd23f'); if (f % 2) r(px + 2, y + 11, 1, 1, '#0b0a0e');
+  for (let k = 0; k < 4; k++) if (x + 3 + k * 3 > px + 3) r(x + 4 + k * 3, y + 11, 1, 1, '#f4ecd8');
+  r(x + 12, y + 8, 3, 3, '#e43b44');
+  r(x + 1, y + 19, 16, 5, '#3e2731'); r(x + 5, y + 18, 2, 3, PAL.ink); r(x + 5, y + 17, 2, 1, PAL.red); r(x + 10, y + 21, 2, 1, '#2ce8f5'); r(x + 13, y + 21, 2, 1, '#63c74d');
+  if (glows) glows.push({ x: x + 9, y: y + 11, r: 20, c: '#b55088' });
+}
+
+// standing whiteboard with an architecture sketch
+function drawDiagramBoard(x, y) {
+  r(x + 2, y + 30, 26, 2, '#00000030');
+  r(x - 1, y - 1, 32, 24, PAL.ink); r(x, y, 30, 22, '#f4f4f8');
+  r(x + 3, y + 3, 7, 5, '#0099db'); r(x + 20, y + 3, 7, 5, '#63c74d'); r(x + 11, y + 13, 8, 5, '#feae34');
+  r(x + 10, y + 5, 10, 1, '#262b44'); r(x + 6, y + 8, 1, 7, '#262b44'); r(x + 6, y + 15, 5, 1, '#262b44'); r(x + 23, y + 8, 1, 7, '#262b44'); r(x + 19, y + 15, 5, 1, '#262b44');
+  r(x + 4, y + 22, 2, 8, PAL.ink); r(x + 24, y + 22, 2, 8, PAL.ink);
+}
+
 window.Art = {
-  portrait,
+  portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
   PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,
