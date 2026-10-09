@@ -4,7 +4,7 @@
 // ---------------- textos ----------------
 const I18N = {
   pt: {
-    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`,
+    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `${n}º andar`, building: 'Ver prédio', agents: 'agentes',
     notify: '🔔 Avisos', sound: '🔊 Som', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
     offline: 'Sem conexão com o coworks-agents. Tentando de novo…',
@@ -45,7 +45,7 @@ const I18N = {
     ago: { s: 's', m: 'min', h: 'h', d: 'd' },
   },
   en: {
-    working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`,
+    working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`, building: 'Building view', agents: 'agents',
     notify: '🔔 Alerts', sound: '🔊 Sound', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
     offline: 'Lost connection to coworks-agents. Retrying…',
@@ -114,13 +114,14 @@ const BADGE_COLOR = { tools100: '#e43b44', tools1000: '#b55088', marathon: '#f77
 // Cada repositório é uma sala com as mesas dos seus agentes; as salas ficam em faixas à esquerda.
 // À direita, uma ala comum: copa, pingue-pongue, sala de reunião e canto da soneca.
 // Com muitas salas, o escritório ganha andares (cada andar tem a sua ala comum).
-const TOP = 58, CELL_W = 100, CELL_H = 96, RW = 148, ROOM_PAD = 6, ROOM_HEAD = 14, SHELF_GAP = 14, MAX_SHELVES = 3;
+const TOP = 58, CELL_W = 100, CELL_H = 96, RW = 148, ROOM_PAD = 6, ROOM_HEAD = 14, SHELF_GAP = 14, MAX_SHELVES = 2, ROOM_MAX = 9;
 const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
+const mainCtx = cv.getContext('2d');
+let ctx = mainCtx; // troca para o canvas da miniatura quando desenha outro andar
 Art.setCtx(ctx);
 const overlay = document.getElementById('overlay');
 let S = 3, W = 480, H = 300, CX = 320, RX = 330;
-let data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null;
+let data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
 
 function roomKey(p) {
   if (p.repo && p.repo.name) return p.repo.name;
@@ -133,7 +134,13 @@ function planFloors(people, leftW) {
   const groups = new Map();
   for (const p of people) { const k = roomKey(p); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
   const maxCols = Math.max(1, Math.floor((leftW - ROOM_PAD * 2) / CELL_W));
-  const list = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, ps]) => {
+  // sala com mais de 9 agentes vira várias (api 1, api 2…) para nenhum andar ficar comprido demais
+  const chunks = [];
+  for (const [name, ps] of [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (ps.length <= ROOM_MAX) { chunks.push([name, ps]); continue; }
+    for (let k = 0; k < ps.length; k += ROOM_MAX) chunks.push([`${name} ${k / ROOM_MAX + 1}`, ps.slice(k, k + ROOM_MAX)]);
+  }
+  const list = chunks.map(([name, ps]) => {
     const cols = Math.min(maxCols, Math.max(1, Math.min(3, ps.length)));
     return { name, people: ps, cols, rows: Math.ceil(ps.length / cols), w: cols * CELL_W + ROOM_PAD * 2 };
   });
@@ -154,7 +161,7 @@ function planFloors(people, leftW) {
 
 function relayout() {
   const stage = document.getElementById('stage');
-  const availW = Math.min(stage.clientWidth - 4, 2400);
+  const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // escondido (modo prédio) mede 0
   // com várias salas, encolhe a escala para caberem duas lado a lado; com uma só, fica grande
   const groups = new Set((data ? data.people : []).map(roomKey)).size;
   const s0 = Math.max(1.6, Math.min(3, availW / (groups > 1 ? 840 : 520)));
@@ -163,25 +170,8 @@ function relayout() {
   const leftW = CX - 12;
   floors = planFloors(data ? data.people : [], leftW);
   if (floor >= floors.length) floor = floors.length - 1;
-  // salas do andar atual
-  rooms = []; desks = [];
-  let y = TOP + 4;
-  for (const shelf of floors[floor].shelves) {
-    let x = 8, shelfH = 0;
-    for (const room of shelf.rooms) {
-      const h = ROOM_HEAD + room.rows * CELL_H + 4;
-      const R = { ...room, x, y, h, doorX: x + Math.round(room.w / 2) - 9 };
-      R.people.forEach((p, i) => {
-        const dx = x + ROOM_PAD + (i % room.cols) * CELL_W, dy = y + ROOM_HEAD + ((i / room.cols) | 0) * CELL_H;
-        desks.push({ p, room: R, x: dx, y: dy, chair: { x: dx + CELL_W / 2 - 8, y: dy + 38 }, aisle: dy + 72 });
-      });
-      rooms.push(R);
-      x += room.w + 8; shelfH = Math.max(shelfH, h);
-    }
-    y += shelfH + SHELF_GAP;
-  }
-  layout = desks.map(d => Object.assign({}, d));
-  layout.forEach((c, i) => { desks[i].cell = c; });
+  // todos os andares (a visão do prédio desenha os outros em miniatura)
+  floorStates = floors.map((_, i) => buildFloor(i));
   // ala comum
   wing = { copa: TOP, ping: TOP + 112, meet: TOP + 184, nap: TOP + 290, bottom: TOP + 372 };
   spots = {
@@ -193,14 +183,42 @@ function relayout() {
     meetBot: [0, 1, 2].map(i => ({ x: RX + 32 + i * 32, y: wing.meet + 54, zone: 'meet', pose: 'back' })),
     nap: [{ x: RX + 8, y: wing.nap + 30 }, { x: RX + 46, y: wing.nap + 46 }, { x: RX + 84, y: wing.nap + 30 }].map(p => ({ ...p, zone: 'nap' })),
   };
-  H = Math.max(y, wing.bottom) + 6;
+  for (const f of floorStates) f.H = Math.max(f.bottom, wing.bottom) + 6;
+  useFloor(floor);
   fitScale();
   renderFloors();
 }
 
+function buildFloor(i) {
+  const rs = [], ds = [];
+  let y = TOP + 4;
+  for (const shelf of floors[i].shelves) {
+    let x = 8, shelfH = 0;
+    for (const room of shelf.rooms) {
+      const h = ROOM_HEAD + room.rows * CELL_H + 4;
+      const R = { ...room, x, y, h, doorX: x + Math.round(room.w / 2) - 9 };
+      R.people.forEach((p, k) => {
+        const dx = x + ROOM_PAD + (k % room.cols) * CELL_W, dy = y + ROOM_HEAD + ((k / room.cols) | 0) * CELL_H;
+        ds.push({ p, room: R, x: dx, y: dy, chair: { x: dx + CELL_W / 2 - 8, y: dy + 38 }, aisle: dy + 72 });
+      });
+      rs.push(R);
+      x += room.w + 8; shelfH = Math.max(shelfH, h);
+    }
+    y += shelfH + SHELF_GAP;
+  }
+  const lay = ds.map(d => Object.assign({}, d));
+  lay.forEach((c, k) => { ds[k].cell = c; });
+  return { rooms: rs, desks: ds, layout: lay, bottom: y, H: 0 };
+}
+
+function useFloor(i) {
+  const f = floorStates[i];
+  rooms = f.rooms; desks = f.desks; layout = f.layout; H = f.H;
+}
+
 function fitScale() {
   const stage = document.getElementById('stage');
-  const availW = Math.min(stage.clientWidth - 4, 2400);
+  const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // escondido (modo prédio) mede 0
   S = Math.max(1.5, Math.floor(Math.min(availW / W, 4) * 4) / 4);
   cv.width = W; cv.height = H;
   cv.style.width = W * S + 'px'; cv.style.height = H * S + 'px';
@@ -212,17 +230,59 @@ function fitScale() {
 // seletor de andares (só aparece com mais de um)
 function renderFloors() {
   let bar = document.getElementById('floors');
-  if (!bar) { bar = document.createElement('nav'); bar.id = 'floors'; bar.className = 'floors'; document.getElementById('stage').before(bar); bar.addEventListener('click', e => { const b = e.target.closest('[data-floor]'); if (b) goFloor(+b.dataset.floor); }); }
-  if (floors.length < 2) { bar.hidden = true; return; }
+  if (!bar) { bar = document.createElement('nav'); bar.id = 'floors'; bar.className = 'floors'; document.getElementById('stage').before(bar); bar.addEventListener('click', e => { if (e.target.closest('[data-building]')) return setBuilding(!building); const b = e.target.closest('[data-floor]'); if (b) goFloor(+b.dataset.floor); }); }
+  if (floors.length < 2) { bar.hidden = true; if (building) setBuilding(false); return; }
   bar.hidden = false;
-  bar.innerHTML = floors.map((f, i) => {
+  bar.innerHTML = `<button class="floor bld ${building ? 'on' : ''}" data-building="1">🏢 ${esc(T.building)}</button>` + floors.map((f, i) => {
     const ps = f.shelves.flatMap(s => s.rooms.flatMap(r => r.people));
     const need = ps.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
     const names = f.shelves.flatMap(s => s.rooms.map(r => r.name));
-    return `<button class="floor ${i === floor ? 'on' : ''}" data-floor="${i}" title="${esc(names.join(', '))}"><b>${esc(T.floor(i + 1))}</b> <span>${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' +' + (names.length - 3) : ''}</span>${need ? ` <i class="dot">${need}</i>` : ''}</button>`;
+    return `<button class="floor ${i === floor && !building ? 'on' : ''}" data-floor="${i}" title="${esc(names.join(', '))}"><b>${esc(T.floor(i + 1))}</b> <span>${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' +' + (names.length - 3) : ''}</span>${need ? ` <i class="dot">${need}</i>` : ''}</button>`;
   }).join('');
 }
-function goFloor(i) { if (i === floor || i < 0 || i >= floors.length) return; floor = i; actors.clear(); want.clear(); lastLayoutKey = ''; renderAll(); }
+// ---------------- visão do prédio: cada andar em miniatura, ao vivo ----------------
+const buildingEl = document.createElement('section');
+buildingEl.className = 'building'; buildingEl.hidden = true;
+document.getElementById('stage').after(buildingEl);
+buildingEl.addEventListener('click', e => { const c = e.target.closest('[data-floor]'); if (c) goFloor(+c.dataset.floor); });
+const thumbs = [];
+
+function setBuilding(on) {
+  building = !!on && floors.length > 1;
+  buildingEl.hidden = !building;
+  document.getElementById('stage').hidden = building;
+  if (building) renderBuilding();
+  renderFloors();
+}
+
+function renderBuilding() {
+  buildingEl.innerHTML = floors.map((f, i) => {
+    const ps = f.shelves.flatMap(sh => sh.rooms.flatMap(r => r.people));
+    const need = ps.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
+    const work = ps.filter(p => !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length;
+    const names = f.shelves.flatMap(sh => sh.rooms.map(r => r.name));
+    return `<button class="card ${i === floor ? 'cur' : ''}" data-floor="${i}">
+      <header><b>${esc(T.floor(i + 1))}</b><span>${esc(names.join(' · '))}</span>${need ? `<i class="dot">${need}</i>` : ''}</header>
+      <canvas data-thumb="${i}"></canvas>
+      <footer>${ps.length} ${esc(T.agents)} · ${work} ${esc(T.working)}${need ? ` · <b class="need">${need} ${esc(T.needYou)}</b>` : ''}</footer></button>`;
+  }).join('');
+  thumbs.length = 0;
+  buildingEl.querySelectorAll('canvas[data-thumb]').forEach(c => { const g = c.getContext('2d'); g.imageSmoothingEnabled = false; thumbs[+c.dataset.thumb] = { c, g }; });
+}
+
+function drawThumbs(t, dt) {
+  for (let i = 0; i < floorStates.length; i++) {
+    const th = thumbs[i];
+    if (!th) continue;
+    useFloor(i);
+    if (th.c.width !== W || th.c.height !== H) { th.c.width = W; th.c.height = H; th.g.imageSmoothingEnabled = false; }
+    ctx = th.g; Art.setCtx(ctx);
+    try { drawScene(t, dt); } catch {}
+  }
+  ctx = mainCtx; Art.setCtx(ctx); useFloor(floor);
+}
+
+function goFloor(i) { if (i < 0 || i >= floors.length) return; floor = i; setBuilding(false); lastLayoutKey = ''; renderAll(); }
 function floorOf(id) { return floors.findIndex(f => f.shelves.some(s => s.rooms.some(r => r.people.some(p => p.id === id)))); }
 
 // ---------------- para onde cada pessoa vai ----------------
@@ -291,7 +351,7 @@ function updateActors(dt, now) {
     }
     cell.actor = a;
   }
-  for (const id of actors.keys()) if (!layout.some(c => c.p.id === id)) { actors.delete(id); want.delete(id); }
+  if (data) { const alive = new Set(data.people.map(p => p.id)); for (const id of actors.keys()) if (!alive.has(id)) { actors.delete(id); want.delete(id); } }
 }
 
 function updateCat(dt, t) {
@@ -685,7 +745,7 @@ panelBody.addEventListener('click', async e => {
   if (msg) msg.textContent = out.ok ? (out.exact ? F.ok(out.app) : F.app(out.app)) : typeof F[out.reason] === 'function' ? F[out.reason](out.app || '') : (F[out.reason] || F.unknown);
 });
 document.getElementById('panel-close').onclick = () => { selected = null; renderOverlay(); renderPanel(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && selected) { selected = null; renderOverlay(); renderPanel(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && building && !selected) return setBuilding(false); if (e.key === 'Escape' && selected) { selected = null; renderOverlay(); renderPanel(); } });
 
 // ---------------- barra de cima ----------------
 function renderBar() {
@@ -766,12 +826,24 @@ function renderAll() {
   else {
     // mesmas pessoas: troca só os dados de cada mesa, senão o desenho fica preso ao estado antigo
     const byId = new Map(data.people.map(p => [p.id, p]));
-    for (const c of layout) c.p = byId.get(c.p.id) || c.p;
-    for (const d of desks) d.p = byId.get(d.p.id) || d.p;
+    for (const f of floorStates) { for (const c of f.layout) c.p = byId.get(c.p.id) || c.p; for (const d of f.desks) d.p = byId.get(d.p.id) || d.p; }
     for (const f of floors) for (const sh of f.shelves) for (const R of sh.rooms) R.people = R.people.map(p => byId.get(p.id) || p);
     renderFloors();
   }
   renderOverlay(); renderBar(); renderPanel();
+  if (building) renderBuildingCounts();
+}
+
+// atualiza só os textos dos cartões (recriar os canvas a cada segundo faria piscar)
+function renderBuildingCounts() {
+  if (buildingEl.children.length !== floors.length) return renderBuilding();
+  floors.forEach((f, i) => {
+    const ps = f.shelves.flatMap(sh => sh.rooms.flatMap(r => r.people));
+    const need = ps.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
+    const work = ps.filter(p => !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length;
+    const foot = buildingEl.children[i].querySelector('footer');
+    if (foot) foot.innerHTML = `${ps.length} ${esc(T.agents)} · ${work} ${esc(T.working)}${need ? ` · <b class="need">${need} ${esc(T.needYou)}</b>` : ''}`;
+  });
 }
 
 let lastFrame = -1, lastT = 0;
@@ -782,7 +854,7 @@ function loop(t) {
     if (f !== lastFrame) {
       const dt = lastT ? Math.min(.25, (t - lastT) / 1000) : 0;
       lastT = t; lastFrame = f;
-      drawScene(t, dt);
+      if (building) { if (f % 3 === 0) drawThumbs(t, dt * 3); } else drawScene(t, dt);
     }
   }
 }
