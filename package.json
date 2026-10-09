@@ -12,7 +12,9 @@
     ".claude-plugin",
     "README.md",
     "LICENSE",
-    "commands"
+    "commands",
+    "skills",
+    "AGENTS.md"
   ],
   "engines": {
     "node": ">=18"
