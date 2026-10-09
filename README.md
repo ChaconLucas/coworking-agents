@@ -2,7 +2,9 @@
 
 **Um coworking em pixel art para as suas IAs de programação.** Cada sessão aberta (Claude Code, Codex, …) vira uma pessoa numa mesa. Você vê quem está trabalhando, quem precisa de você e quem está editando o mesmo clone que outra sessão, mesmo que sejam IAs diferentes.
 
-![coworks-agents em modo demo](docs/demo.png)
+![coworks-agents de dia](docs/demo.png)
+
+![coworks-agents à noite: monitores e abajures iluminam o escritório](docs/night.png)
 
 *[English below](#english)*
 
@@ -48,9 +50,11 @@ A plaquinha colorida na mesa e a borda do crachá dizem de qual IA é cada pesso
 | Monitor com organograma, mais estagiários nos banquinhos | delegando para subagentes |
 | Virada para você, acenando, com balão **!** | fez uma pergunta e espera a sua resposta |
 | Virada para você, com balão **?** | ferramenta parada há mais de 6s: ainda rodando **ou** esperando a sua permissão |
-| Protetor de tela, com uma caneca fumegante | terminou o turno, é a sua vez |
+| Levanta, vai a pé até a copa e senta no sofá com um café | terminou o turno, é a sua vez |
 | Balão **zZ**, monitor desligado | parada há mais de 20 min |
 | Divisória piscando em vermelho e faixa no topo | duas sessões, de qualquer IA, editaram o mesmo checkout nos últimos 15 min |
+
+**O escritório vive:** a luz segue a hora real (dia, entardecer e noite, com monitores e abajures acesos), o quadro branco mostra um gráfico ao vivo de quem está trabalhando, esperando ou parado, e o gato do escritório passeia e vai dormir ao lado de quem está parado.
 
 **Certificados na parede:** cada mesa ganha quadros com as skills e os servidores MCP que aquela sessão usou, além de conquistas como *Maratonista*, *Chefe de equipe*, *Memória de elefante* e *Mestre do terminal*. Passe o mouse para ler. O **mural de cortiça** mostra as skills de cada IA instaladas na máquina e as mais usadas.
 
@@ -104,6 +108,7 @@ Or as a Claude Code plugin: `/plugin marketplace add <you>/coworks-agents`, then
 - **Supported:** Claude Code (official live-session registry) and Codex CLI/app (a running Codex process plus a conversation touched in the last 3h). Each desk's colored nameplate shows which AI it is.
 - **Read-only, no hooks, no tokens, local only.** Never reads credentials (`*.key`, `auth.json`). Binds to `127.0.0.1`.
 - **States:** editing, terminal, reading, web, delegating (with interns for subagents), has a question for you (**!**), tool stalled for more than 6s (**?**: still running *or* waiting for permission; the disk can't tell which), done/your turn, asleep.
+- **A living office:** lighting follows your local time, idle agents walk to the lounge sofa for coffee, the whiteboard charts the office live, and the office cat naps next to idle desks.
 - **Certificates:** skills, MCP servers and achievements on each desk's partition. The cork board shows installed and most-used skills per AI.
 - **Clash alert:** sessions from any AI that edited the same checkout in the last 15 minutes flash red.
 - **Add an AI:** one file in `src/sources/` (see the section above).
