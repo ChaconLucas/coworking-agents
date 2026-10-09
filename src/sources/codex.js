@@ -152,10 +152,10 @@ function sessions(now) {
 }
 
 function today(since) {
-  const out = [];
+  const out = [], names = titles();
   for (const f of recentRollouts(Date.now(), since)) {
     const st = read(f);
-    if (st && st.id) out.push({ agent: 'codex', id: st.id, st, title: titles().get(st.id) || st.firstPrompt || '' });
+    if (st && st.id) out.push({ agent: 'codex', id: st.id, st, title: names.get(st.id) || st.firstPrompt || '' });
   }
   return out;
 }

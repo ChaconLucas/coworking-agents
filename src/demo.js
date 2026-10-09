@@ -50,4 +50,11 @@ function demoSnapshot() {
   };
 }
 
-module.exports = { demoSnapshot };
+function demoReport() {
+  const now = Date.now(), d = new Date(now), since = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const rows = demoSnapshot().people.map((p, i) => ({ agent: p.agent, id: p.id, name: p.name, live: true, title: p.title, repo: p.repo.name, activeMs: (10 - (i % 10)) * 23 * 60000, tools: 40 + i * 7, turns: 3 + i, files: i % 6, outTokens: 20000 + i * 3100 }));
+  const sum = k => rows.reduce((a, r) => a + r[k], 0);
+  return { since, now, rows, topFiles: [{ repo: 'web-app', rel: 'src/Checkout.tsx', n: 2 }, { repo: 'api', rel: 'auth/oauth.ts', n: 1 }], totals: { sessions: rows.length, activeMs: sum('activeMs'), tools: sum('tools'), files: 9, outTokens: sum('outTokens'), turns: sum('turns') } };
+}
+
+module.exports = { demoSnapshot, demoReport };

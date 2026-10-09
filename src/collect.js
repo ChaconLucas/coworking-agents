@@ -111,7 +111,7 @@ function snapshot({ privacy = false } = {}) {
   for (const src of SOURCES) {
     let list = [];
     try { list = src.sessions(now); } catch {}
-    for (const s of list) people.push(person(s, now));
+    for (const s of list) { try { people.push(person(s, now)); } catch {} }
     try { credentials[src.id] = src.credentials(); } catch {}
     agents.push({ id: src.id, label: src.label, sessions: list.length });
   }
@@ -135,6 +135,20 @@ function snapshot({ privacy = false } = {}) {
   const fileClashes = [...byFile.values()].filter(c => c.who.size > 1).map(c => ({ file: privacy ? '' : c.file, repo: c.repo, who: [...c.who] }));
   for (const p of people) p.files = p.files.map(({ abs, ...f }) => f);
 
+  // modo privado (compartilhar a tela): nada que identifique projeto, pessoa ou máquina
+  const alias = new Map();
+  const aliasOf = name => { if (!name) return name; if (!alias.has(name)) alias.set(name, 'repo ' + String.fromCharCode(65 + (alias.size % 26)) + (alias.size >= 26 ? alias.size : '')); return alias.get(name); };
+  if (privacy) for (const c of clashes) c.repo = aliasOf(c.repo);
+  if (privacy) for (const c of fileClashes) c.repo = aliasOf(c.repo);
+  if (privacy) people.forEach((p, i) => {
+    p.name = p.agent + '-' + (i + 1); p.branch = '';
+    if (p.doing && p.doing.tool.startsWith('mcp__')) p.doing.tool = 'MCP';
+    p.recent = p.recent.map(r => ({ ...r, tool: r.tool.startsWith('mcp__') ? 'MCP' : r.tool }));
+    p.files = p.files.map(f => ({ ...f, repo: aliasOf(f.repo) }));
+    p.editing = p.editing.map(e => ({ ...e, repo: aliasOf(e.repo) }));
+    if (p.repo) p.repo = { ...p.repo, name: aliasOf(p.repo.name) };
+    p.mcps = {}; p.skills = {};
+  });
   if (privacy) for (const p of people) {
     p.title = ''; p.cwd = ''; p.doing = p.doing && { ...p.doing, what: '' };
     if (p.repo) p.repo = { name: p.repo.name, path: '', worktree: '', isWorktree: p.repo.isWorktree };
@@ -145,7 +159,7 @@ function snapshot({ privacy = false } = {}) {
     if (p.doing) p.doing.ask = '';
   }
   const hn = os.hostname().replace(/\.local$/, '');
-  return { now, host: /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, credentials };
+  return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, credentials: privacy ? {} : credentials };
 }
 
 // Relatório do dia: todas as conversas mexidas desde a meia-noite, abertas ou já fechadas.

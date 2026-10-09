@@ -32,17 +32,40 @@ function open(url) {
   execFile(cmd, a, () => {});
 }
 
+// O link com o token fica num ficheiro só seu (0600): assim uma segunda chamada reabre o mesmo
+// escritório, e um programa alheio na porta 4777 não consegue se passar por ele (não tem o token).
+const os = require('os'), fs = require('fs'), path = require('path');
+const STATE_DIR = path.join(os.homedir(), '.config', 'coworks-agents');
+const STATE_FILE = path.join(STATE_DIR, 'session.json');
+
+async function reuse() {
+  let s;
+  try { s = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return null; }
+  if (!s || !s.base || !s.token) return null;
+  const ok = await fetch(s.base + '/api/ping', { headers: { Cookie: 'cw=' + s.token } }).then(r => r.ok).catch(() => false);
+  return ok ? s : null;
+}
+
 (async () => {
   const port = Number(opt('--port', 4777));
   const privacy = flag('--private'), demo = flag('--demo');
+  if (!demo && !privacy && !flag('--port')) {
+    const s = await reuse();
+    if (s) { console.log(`coworks-agents already running → ${s.base}/?t=${s.token}`); if (!flag('--no-open')) open(`${s.base}/?t=${s.token}`); return; }
+  }
   let hq;
   try { hq = await start({ port, privacy, demo }); }
   catch (e) {
     if (e.code !== 'EADDRINUSE') throw e;
-    // já há um escritório aberto nessa porta? então só abre o navegador nele
-    const already = await fetch(`http://127.0.0.1:${port}/api/state`).then(r => r.ok).catch(() => false);
-    if (already) { console.log(`coworks-agents already running → http://127.0.0.1:${port}`); if (!flag('--no-open')) open(`http://127.0.0.1:${port}`); return; }
-    hq = await start({ port: 0, privacy, demo });
+    hq = await start({ port: 0, privacy, demo }); // porta ocupada por outro: usa uma livre
+  }
+  if (!demo && !privacy) {
+    try {
+      fs.mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 });
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ pid: process.pid, base: hq.base, token: hq.token }), { mode: 0o600 });
+      const cleanup = () => { try { const s = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (s.pid === process.pid) fs.unlinkSync(STATE_FILE); } catch {} process.exit(0); };
+      process.on('SIGINT', cleanup); process.on('SIGTERM', cleanup);
+    } catch {}
   }
   console.log(`coworks-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
   if (!flag('--no-open')) open(hq.url);

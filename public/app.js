@@ -93,7 +93,8 @@ const store = {
 };
 const qs = new URLSearchParams(location.search);
 let lang = qs.get('lang') || store.get('lang', (navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
-let T = I18N[lang] || I18N.pt;
+if (!Object.prototype.hasOwnProperty.call(I18N, lang)) lang = 'pt';
+let T = I18N[lang];
 let notifyOn = store.get('notify', false);
 let soundOn = store.get('sound', false);
 
@@ -627,10 +628,10 @@ function renderPanel() {
     const section = (id, c) => {
       const a = AGENT[id] || { label: id, color: '#888' };
       return `<h3 style="color:${a.color}">${esc(a.label)}</h3>
-      ${c.topSkills.length ? `<p class="note">${esc(P.topSkills)}</p><ul class="list">${c.topSkills.map((s, i) => `<li><span class="k">${['🥇', '🥈', '🥉'][i] || '·'}</span>${esc(s.name)}<span class="t">${s.count}×</span></li>`).join('')}</ul>` : ''}
+      ${c.topSkills.length ? `<p class="note">${esc(P.topSkills)}</p><ul class="list">${c.topSkills.map((s, i) => `<li><span class="k">${['🥇', '🥈', '🥉'][i] || '·'}</span>${esc(s.name)}<span class="t">${Number(s.count) || 0}×</span></li>`).join('')}</ul>` : ''}
       ${c.skills.length ? `<p class="note">${esc(P.installed)}</p><div class="certs">${c.skills.map(s => `<div class="cert" style="--c:${CERT.skill}"><small>${T.kinds.skill}</small>${esc(s)}</div>`).join('')}</div>` : ''}
       ${c.mcps.length ? `<p class="note">${esc(P.mcps)}</p><div class="certs">${c.mcps.map(s => `<div class="cert" style="--c:${CERT.mcp}"><small>MCP</small>${esc(s)}</div>`).join('')}</div>` : ''}
-      ${c.plugins.length ? `<p class="note">${esc(P.plugins)}</p><ul class="list">${c.plugins.map(s => `<li>${esc(s.name)}<span class="t">${s.count}×</span></li>`).join('')}</ul>` : ''}`;
+      ${c.plugins.length ? `<p class="note">${esc(P.plugins)}</p><ul class="list">${c.plugins.map(s => `<li>${esc(s.name)}<span class="t">${Number(s.count) || 0}×</span></li>`).join('')}</ul>` : ''}`;
     };
     panelBody.innerHTML = `<h2>${esc(P.hall)}</h2><p class="sub">${esc(data.host)}</p>` +
       Object.entries(data.credentials || {}).map(([id, c]) => section(id, c)).join('');
@@ -656,13 +657,13 @@ function renderPanel() {
       ${p.editing.length ? `<dt>${P.editingIn}</dt><dd>${p.editing.map(e => esc(e.repo)).join(', ')}</dd>` : ''}
       ${p.model ? `<dt>${P.model}</dt><dd><code>${esc(p.model)}</code></dd>` : ''}
       <dt>${P.started}</dt><dd>${esc(ago(data.now - p.startedAt))} · ${P.turns}: ${p.turns}</dd>
-      <dt>${P.version}</dt><dd>${esc(p.version || '')}${p.pid ? ' · pid ' + p.pid : ''}</dd>
+      <dt>${P.version}</dt><dd>${esc(p.version || '')}${p.pid ? ' · pid ' + (Number(p.pid) || '') : ''}</dd>
     </dl>
     ${p.ctx ? `<h3>${P.context}</h3><div>${esc(P.tokens(fmtK(p.ctx)))}</div><div class="meter"><i style="width:${Math.min(100, p.ctx / ctxMax * 100)}%"></i></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
     ${p.subagents.length ? `<h3>${P.team}</h3><ul class="list">${p.subagents.map(a => `<li><span class="k">${KIND_ICON[a.state] || '•'}</span><span><b>${esc(a.type)}</b> ${esc(a.description)}${a.doing ? `<br><span class="note">${esc(a.doing)}</span>` : ''}</span></li>`).join('')}</ul>` : ''}
     <h3>${P.recent}</h3><ul class="list">${p.recent.map(a => `<li><span class="k">${KIND_ICON[a.kind] || '•'}</span><span><code>${esc(a.tool)}</code> ${esc(a.what)}</span><span class="t">${esc(ago(data.now - a.ts))}</span></li>`).join('') || '<li>—</li>'}</ul>
-    <h3>${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${c.n}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
-    ${tools.length ? `<h3>${P.tools}</h3><ul class="list">${tools.map(([k, n]) => `<li><code>${esc(k)}</code><span class="t">${n}×</span></li>`).join('')}</ul>` : ''}
+    <h3>${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${Number(c.n) || 0}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
+    ${tools.length ? `<h3>${P.tools}</h3><ul class="list">${tools.map(([k, n]) => `<li><code>${esc(k)}</code><span class="t">${Number(n) || 0}×</span></li>`).join('')}</ul>` : ''}
     <p class="note" style="margin-top:18px">${P.session}: <code>${esc(p.id)}</code></p>`;
 }
 

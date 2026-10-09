@@ -1,3 +1,6 @@
+/* Silkscreen (Jason Kottke), SIL Open Font License — public/fonts/OFL.txt */
+@font-face { font-family: 'Silkscreen'; src: url(fonts/silkscreen-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Silkscreen'; src: url(fonts/silkscreen-700.woff2) format('woff2'); font-weight: 700; font-display: swap; }
 :root {
   --bg: #f3efe7; --surface: #fffdf8; --ink: #2a2622; --muted: #7a7166; --line: #e2dbcf;
   --accent: #d97757; --ok: #2f9e6e; --warn: #d9952b; --bad: #d6453d; --shadow: 0 10px 30px rgba(40,30,20,.15);

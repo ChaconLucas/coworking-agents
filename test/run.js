@@ -111,7 +111,7 @@ assert.strictEqual(by('X1').agent, 'codex');
 assert.strictEqual(by('X1').title, 'Conversa do Codex');
 assert.strictEqual(by('X1').state, 'terminal');
 assert.strictEqual(by('X1').doing.what, 'npm test');
-assert.deepStrictEqual(by('X1').skills, { imagegen: 1 });
+assert.deepStrictEqual({ ...by('X1').skills }, { imagegen: 1 });
 assert.strictEqual(by('X1').ctx, 5000);
 assert.strictEqual(by('X1').ctxMax, 258400);
 assert.strictEqual(by('X2').state, 'idle', 'task_complete encerra o turno');
@@ -120,8 +120,8 @@ assert.ok(!by('D'), 'pid morto fica de fora');
 assert.strictEqual(by('A').state, 'edit');
 assert.strictEqual(by('A').title, 'Título A');
 assert.strictEqual(by('A').doing.what, 'a.txt');
-assert.deepStrictEqual(by('A').skills, { impeccable: 1 });
-assert.deepStrictEqual(by('A').mcps, { rea: 1 });
+assert.deepStrictEqual({ ...by('A').skills }, { impeccable: 1 });
+assert.deepStrictEqual({ ...by('A').mcps }, { rea: 1 });
 assert.strictEqual(by('A').ctx, 1001);
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
@@ -148,6 +148,53 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
-sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill();
-fs.rmSync(root, { recursive: true, force: true });
-console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
+// segredos em comandos nunca aparecem
+const { short } = require('../src/util');
+assert.ok(!short('export GITHUB_TOKEN=ghp_abc123 && x').includes('ghp_abc123'));
+assert.ok(!short('curl -H "Authorization: Bearer xyz.secret" x', 200).includes('xyz.secret'));
+assert.strictEqual(short('npm test'), 'npm test');
+
+// modo privado: nada que identifique projeto, pessoa ou máquina
+const pv = snapshot({ privacy: true }), pvJson = JSON.stringify(pv);
+assert.ok(pv.people.every(p => !p.branch && /^(claude|codex)-\d+$/.test(p.name)), 'privado: sem branch nem nome');
+assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') && !pvJson.includes('Conversa do Codex'), 'privado: repo com apelido, sem skills, sem títulos');
+assert.deepStrictEqual(pv.credentials, {});
+
+// servidor: tentativas de entrar sem ser a própria página
+const http = require('http');
+const { start } = require('../src/server');
+function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
+  return new Promise((resolve, reject) => {
+    const r = http.request({ host: '127.0.0.1', port, path: pathName, method, headers: { Host: '127.0.0.1:' + port, ...headers } }, res => {
+      let data = ''; res.on('data', c => { data += c; if (res.headers['content-type'] === 'text/event-stream') res.destroy(); });
+      res.on('end', () => resolve({ code: res.statusCode, headers: res.headers, body: data }));
+      res.on('close', () => resolve({ code: res.statusCode, headers: res.headers, body: data }));
+    });
+    r.on('error', reject); if (body) r.write(body); r.end();
+  });
+}
+
+(async () => {
+  const hq = await start({ port: 0 });
+  const port = hq.server.address().port, ck = { Cookie: 'cw=' + hq.token };
+  for (const pth of ['/api/state', '/api/report', '/events', '/app.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'sem token: ' + pth);
+  assert.strictEqual((await req(port, '/?t=errado')).code, 401, 'token errado');
+  const login = await req(port, '/?t=' + hq.token);
+  assert.strictEqual(login.code, 302);
+  assert.ok(/HttpOnly/.test(login.headers['set-cookie']) && /SameSite=Strict/.test(login.headers['set-cookie']), 'cookie protegido');
+  const ok = await req(port, '/api/state', { headers: ck });
+  assert.strictEqual(ok.code, 200);
+  assert.ok(JSON.parse(ok.body).people.length > 0);
+  assert.strictEqual((await req(port, '/api/state', { headers: { ...ck, Host: 'evil.example:' + port } })).code, 421, 'DNS rebinding');
+  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus sem cabeçalho próprio');
+  assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworks': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus de outra origem');
+  assert.ok([403, 404].includes((await req(port, '/../src/server.js', { headers: ck })).code), 'path traversal');
+  assert.ok([403, 404].includes((await req(port, '/%2e%2e/package.json', { headers: ck })).code), 'path traversal codificado');
+  const csp = (await req(port, '/', { headers: ck })).headers['content-security-policy'] || '';
+  assert.ok(/default-src 'self'/.test(csp) && !/googleapis/.test(csp), 'CSP só local');
+  hq.close();
+
+  sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill();
+  fs.rmSync(root, { recursive: true, force: true });
+  console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
+})().catch(e => { console.error(e); process.exit(1); });
