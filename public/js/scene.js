@@ -54,6 +54,8 @@ function drawUsageBoard(x, y, t) {
   if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h - 2, 2, 1, k === page ? '#ffffff' : '#2a2f45');
   if (!ids.length) pixText(x + 40, y + 10, '--', '#2a2f45');
 }
+// hour of the sky (?hour= overrides it for screenshots), with minutes
+const skyHour = () => qs.get('hour') ? Number(qs.get('hour')) : new Date().getHours() + new Date().getMinutes() / 60;
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
@@ -69,7 +71,7 @@ function drawWall(t, sky) {
     else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, t, wallGlows); Art.drawPoster(wx - 4, 28 - 8, 0); Art.drawPoster(wx + 34, 28 - 8, 2); }
     else if (i === 4 && nWin >= 7) drawTrophyShelf(wx - 8, 9, 64, t);
     else if (i === 5) { if (nWin >= 7) drawAgentOfMonth(wx, 10, t, wallGlows); else Art.drawPoster(wx + 14, 12, 1); }
-    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawWeather(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
+    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawSkyExtras(wx, 9, 48, 30, sky, t, i, skyHour()); drawSeasonWindow(wx, 9, 48, 30, t); drawWeather(wx, 9, 48, 30, t); drawGlassDrops(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
   }
   // the ON AIR sign takes the gap between the last window and the whiteboard, when there is one
   { const lastEnd = 16 + (nWin - 1) * 74 + 48, gap = RX - 14 - lastEnd; moodBox = null; if (gap >= 32) drawMoodSign(lastEnd + ((gap - 24) / 2 | 0), 16, t, wallGlows); }
@@ -454,7 +456,7 @@ function drawScene(t, dt) {
     const devTop = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 30;
     if (devTop < H) lights.push({ x: CX / 2, y: devTop + 20, r: CX / 2 });
   }
-  moodShade();
+  moodShade(); seasonTint();
   Art.applyLight(W, H, sky, lights, glows, lightsOn);
   // the LED panel is self-lit: drawn again over the dark, so it shines when the lights are off
   if (sky.phase !== 'day' && usageBox) drawUsageBoard(usageBox.x, usageBox.y, t);

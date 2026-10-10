@@ -82,6 +82,7 @@ function renderOverlay() {
     box(aotmBox, 'data-ach="1"', m ? T.ach.aotmTip((live && live.name) || m.title || m.id.slice(0, 8), Math.round(m.activeMs / 36e5), m.tools) : T.ach.noMonth); }
   box(trophyBox, 'data-ach="1"', T.ach.shelfTip);
   box(moodBox, '', T.mood[officeMood()]);
+  box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
   if (hallBox) parts.push(`<div class="desk-hit" data-hall="1" title="${esc(T.panel.hall)}" style="left:${hallBox.x * S}px;top:${hallBox.y * S}px;width:${hallBox.w * S}px;height:${hallBox.h * S}px"></div>`);
   const h = parts.join(''), g = tags.join('');
   if (h !== lastHits) { hitsLayer.innerHTML = h; lastHits = h; }

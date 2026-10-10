@@ -156,6 +156,8 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month, with the top 5 in the achievements tab.
 - **Holidays:** Christmas, New Year, Halloween, Festa Junina, Carnaval and the office's birthday decorate the room and put hats on everyone (`E` turns decor off).
 - **Office mood:** an ON AIR sign lights up when most of the office is working; with nobody working the room gets calmer.
+- **Chiptune radio:** generative music, off by default (☰ menu or click the radio in the kitchen). The station follows the AI that's working the most, the beat follows the office mood; with real weather on and rain outside, soft rain joins in.
+- **Sky and seasons:** the sun crosses the windows, the moon shows tonight's real phase, city lights come on at dusk and go out late; leaves fall in autumn, petals in spring (hemisphere from your time zone), and the light is a touch warmer in summer, cooler in winter. Rain slides down the glass when it rains.
 - **The cat** visits whoever has been waiting on you the longest. You can pet it.
 - **Estimated cost:** each session's panel and the usage report show what the tokens would cost at the official API list prices (table in `src/prices.js`, dated; add or override models in `~/.config/coworking-agents/prices.json`). Priced per reply, with Claude's 1-hour/5-minute cache-write split. Models without a published price are listed as such, never guessed. On a subscription this is not what you pay.
 

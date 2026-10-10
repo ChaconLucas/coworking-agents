@@ -73,6 +73,7 @@ function drawHolidayWall(t, nWin) {
 
 // floor decor: a Christmas tree in the corridor, pumpkins, a cake in the kitchen
 function drawHolidayFloor(t, glows) {
+  drawRadio(RX + 58, TOP - 15, t);
   const h = holidayToday();
   if (!h) return;
   const f = (t / 350) | 0;

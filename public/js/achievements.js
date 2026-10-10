@@ -52,7 +52,7 @@ function achFacts() {
     fast: achCount('fast'), patience: achCount('patience'), compacts: achCount('compacts'), focusDone: achCount('focusDone'),
     replay: achCount('replay'), avatars: achCount('avatars'), lights: achCount('lights'), weatherDays: achCount('weatherDays'),
     holidays: achCount('holidays'), lang: achCount('lang'), openDays: achCount('openDays'), catVisits: achCount('catVisits'),
-    nightShift: achCount('nightShift'), konami: achCount('konami'),
+    radio: achCount('radio'), nightShift: achCount('nightShift'), konami: achCount('konami'),
   };
 }
 
@@ -96,6 +96,7 @@ const ACH = [
   { id: 'weatherman', g: 'you', icon: '🌦', fact: 'weatherDays', steps: [1, 7, 30, 100, 365] },
   { id: 'bilingual', g: 'you', icon: '🗣', fact: 'lang', steps: [1, 10, 30, 100, 300] },
   { id: 'party', g: 'you', icon: '🎉', fact: 'holidays', steps: [1, 3, 6, 12, 24] },
+  { id: 'dj', g: 'you', icon: '📻', fact: 'radio', steps: [1, 5, 20, 50, 100] },
   { id: 'cat', g: 'you', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200, 1000] },
   { id: 'catwatch', g: 'live', icon: '🐈', fact: 'catVisits', steps: [1, 10, 50, 150, 500] },
   { id: 'nightshift', g: 'you', icon: '🌙', fact: 'nightShift', steps: [1, 3, 7, 15, 30], secret: true },
