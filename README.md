@@ -120,6 +120,34 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 
 <p align="center"><img src="docs/mobile.png" alt="The office on a phone" width="300"></p>
 
+
+## Shortcuts and tools
+
+| Key | Does |
+|---|---|
+| `1`–`9` | open the n-th agent |
+| `N` | next agent that needs you (opens its talk modal) |
+| `/` | quick search by name, title, repository or state |
+| `R` / `D` | usage report / daily report |
+| `H` | replay the last hour (scrub or play) |
+| `L` | ceiling lights on/off |
+| `B` | building view (when there are floors) |
+
+- **Compact:** when a Claude session's context passes 75% and it finished its turn, a **Compact** button shows over it; it sends `/compact` to that session's terminal tab (macOS).
+- **Alerts:** a toast and a system notification when a rate limit crosses 80% / 95% or a context passes 85%; distinct chiptunes for requests, done, arrivals and departures.
+- **Same file:** a red banner when two sessions edit the same file, not just the same repository.
+- **New certificates** are hung on the partition with a little animation.
+
+## Platforms
+
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| See sessions (Claude Code, Codex, other CLIs) | ✓ | ✓ | ✓ |
+| Go to terminal | exact tab (Terminal, iTerm2) | window (needs `xdotool` or `wmctrl`) | window |
+| Reply / answer / compact from the office | ✓ | copy and go | copy and go |
+
+Linux and Windows support is written against their process tools but has not been tested on real machines yet; reports welcome.
+
 ## Privacy and security
 
 - **Read-only.** No hooks, nothing installed into the AIs, no configuration changed.
