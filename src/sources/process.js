@@ -75,4 +75,4 @@ function sessions(now) {
 
 function credentials() { return { topSkills: [], skills: [], mcps: [], plugins: [] }; }
 
-module.exports = { id: 'process', label: 'Other AIs', sessions, credentials, KNOWN };
+module.exports = { id: 'process', label: 'Other AIs', sessions, credentials, KNOWN, cwdOf };

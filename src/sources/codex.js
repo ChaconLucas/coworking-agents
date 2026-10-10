@@ -140,8 +140,31 @@ function recentRollouts(now, since) {
   return files;
 }
 
+// Which terminal process runs a conversation: Codex keeps no registry, so it's matched by measurement —
+// a codex CLI process in a terminal with the same working directory, started around when the
+// conversation began. Only an unambiguous match gets a pid (then replies can be typed into its tab).
+const cwdCache = new Map();
+function codexProcs(now) {
+  const rows = processList().filter(p => p.tty && /(^|[\/\\])codex(\.exe)?(\s|$)/i.test(p.cmd) && !/app-server|Codex\.app\//.test(p.cmd));
+  const pids = new Set(rows.map(p => p.pid));
+  return rows.filter(p => !pids.has(p.ppid)).map(p => { // the topmost codex process of each tab
+    let cwd = cwdCache.get(p.pid);
+    if (cwd === undefined) { cwd = require('./process').cwdOf(p.pid); cwdCache.set(p.pid, cwd); }
+    return { pid: p.pid, cwd, startedAt: now - p.secs * 1000 };
+  });
+}
+function pidFor(st, procs) {
+  const same = procs.filter(p => p.cwd && p.cwd === st.cwd && p.startedAt <= (st.startedAt || now()) + 60000);
+  if (same.length === 1) return same[0].pid;
+  if (!same.length || !st.startedAt) return null;
+  same.sort((a, b) => Math.abs(a.startedAt - st.startedAt) - Math.abs(b.startedAt - st.startedAt));
+  return Math.abs(same[0].startedAt - st.startedAt) < 60000 && Math.abs(same[1].startedAt - st.startedAt) > 120000 ? same[0].pid : null;
+}
+const now = () => Date.now();
+
 function sessions(now) {
   if (!fs.existsSync(DIR()) || !codexRunning()) return [];
+  const procs = codexProcs(now);
   const names = titles();
   const out = [];
   for (const f of recentRollouts(now)) {
@@ -149,8 +172,8 @@ function sessions(now) {
     if (!st || !st.id) continue;
     st.title = names.get(st.id) || st.firstPrompt || '';
     out.push({
-      agent: 'codex', id: st.id, name: 'codex-' + st.id.slice(-4), pid: null,
-      kind: st.originator.includes('desktop') ? 'desktop' : 'cli', version: st.version,
+      agent: 'codex', id: st.id, name: 'codex-' + st.id.slice(-4), pid: st.originator.includes('desktop') ? null : pidFor(st, procs),
+      kind: st.originator.includes('desktop') ? 'desktop' : 'cli', entrypoint: st.originator.includes('desktop') ? 'codex-desktop' : '', version: st.version,
       status: st.busy ? 'busy' : 'idle', since: st.since || st.lastTs, startedAt: st.startedAt || st.lastTs,
       cwd: st.cwd, st, subagents: [],
     });

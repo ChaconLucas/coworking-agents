@@ -337,9 +337,11 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(/default-src 'self'/.test(csp) && !/googleapis/.test(csp), 'CSP local only');
   hq.close();
 
-  // reply safeguards: only Claude sessions, and only when Claude owns a real terminal tab
+  // reply safeguards: Claude and Codex CLI sessions only, and only when the agent owns a real terminal tab
   const { sendText } = require('../src/focus');
-  assert.strictEqual((await sendText({ agent: 'codex', pid: 1 }, 'hi')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform');
+  assert.strictEqual((await sendText({ agent: 'codex', pid: null }, 'hi')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform', 'a Codex conversation not matched to a terminal process never receives text');
+  assert.strictEqual((await sendText({ agent: 'gemini', pid: 1 }, 'hi')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform', 'other AIs never receive text');
+  if (process.platform === 'darwin') assert.strictEqual((await sendText({ agent: 'codex', pid: sleepers[0].pid }, 'hi')).reason, 'notty', 'a Codex process without a terminal never receives text');
   if (process.platform === 'darwin') {
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, 'hi')).reason, 'notty', 'a process without a terminal never receives text');
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, '')).reason, 'text', 'empty text is refused');

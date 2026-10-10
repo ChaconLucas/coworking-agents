@@ -168,13 +168,13 @@ end run`,
 async function sendText(person, text) {
   if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
   if (person.entrypoint === 'claude-desktop') return { ok: false, reason: 'desktop' };
-  if (!person.pid || person.agent !== 'claude') return { ok: false, reason: 'unsupported' };
+  if (!person.pid || !['claude', 'codex'].includes(person.agent)) return { ok: false, reason: 'unsupported' };
   text = String(text || '').replace(/\r/g, '').trim();
   if (!text || text.length > 4000) return { ok: false, reason: 'text' };
   const info = await run('ps', ['-o', 'tty=,stat=', '-p', String(person.pid)]);
   const m = info && /^(ttys?\d+)\s+(\S+)$/.exec(info.trim());
   if (!m) return { ok: false, reason: 'notty' };
-  if (!m[2].includes('+')) return { ok: false, reason: 'notforeground' }; // claude must own the tab right now
+  if (!m[2].includes('+')) return { ok: false, reason: 'notforeground' }; // the agent must own the tab right now
   const chain = await ancestry(person.pid);
   const app = APPS.find(a => chain.some(c => a.re.test(c)));
   if (!app || !SEND[app.name]) return { ok: false, reason: 'unsupported', app: app && app.name };

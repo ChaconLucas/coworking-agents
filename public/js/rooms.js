@@ -209,11 +209,12 @@ function drawTrophyRoom(t) {
     const a = legends[i];
     drawPedestal(nx, 92, 26, 18, a ? 5 : 0);
     if (a) { drawAward(nx, 90, 5, 3, t, i, false); hits.push({ x: nx - 24, y: 30, w: 48, h: 80, a }); }
-    else { pixText(nx - 1, 70, '?', '#7a5040'); }
+    else { drawAward(nx, 90, 5, 3, t, i, true); pixText(nx - 1, 66, '?', '#9a7060'); }
   });
   // ---- floor: marble with perspective lines, the red carpet ----
-  for (let y = 150; y < Ht; y += 16) for (let x = 0; x < Wt; x += 16) { r(x, y, 16, 16, ((x + y) / 16) % 2 ? '#efe9dd' : '#ddd5c5'); r(x + 3, y + 3, 5, 1, '#ffffff77'); }
-  r(0, 150, Wt, 3, '#2a1810');
+  for (let y = 150; y < Ht; y += 16) for (let x = 0; x < Wt; x += 16) { r(x, y, 16, 16, ((x + y) / 16) % 2 ? '#2b2632' : '#3a3442'); r(x + 3, y + 3, 5, 1, '#ffffff18'); }
+  r(0, 150, Wt, 3, '#2a1810'); r(6, 156, Wt - 12, 1, '#d9a441'); r(6, Ht - 6, Wt - 12, 1, '#d9a441'); r(6, 156, 1, Ht - 162, '#d9a441'); r(Wt - 7, 156, 1, Ht - 162, '#d9a441');
+  { const mx = cx, my = Ht - 70; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; for (let q = 4; q < 26; q++) r(Math.round(mx + Math.cos(a) * q * (k % 2 ? .6 : 1)), Math.round(my + Math.sin(a) * q * .45 * (k % 2 ? .6 : 1)), 1, 1, '#d9a44188'); } r(mx - 3, my - 2, 6, 4, '#ffd84d'); }
   r(cx - 24, 186, 48, Ht - 186, '#a3283a'); r(cx - 24, 186, 2, Ht - 186, '#d9a441'); r(cx + 22, 186, 2, Ht - 186, '#d9a441');
   // crown pedestal (in front of the arch)
   drawPedestal(cx, 156, 40, 30, prog.super ? 5 : 0);
@@ -222,7 +223,7 @@ function drawTrophyRoom(t) {
     r(dx - 12, dy + 14, 24, 8, '#d9a441'); r(dx - 11, dy + 4, 22, 10, '#ffd84d'); r(dx - 11, dy - 2, 4, 6, '#ffd84d'); r(dx - 2, dy - 5, 4, 9, '#ffd84d'); r(dx + 7, dy - 2, 4, 6, '#ffd84d');
     r(dx - 1, dy + 7, 3, 3, '#e43b44'); r(dx - 8, dy + 7, 3, 3, '#2ce8f5'); r(dx + 6, dy + 7, 3, 3, '#63c74d');
     hits.push({ x: dx - 16, y: dy - 8, w: 32, h: 32, title: `${T.ach.superName} · ${T.ach.superDone}` });
-  } else pixText(cx - 1, 140, '?', '#8a7a6a');
+  } else { const dx = cx, dy = 130; r(dx - 12, dy + 14, 24, 8, '#3a3442'); r(dx - 11, dy + 4, 22, 10, '#3a3442'); r(dx - 11, dy - 2, 4, 6, '#3a3442'); r(dx - 2, dy - 5, 4, 9, '#3a3442'); r(dx + 7, dy - 2, 4, 6, '#3a3442'); pixText(dx - 1, dy + 7, '?', '#8a7a9a'); hits.push({ x: dx - 16, y: dy - 8, w: 32, h: 32, title: `${T.ach.superName} · ${T.ach.superDesc}` }); }
   drawDome(cx, 154, 34, 32);
   // ---- front: individual domes on pedestals for the next best (diamond, gold, silver), in two curved rows ----
   const front = sorted.filter(a => a.tier >= 1 && !legends.slice(0, 4).includes(a)).slice(0, 16);
@@ -232,23 +233,24 @@ function drawTrophyRoom(t) {
     drawPedestal(px, py, 22, 22, a.tier);
     drawAward(px, py - 2, a.tier, 2, t, i, false);
     drawDome(px, py, 26, 30);
+    ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(px - 10, py + 22, 20, 10); ctx.fillStyle = (TIER_COLOR[a.tier] || '#888') + '22'; ctx.fillRect(px - 6, py + 24, 12, 6);
     hits.push({ x: px - 13, y: py - 30, w: 26, h: 52, a });
   });
   // ---- side glass cabinets: everything else (bronze, still locked) ----
   const restA = sorted.filter(a => !front.includes(a) && !legends.slice(0, 4).includes(a));
   const cab = (x, list) => {
-    const w = 64, y = 160, h = 170;
+    const w = 96, y = 160, h = Math.min(TROPHY_H - 172, Math.max(150, Math.ceil(list.length / 4) * 26 + 20));
     r(x - 3, y - 4, w + 6, h + 8, '#2a1810'); r(x, y, w, h, '#2b1d26');
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(255,220,160,.2)'); g.addColorStop(1, 'rgba(255,220,160,.03)'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.restore();
     list.forEach((a, i) => {
-      const sx = x + 10 + (i % 3) * 22, sy = y + 30 + Math.floor(i / 3) * 28;
-      if (i % 3 === 0) { r(x + 2, sy + 1, w - 4, 2, '#cfe8ff88'); }
-      drawAward(sx, sy, a.tier, 1, t, i, !a.tier);
-      hits.push({ x: sx - 9, y: sy - 16, w: 18, h: 18, a });
+      const sx = x + 13 + (i % 4) * 23, sy = y + 30 + Math.floor(i / 4) * 26;
+      if (i % 4 === 0) { r(x + 2, sy + 1, w - 4, 2, '#cfe8ff88'); }
+      drawAward(sx, sy, a.tier, 2, t, i, !a.tier);
+      hits.push({ x: sx - 12, y: sy - 24, w: 24, h: 24, a });
     });
     drawGlass(x, y, w, h, '#d9a441');
   };
-  cab(8, restA.slice(0, Math.ceil(restA.length / 2))); cab(Wt - 72, restA.slice(Math.ceil(restA.length / 2)));
+  cab(8, restA.slice(0, Math.ceil(restA.length / 2))); cab(Wt - 104, restA.slice(Math.ceil(restA.length / 2)));
   // velvet ropes along the carpet
   for (const px of [cx - 40, cx + 40]) for (const py of [200, 260, 320]) { r(px - 1, py, 3, 16, '#d9a441'); r(px - 2, py - 2, 5, 3, '#ffd84d'); r(px - 3, py + 15, 7, 2, '#8a6420'); }
   for (const px of [cx - 40, cx + 40]) for (const [a2, b2] of [[200, 260], [260, 320]]) for (let y = a2 + 2; y < b2; y++) { const k = (y - a2) / (b2 - a2); r(px + Math.round(Math.sin(k * Math.PI) * 4) * (px < cx ? -1 : 1), y, 2, 1, '#a3283a'); }

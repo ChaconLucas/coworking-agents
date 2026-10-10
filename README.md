@@ -4,7 +4,7 @@
 
 <h1 align="center">coworking-agents</h1>
 
-<p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Claude Code · Codex · zero dependencies · local only</p>
+<p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Claude Code · Codex · walk around · trophies · zero dependencies · local only</p>
 
 <p align="center"><a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/v/coworking-agents" alt="npm"></a></p>
 
@@ -19,12 +19,13 @@
 | | |
 |---|---|
 | ![Top bar](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
-| ![Talk](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (sent to its Terminal/iTerm tab) or jump to the terminal. |
+| ![Talk](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (typed into its Terminal/iTerm tab for Claude Code and Codex CLI) or jump to it. |
 | ![Camera](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
 | ![Panel](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
 | ![Usage](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** Agent of the month, then every achievement with its tiers and progress. |
+| ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** 74 of them, five tiers each, coins for every tier, the agent of the month on top. |
+| ![Paper](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
 | ![Trophy room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
 | ![Christmas](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
 | ![Building](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
@@ -115,19 +116,62 @@ Each toast has **Show** (switches floor, opens the panel and scrolls to the desk
 
 Agents away from their desks (kitchen, meeting room, nap corner) carry a name tag over their heads. Optional sound and system notifications can be turned on from the top bar.
 
+## Working with your agents
+
+- **Talk and reply:** click a waiting agent to read what it wants; type the next instruction and send it straight to its Terminal/iTerm tab (Claude Code, and Codex CLI when its terminal process can be matched), or copy it and jump there. Sessions in the Claude or Codex desktop apps can't be typed into: the button copies and opens the app.
+- **Answer questions:** a single-choice question from Claude Code can be answered by clicking an option.
+- **Compact:** when a Claude session that finished its turn passes 75% of its context window, a **Compact** button shows over it and sends `/compact` to its terminal tab (macOS).
+- **Alerts:** a toast and a system notification when a rate limit crosses 80% / 95%, a context passes 85%, or an agent has waited 5 minutes for you; chiptunes for requests, done work, arrivals and departures.
+- **Same file, same repo:** a red banner when two sessions edit the same file or checkout.
+- **Git on the door:** each room sign shows uncommitted files (●), commits to push (↑) and to pull (↓), read with `git status` in the background (no fetch).
+- **History and daily report:** the last 24 hours of arrivals, departures, requests and finished work; a daily report with active time, tools and files that copies as Markdown for a standup; your reply times.
+- **Estimated cost:** what the tokens would cost at official API list prices (table in `src/prices.js`, dated; override in `~/.config/coworking-agents/prices.json`), priced per reply with Claude's cache-write split. Unknown models are never guessed. On a subscription this is not what you pay.
+- **Focus mode:** sounds and system notifications pause for 25 or 50 minutes.
+- **Replay:** scrub or play back the last hour.
+
+## Walk around (Gather-style)
+
+You're in the office too, with a **YOU** tag. **WASD** or the arrow keys walk (hold **Shift** to run), a click on the floor walks you there through the doors, and walls stop you. Near an agent, a prop or a door, **Enter** talks, opens or enters. Turn it off in the ☰ menu.
+
+## The game room and the trophy room
+
+![The game room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/game-room.png)
+
+Under the team rooms there's a game room with four doors: arcades, foosball, a pool table, an aquarium, a water cooler and bean bags, where idle agents hang out. Its props open the reports: the **newspaper rack** (the weekly paper), the **vending machine** (the shop), the **easel** (customise), the **guestbook** (history) and the **cork board** (today's date, files edited today, the daily report).
+
+A marble portal leads to the **trophy room**, its own screen: legends with wings and a flame in lit niches between marble columns, a stained-glass arch over the crown of **Legend of Legends**, every other trophy under its own glass dome or in the side cabinets, locked ones as silhouettes. Each tier has its own award (bronze cup, silver star cup, gold ruby cup, diamond crystal, winged legend). Click one for its card.
+
+![The trophy room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/trophy-room.png)
+
+## Achievements, coins and the shop
+
+- **74 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
+- **Legend of Legends** when every achievement is at legend.
+- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain.
+- **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month; the top 5 are in the achievements tab.
+- **The weekly paper**, *The Office Times*, tells your week in headlines, all from measured data.
+- **Progress file:** achievements, coins, purchases, avatars and settings live in `~/.config/coworking-agents/progress.json` (mode `0600`). No account needed: the app runs on your machine, so the progress is yours.
+
+## Make it yours
+
+![Customise](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/customise.png)
+
+☰ → **Customise** has 13 options: the office name (on a plaque by the elevator and in the top bar), your own look, floor (wood, dark wood, carpet, concrete, tiles, checker, marble, grass), walls (10 colours), room carpets (5 palettes), desks (5), the window view (city, beach, mountains, forest, space), the sky (automatic, always day, sunset, always night), lighting (natural, warm, cool, neon), the mascot (cat, dog, robot, fox, penguin, bunny), plants (normal or jungle), the radio station and the accent colour. The die next to an agent's face in its panel gives that agent a new look.
+
 ## A living office
 
-- **Certificates and achievements:** each desk's partition gets framed certificates for the skills and MCP servers that session used, plus achievements such as *Hundred tools*, *Thousand tools*, *Marathoner* (4h+), *Immortal* (24h+), *Team lead*, *Elephant memory* (500k+ context tokens), *Long talk*, *Terminal master*, *Writer* and *Researcher*. Hover to read them.
-- **Whiteboard:** a live bar chart of who is working, needs you, has the turn, or is asleep.
-- **Cork board:** skills installed on the machine and the most-used ones, per AI, plus MCP servers and plugins.
-- **Day/night lighting:** the light follows your local time (day, dusk, night with monitors and lamps glowing).
-- **The office cat** wanders around and naps next to sleeping agents.
-- **Languages:** English and Brazilian Portuguese, picked from your browser and switchable in the top bar.
+- **Life:** after a long task an agent goes for a coffee or celebrates with confetti; at lunch idle agents eat a sandwich; idle ones play ping-pong and foosball or chat at the water cooler; a request waiting 2+ minutes rings the desk phone; uncommitted files pile up as paper on the desk; the desk plant grows with the session's age; a week-old session gets a cake; a room where everyone works hangs a do-not-disturb sign; after 6pm idle rooms turn their lights off; a janitor mops at night; Friday evenings bring pizza; newcomers step out of the elevator next to a punch clock; long-idle agents think funny thoughts.
+- **Sky, seasons and weather:** the sun crosses the windows, the moon shows tonight's real phase, city lights follow the hour, leaves and petals fall by season (hemisphere from your time zone). Real weather is opt-in: click a window and the browser fetches it from Open-Meteo (coordinates rounded to ~1 km); rain slides down the glass.
+- **Chiptune radio** (off by default): the station follows the AI working the most, the beat follows the office mood; an **ON AIR** sign lights up while anyone works.
+- **Holidays:** Christmas, New Year, Halloween, Festa Junina, Carnaval and the office's birthday decorate the room and put hats on everyone (`E` turns decor off).
+- **Pets:** the mascot visits whoever has waited on you the longest and likes being petted; a dog joins at 8 achievements at gold, a parrot at 16.
+- **Certificates** for the skills and MCP servers each session used hang on its partition.
+- **Office photo:** ☰ → Office photo saves the scene as a PNG. And something happens if you click the `</>` neon three times.
+- **Languages:** English and Brazilian Portuguese.
 
 <p align="center"><img src="https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/mobile.png" alt="The office on a phone" width="300"></p>
 
-
-## Shortcuts and tools
+## Shortcuts
 
 | Key | Does |
 |---|---|
@@ -135,39 +179,12 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 | `N` | next agent that needs you (opens its talk modal) |
 | `/` | quick search by name, title, repository or state |
 | `R` / `T` / `G` / `C` | usage report / daily report (today) / history / achievements |
-| `E` | holiday decor on/off |
-| WASD or arrows / Enter | walk around the office / interact with what's near you |
-| `F` | focus mode: mute sounds and notifications for 25 min (again: 50, again: off) |
-| `H` | replay the last hour (scrub or play) |
+| WASD or arrows, Shift, Enter | walk, run, interact with what's near you |
+| `F` | focus mode (25 min, again 50, again off) |
+| `H` | replay the last hour |
 | `L` | ceiling lights on/off |
+| `E` | holiday decor on/off |
 | `B` | building view (when there are floors) |
-
-- **Compact:** when a Claude session's context passes 75% and it finished its turn, a **Compact** button shows over it; it sends `/compact` to that session's terminal tab (macOS).
-- **Alerts:** a toast and a system notification when a rate limit crosses 80% / 95% or a context passes 85%; distinct chiptunes for requests, done, arrivals and departures.
-- **Real weather (opt-in):** click a window; the browser asks for your location and, if you allow it, fetches the current weather from Open-Meteo directly (coordinates rounded to ~1 km). Off by default; nothing goes through the server.
-- **Same file:** a red banner when two sessions edit the same file, not just the same repository.
-- **New certificates** are hung on the partition with a little animation.
-- **Git on the door:** each room sign shows uncommitted files (●), commits to push (↑) and to pull (↓), read with `git status` in the background (no fetch).
-- **Waiting too long:** one reminder when an agent has waited 5 minutes for your answer or approval.
-- **History:** arrivals, departures, requests and finished work from the last 24 hours (kept in your browser).
-- **Daily report as Markdown:** one click copies it, ready for a standup.
-- **Focus mode:** sounds and system notifications pause for 25 or 50 minutes; the office keeps updating.
-- **Pick an avatar:** the die next to an agent's face in the panel rolls a new look, remembered for that session name; ↺ goes back.
-- **Achievements:** 74 of them, with tiers from bronze to legend, measured from your history (busiest day, streaks, nights, Friday evenings, tokens, models), the live office (parallel sessions, subagents, giant contexts, quick answers) and what you do in it. A few are secret. Trophies stand on a shelf on the wall (`C` opens the list).
-- **Progress file:** achievements, coins, bought items, avatars and office settings are saved in `~/.config/coworking-agents/progress.json` (mode `0600`). No account: the app runs on your machine, so the progress is yours. Every achievement goes up to legend; all 74 at legend unlock **Legend of Legends**. Tiers pay coins (10 to 50, the super one 1000).
-- **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month, with the top 5 in the achievements tab.
-- **Holidays:** Christmas, New Year, Halloween, Festa Junina, Carnaval and the office's birthday decorate the room and put hats on everyone (`E` turns decor off).
-- **Office mood:** an ON AIR sign lights up when most of the office is working; with nobody working the room gets calmer.
-- **Chiptune radio:** generative music, off by default (☰ menu or click the radio in the kitchen). The station follows the AI that's working the most, the beat follows the office mood; with real weather on and rain outside, soft rain joins in.
-- **Sky and seasons:** the sun crosses the windows, the moon shows tonight's real phase, city lights come on at dusk and go out late; leaves fall in autumn, petals in spring (hemisphere from your time zone), and the light is a touch warmer in summer, cooler in winter. Rain slides down the glass when it rains.
-- **Office life:** after a long task (30+ min) an agent goes for a coffee; 10+ min earns a little celebration with confetti; at lunch idle agents hold a sandwich; idle ones play ping-pong and foosball or chat at the water cooler; a request waiting 2+ min rings the desk phone; uncommitted files pile up as paper on the desk; the desk plant grows with the session's age (and wilts after a day asleep); every week a session gets a cake; a room where everyone works hangs a do-not-disturb sign; after 6pm empty or idle rooms turn their lights off; a janitor mops at night when nobody works; on Friday evenings the pizza arrives; newcomers step out of the elevator, next to a punch clock with today's arrivals; agents idle for a long time think funny thoughts.
-- **More of the office:** the meeting room TV shows one bar per subagent at work (hover for what each does), a notice board pins today's most edited files as post-its, and a trophy case holds your legend-tier achievements (with a crown for Legend of Legends). A game room under the team rooms has arcades, foosball, a pool table, an aquarium, a water cooler and bean bags; its newspaper rack, vending machine, easel and guestbook open the paper, the shop, the customise tab and the history, and the whiteboard opens the daily report.
-- **Walk around (Gather-style):** you're in the office too. WASD or the arrow keys walk, a click on the floor walks you there through the doors, walls stop you. Near an agent, a prop or a door, **Enter** talks, opens or enters. Turn it off in the ☰ menu.
-- **Trophy room:** a golden door in the game room (or the trophy shelf on the wall) leads to its own screen: a Hall of Fame with chandeliers, glass cabinets holding every achievement (locked ones as silhouettes), the legends large in a glass case under spotlights and the crown under a dome. Click a trophy for a card with its tier and progress.
-- **Make it yours:** ☰ → Customise has 13 options, saved in your progress file: office name (plaque and top bar), your own look, floor (8), walls (10), room carpets (5 palettes), desks (5), window view (city, beach, mountains, forest, space), sky (automatic, always day, sunset, always night), lighting (natural, warm, cool, neon), mascot (cat, dog, robot, fox, penguin, bunny), plants (normal or jungle), radio station and the accent colour.
-- **Collect:** the weekly paper (The Office Times) tells the week from your history; achievement coins buy decor in the shop (plants, rug, neon, lamps, disco ball, a golden statue of the agent of the month, piano, fountain); a dog joins at 8 achievements at gold, a parrot at 16; ☰ → Office photo saves the scene as a PNG; the daily report shows your reply times. Something happens if you click the `</>` neon three times.
-- **The cat** visits whoever has been waiting on you the longest. You can pet it.
-- **Estimated cost:** each session's panel and the usage report show what the tokens would cost at the official API list prices (table in `src/prices.js`, dated; add or override models in `~/.config/coworking-agents/prices.json`). Priced per reply, with Claude's 1-hour/5-minute cache-write split. Models without a published price are listed as such, never guessed. On a subscription this is not what you pay.
 
 ## Platforms
 
