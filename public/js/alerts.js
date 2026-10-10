@@ -2,6 +2,8 @@
 // ---------------- alerts: rate limits filling up, contexts close to compaction, and the compact action ----------------
 const CTX_WARN = .75;               // from here a "compact" button shows over the agent
 const LIMIT_STEPS = [80, 95];       // notify once per window when usage crosses these
+const WAIT_NUDGE = 5 * 60000;       // an agent waiting on you this long gets one reminder
+const waitStart = new Map();        // id → { state, at }: when it started waiting
 const alerted = new Set();
 
 const ctxPct = p => p.ctx && p.ctxMax ? p.ctx / p.ctxMax : 0; // unknown window size = no percentage, no compact button
@@ -46,6 +48,23 @@ function checkAlerts() {
       if (!firstAlertPass) { toast(`<b>${esc(A.context(Math.round(pct * 100)))}</b>${esc(p.name)} · ${esc(p.title || '')}`, 'warn'); notifyOS(A.context(Math.round(pct * 100)), p.name); }
     }
   }
+  // waiting on you for a while (a question or a command to approve): one reminder per wait
+  const seen = new Set();
+  for (const p of data.people) {
+    if (p.leaving || (p.state !== 'needs_you' && p.state !== 'waiting')) continue;
+    seen.add(p.id);
+    let w = waitStart.get(p.id);
+    if (!w || w.state !== p.state) { w = { state: p.state, at: data.now - ((p.doing && p.doing.for) || 0) }; waitStart.set(p.id, w); }
+    const key = `wait:${p.id}:${w.at}`, mins = Math.floor((data.now - w.at) / 60000);
+    if (data.now - w.at >= WAIT_NUDGE && !alerted.has(key)) {
+      alerted.add(key);
+      if (firstAlertPass) continue; // already waiting when the page opened: the counters show it
+      const what = p.state === 'needs_you' ? A.waitAsk(mins) : A.waitApprove(mins);
+      toast(`<b>${esc(what)}</b>${esc(p.name)} · ${esc(p.title || '')}`, 'warn');
+      notifyOS(what, p.name);
+    }
+  }
+  for (const id of [...waitStart.keys()]) if (!seen.has(id)) waitStart.delete(id);
   // a newer release on npm: told once per page load, even if it was already true on load
   const up = data.update;
   if (up && up.latest && !alerted.has('upd:' + up.latest)) {
