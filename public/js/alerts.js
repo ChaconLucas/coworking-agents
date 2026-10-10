@@ -16,6 +16,7 @@ function toast(html, kind) {
   el.className = 'toast ' + (kind || '');
   el.innerHTML = html;
   toastEl.appendChild(el);
+  if (/\bsticky\b/.test(kind || '')) { el.title = '×'; el.addEventListener('click', e => { if (e.target.tagName !== 'CODE') el.remove(); }); return; } // stays until clicked (the command itself stays selectable)
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 7000);
 }
 function notifyOS(title, body) {
@@ -44,6 +45,12 @@ function checkAlerts() {
       alerted.add(key);
       if (!firstAlertPass) { toast(`<b>${esc(A.context(Math.round(pct * 100)))}</b>${esc(p.name)} · ${esc(p.title || '')}`, 'warn'); notifyOS(A.context(Math.round(pct * 100)), p.name); }
     }
+  }
+  // a newer release on npm: told once per page load, even if it was already true on load
+  const up = data.update;
+  if (up && up.latest && !alerted.has('upd:' + up.latest)) {
+    alerted.add('upd:' + up.latest);
+    toast(`<b>${esc(A.update(up.latest))}</b>${esc(A.updateHow)} <code>npx coworking-agents@latest</code>`, 'ok sticky');
   }
   firstAlertPass = false;
 }

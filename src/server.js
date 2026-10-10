@@ -7,6 +7,7 @@ const { snapshot: real, report } = require('./collect');
 const { demoSnapshot, demoReport } = require('./demo');
 const { focus, sendText } = require('./focus');
 const { usage } = require('./usage');
+const { updateInfo } = require('./update');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png', '.ico': 'image/x-icon' };
@@ -36,7 +37,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   let last = '', lastPush = 0;
 
   function safeSnapshot() {
-    try { return JSON.stringify(snapshot({ privacy })); } catch (e) { return JSON.stringify({ error: 'snapshot failed' }); }
+    try { return JSON.stringify({ ...snapshot({ privacy }), update: demo ? null : updateInfo() }); } catch (e) { return JSON.stringify({ error: 'snapshot failed' }); }
   }
 
   function tick() {

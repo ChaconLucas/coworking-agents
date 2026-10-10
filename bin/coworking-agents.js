@@ -18,7 +18,8 @@ if (flag('-h') || flag('--help')) {
   --no-open   don't open the browser
   --private   hide session titles, paths and file names (screen sharing)
   --demo [N]  show a fake office with every state and N agents (default 10)
-  --json      print one snapshot and exit`);
+  --json      print one snapshot and exit
+  --no-update-check  don't ask npm whether a newer version is out`);
   process.exit(0);
 }
 
@@ -75,4 +76,8 @@ async function reuse() {
   }
   console.log(`coworking-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
   if (!flag('--no-open')) open(hq.url);
+  if (!demo && !flag('--no-update-check')) {
+    const up = await require('../src/update').startChecks();
+    if (up) console.log(`New version ${up.latest} (you have ${up.current}): npx coworking-agents@latest`);
+  }
 })();

@@ -575,6 +575,8 @@ main:has(#office.cam) { overflow: visible; }
 .toast b { display: block; font: 700 10px/1.3 var(--pix); margin-bottom: 3px; }
 .toast.warn { border-left-color: #feae34; } .toast.bad { border-left-color: #e43b44; } .toast.ok { border-left-color: #63c74d; }
 .toast.out { animation: sink .3s ease-in both; }
+.toast.sticky { cursor: pointer; }
+.toast code { font: 12px ui-monospace, monospace; background: rgba(255,255,255,.08); padding: 1px 4px; border-radius: 3px; user-select: all; }
 @media (prefers-reduced-motion: reduce) { .compact-btn { animation: none; } }
 
 .search { position: fixed; inset: 0; z-index: 70; background: rgba(8,6,12,.55); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }

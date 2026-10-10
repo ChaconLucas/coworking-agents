@@ -229,6 +229,12 @@ assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') &&
 assert.deepStrictEqual(pv.credentials, {});
 assert.ok(pv.people.every(p => !p.lastPrompt && !p.lastReply), 'private: no prompt or reply text');
 
+// update notice: only a strictly higher x.y.z counts; nothing is known until the CLI asks npm
+const upd = require('../src/update');
+assert.ok(upd.newer('0.2.0', '0.1.9') && upd.newer('1.0.0', '0.9.9') && upd.newer('0.1.10', '0.1.9'), 'newer versions');
+assert.ok(!upd.newer('0.1.0', '0.1.0') && !upd.newer('0.0.9', '0.1.0') && !upd.newer('0.0.0-stage', '0.1.0') && !upd.newer('9.0.0-beta', '0.1.0'), 'same, older or pre-release is not newer');
+assert.strictEqual(upd.updateInfo(), null, 'no update notice before a check');
+
 // server: attempts to get in other than through the page itself
 const http = require('http');
 const { start } = require('../src/server');
@@ -254,6 +260,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   const ok = await req(port, '/api/state', { headers: ck });
   assert.strictEqual(ok.code, 200);
   assert.ok(JSON.parse(ok.body).people.length > 0);
+  assert.strictEqual(JSON.parse(ok.body).update, null, 'the server never asks npm by itself');
   assert.strictEqual((await req(port, '/api/state', { headers: { ...ck, Host: 'evil.example:' + port } })).code, 421, 'DNS rebinding');
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus without the custom header');
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');

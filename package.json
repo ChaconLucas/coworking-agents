@@ -36,5 +36,11 @@
     "monitor"
   ],
   "author": "Lucas Chacon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChaconLucas/coworking-agents.git"
+  },
+  "homepage": "https://github.com/ChaconLucas/coworking-agents#readme",
+  "bugs": "https://github.com/ChaconLucas/coworking-agents/issues",
   "license": "MIT"
 }

@@ -1,31 +1,33 @@
 <p align="center">
-  <img src="docs/logo.png" width="128" alt="coworking-agents logo">
+  <img src="https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/logo.png" width="128" alt="coworking-agents logo">
 </p>
 
 <h1 align="center">coworking-agents</h1>
 
 <p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Claude Code · Codex · zero dependencies · local only</p>
 
+<p align="center"><a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/v/coworking-agents" alt="npm"></a> <a href="https://github.com/ChaconLucas/coworking-agents/actions/workflows/test.yml"><img src="https://github.com/ChaconLucas/coworking-agents/actions/workflows/test.yml/badge.svg" alt="tests"></a></p>
+
 **A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
 
-![The office by day](docs/office-day.png)
+![The office by day](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-day.png)
 
-![The office at night: monitors and desk lamps light the room](docs/office-night.png)
+![The office at night: monitors and desk lamps light the room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-night.png)
 
 ## Tour
 
 | | |
 |---|---|
-| ![Top bar](docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
-| ![Talk](docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (sent to its Terminal/iTerm tab) or jump to the terminal. |
-| ![Camera](docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
-| ![Panel](docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
-| ![Usage](docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
-| ![Work site](docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Building](docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
-| ![House wall](docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
-| ![Night](docs/office-night.png) | **Day and night.** Lighting follows your clock; a wall switch turns the ceiling lights on or off; the rest room stays dark. |
-| ![Mobile](docs/mobile.png) | **Phone.** Works on small screens too. |
+| ![Top bar](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
+| ![Talk](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (sent to its Terminal/iTerm tab) or jump to the terminal. |
+| ![Camera](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
+| ![Panel](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
+| ![Usage](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
+| ![Work site](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
+| ![Building](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
+| ![House wall](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
+| ![Night](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-night.png) | **Day and night.** Lighting follows your clock; a wall switch turns the ceiling lights on or off; the rest room stays dark. |
+| ![Mobile](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/mobile.png) | **Phone.** Works on small screens too. |
 
 ## Why
 
@@ -40,9 +42,10 @@ npx coworking-agents --private    # hide names, branches, repos, titles and path
 npx coworking-agents --port 5000  # pick a port (default 4777; falls back to a free one if taken)
 npx coworking-agents --no-open    # don't open the browser
 npx coworking-agents --json       # print one snapshot of the state as JSON and exit
+npx coworking-agents@latest       # make sure you run the newest release (npx caches the last one)
 ```
 
-Requires Node 18+. Zero dependencies.
+Requires Node 18+. Zero dependencies. When a newer release is on npm, the terminal and the office tell you once (`--no-update-check` or `COWORKING_NO_UPDATE_CHECK=1` turns that off).
 
 ### Access token
 
@@ -78,7 +81,7 @@ Running `npx coworking-agents` a second time reuses the office that is already r
   - **Nap corner:** sessions idle for a long time (20+ min) lie down on bean bags.
 - **Floors and Building view.** With many rooms the office gains floors, each with its own shared wing. A floor picker appears at the top, and **Building view** shows every floor as a live thumbnail with counts of who is working and who needs you; click one to go there.
 
-![Building view: every floor as a live thumbnail](docs/building.png)
+![Building view: every floor as a live thumbnail](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png)
 
 ## States
 
@@ -99,7 +102,7 @@ Running `npx coworking-agents` a second time reuses the office that is already r
 
 Click a person for the side panel: repository, branch, worktree, model, context size, turns, recent actions, subagents, most-used tools and certificates.
 
-![Side panel for one agent](docs/panel.png)
+![Side panel for one agent](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png)
 
 ## Help toasts
 
@@ -118,7 +121,7 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **The office cat** wanders around and naps next to sleeping agents.
 - **Languages:** English and Brazilian Portuguese, picked from your browser and switchable in the top bar.
 
-<p align="center"><img src="docs/mobile.png" alt="The office on a phone" width="300"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/mobile.png" alt="The office on a phone" width="300"></p>
 
 
 ## Shortcuts and tools
@@ -152,11 +155,11 @@ Linux and Windows support is written against their process tools but has not bee
 ## Privacy and security
 
 - **Read-only.** No hooks, nothing installed into the AIs, no configuration changed.
-- **No tokens spent.** It never calls a model or any network service.
+- **No tokens spent.** It never calls a model. The only network calls are the update check (asks npm for the latest version number, nothing else is sent; `--no-update-check` turns it off) and, only if you turn on real weather, the forecast your browser fetches from Open-Meteo.
 - **Local only.** The server binds to `127.0.0.1`.
 - **Host allowlist.** Requests whose `Host` header isn't `127.0.0.1`, `localhost` or `[::1]` are rejected, which blocks DNS-rebinding attacks.
 - **Access token.** Every request needs the per-run token cookie (see [Access token](#access-token)). The "Go to terminal" endpoint additionally requires a custom header and a local origin.
-- **Strict CSP.** `default-src 'self'`, no frames, no external scripts, fonts or connections.
+- **Strict CSP.** `default-src 'self'`, no frames, no external scripts or fonts; the only outside connection allowed is Open-Meteo for the opt-in weather.
 - **Never reads credentials.** Not Claude Code's `*.key` files, not Codex's `auth.json`. From `~/.claude.json` it reads only `skillUsage`, `pluginUsage` and `mcpServers`.
 - **Secrets are masked.** Tokens, passwords, API keys and `Bearer` values inside commands are replaced with `•••` before display.
 - **`--private` mode** for screen sharing hides agent names, branches, repo names (replaced by aliases like `repo A`), session titles, paths, file names, questions, skills, MCP names and the host name.
