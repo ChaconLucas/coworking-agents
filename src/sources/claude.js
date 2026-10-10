@@ -63,7 +63,14 @@ function absorb(st, d) {
   if (d.type === 'assistant') {
     if (m.model && !m.model.startsWith('<')) st.model = m.model;
     const u = m.usage;
-    if (u) { st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); addTokens(st, ts, u.output_tokens || 0); }
+    // one API message is written as several entries (one per content block) with the same usage: count it once
+    if (u && (!m.id || m.id !== st.lastMsgId)) {
+      st.lastMsgId = m.id;
+      st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+      addTokens(st, ts, u.output_tokens || 0);
+      st.usage.input += u.input_tokens || 0; st.usage.output += u.output_tokens || 0;
+      st.usage.cacheRead += u.cache_read_input_tokens || 0; st.usage.cacheWrite += u.cache_creation_input_tokens || 0;
+    }
     for (const c of Array.isArray(m.content) ? m.content : []) {
       if (c.type === 'text' && c.text && c.text.trim()) { st.lastReply = short(c.text.replace(/[*_`#>]+/g, ''), 260); st.turnText = ((st.turnText ? st.turnText + '\n\n' : '') + c.text.replace(/[*_`#>]+/g, '').trim()).slice(-6000); st.lastReplyLong = st.turnText; st.lastReplyAt = ts; } // lastReplyLong = everything said this turn
       if (c.type !== 'tool_use') continue;
@@ -177,6 +184,15 @@ function today(since) {
   return out;
 }
 
+// Claude Code keeps rate limits only in memory (the status line receives them). If the user's status line
+// saves them to ~/.config/coworking-agents/claude-limits.json, we show them.
+function limits() {
+  const d = safeJson(path.join(os.homedir(), '.config', 'coworking-agents', 'claude-limits.json'));
+  if (!d) return null;
+  const w = x => x && { usedPercent: Number(x.used_percentage ?? x.used_percent ?? x.utilization) || 0, windowMinutes: Number(x.window_minutes) || 0, resetsAt: (() => { const v = x.resets_at ?? x.reset_at; return typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(v) || 0; })() };
+  return { at: Number(d.at) || 0, primary: w(d.five_hour), secondary: w(d.seven_day) };
+}
+
 function credentials() {
   const cj = safeJson(path.join(os.homedir(), '.claude.json')) || {};
   const topSkills = Object.entries(cj.skillUsage || {})
@@ -190,4 +206,4 @@ function credentials() {
   };
 }
 
-module.exports = { id: 'claude', label: 'Claude Code', sessions, credentials, today };
+module.exports = { id: 'claude', label: 'Claude Code', sessions, credentials, today, limits };

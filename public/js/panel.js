@@ -1,14 +1,41 @@
 'use strict';
 // ---------------- side panel ----------------
 const panel = document.getElementById('panel'), panelBody = document.getElementById('panel-body');
-function fmtK(n) { return n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n); }
+function fmtK(n) { return n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n); }
 const KIND_ICON = { edit: '✎', read: '◉', terminal: '›_', web: '◍', delegate: '⚑', skill: '✦', mcp: '⚡', other: '•', ask: '?', thinking: '…' };
+
+const fmtTok = n => fmtK(Math.round(Number(n) || 0));
+const untilText = ms => { if (!ms) return ''; const d = ms - Date.now(); if (d <= 0) return T.usage.now; const h = Math.floor(d / 36e5), m = Math.round((d % 36e5) / 6e4); return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : h ? `${h}h${String(m).padStart(2, '0')}` : `${m}min`; };
+function limitRow(label, w) {
+  if (!w) return '';
+  const pct = Math.max(0, Math.min(100, w.usedPercent)), cls = pct > 85 ? 'hi' : pct > 60 ? 'mid' : 'on';
+  return `<div class="lim"><div class="lim-h"><span>${esc(label)}</span><b>${Math.round(pct)}%</b></div><div class="lim-bar"><i class="${cls}" style="width:${pct}%"></i></div><small>${esc(T.usage.resets)} ${esc(untilText(w.resetsAt))}${w.resetsAt ? ' · ' + new Date(w.resetsAt).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</small></div>`;
+}
+// usage & limits: rate-limit windows per AI, then tokens per open session
+function renderUsage(P) {
+  const U = T.usage, L = data.limits || {};
+  const block = id => {
+    const a = AGENT[id] || { label: id, color: '#888' }, l = L[id];
+    const body = l ? limitRow(U.fiveHour, l.primary) + limitRow(U.week, l.secondary) : `<p class="note">${esc(id === 'claude' ? U.claudeHint : U.none)}</p>`;
+    return `<h3 style="color:${a.color}">${esc(a.label)}</h3>${body}`;
+  };
+  const ps = data.people.filter(p => p.usage && !p.leaving).sort((a, b) => (b.usage.output + b.usage.input) - (a.usage.output + a.usage.input));
+  const total = ps.reduce((t, p) => ({ input: t.input + p.usage.input, output: t.output + p.usage.output, cacheRead: t.cacheRead + p.usage.cacheRead, cacheWrite: t.cacheWrite + p.usage.cacheWrite }), { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
+  const todayOut = data.people.reduce((n, p) => n + ((p.today && p.today.outTokens) || 0), 0);
+  panelBody.innerHTML = `<h2>${esc(U.title)}</h2><p class="sub">${esc(U.sub)}</p>
+    ${Object.keys(AGENT).map(block).join('')}
+    <h3>${esc(U.tokens)}</h3>
+    <div class="stats tok"><div><b>${fmtTok(todayOut)}</b><small>${esc(U.outToday)}</small></div><div><b>${fmtTok(total.output)}</b><small>${esc(U.out)}</small></div><div><b>${fmtTok(total.input + total.cacheWrite)}</b><small>${esc(U.in)}</small></div><div><b>${fmtTok(total.cacheRead)}</b><small>${esc(U.cache)}</small></div></div>
+    <ul class="list usage-list">${ps.map(p => `<li><span class="k" style="color:${agentOf(p).color}">●</span><span>${esc(p.name)}<br><span class="note">${esc(p.title || '')}</span></span><span class="t">${fmtTok(p.usage.output)} ${esc(U.outShort)} · ${fmtTok(p.usage.input + p.usage.cacheWrite)} ${esc(U.inShort)}</span></li>`).join('')}</ul>
+    <p class="note">${esc(U.note)}</p>`;
+}
 
 function renderPanel() {
   document.body.classList.toggle('panel-open', !!(selected && data));
   if (!selected || !data) { panel.hidden = true; return; }
   panel.hidden = false;
   const P = T.panel;
+  if (selected === '__usage') return renderUsage(P);
   if (selected === '__hall') {
     const section = (id, c) => {
       const a = AGENT[id] || { label: id, color: '#888' };
@@ -54,6 +81,7 @@ function renderPanel() {
       <div><b>${fmtK(Number(td.outTokens) || 0)}</b><small>${esc(P.tokensOut)}</small></div></div>
     ${p.files && p.files.length ? `<h3>${esc(P.filesNow)}</h3><ul class="list files">${p.files.map(f => `<li><span class="k">✎</span><code title="${esc(f.repo + '/' + f.rel)}">${esc(f.rel)}</code><span class="t">${esc(ago(data.now - f.at))}</span></li>`).join('')}</ul>` : ''}
     ${p.subagents.length ? `<h3>${P.team}</h3><ul class="list">${p.subagents.map(a => `<li><span class="k">${KIND_ICON[a.state] || '•'}</span><span><b>${esc(a.type)}</b> ${esc(a.description)}${a.doing ? `<br><span class="note">${esc(a.doing)}</span>` : ''}</span></li>`).join('')}</ul>` : ''}
+    ${p.usage ? `<h3>${esc(T.usage.session)}</h3><div class="stats tok"><div><b>${fmtTok(p.usage.output)}</b><small>${esc(T.usage.out)}</small></div><div><b>${fmtTok(p.usage.input + p.usage.cacheWrite)}</b><small>${esc(T.usage.in)}</small></div><div><b>${fmtTok(p.usage.cacheRead)}</b><small>${esc(T.usage.cache)}</small></div></div>` : ''}
     ${p.ctx ? `<h3>${P.context}</h3><div class="blocks">${blocks}</div><div class="ctx-row"><span>${esc(P.tokens(fmtK(p.ctx)))}</span><span>${Math.round(ctxPct * 100)}% / ${fmtK(ctxMax)}</span></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
     <h3>${P.where}</h3><dl>
       ${p.repo ? `<dt>${P.repo}</dt><dd>${esc(p.repo.name)}${p.repo.isWorktree ? ` <span class="note">(${P.worktree})</span>` : ''}</dd>` : ''}
@@ -64,7 +92,7 @@ function renderPanel() {
       <dt>${P.version}</dt><dd>${esc(p.version || '')}${p.pid ? ' · pid ' + (Number(p.pid) || '') : ''}</dd>
     </dl>
     <h3>${P.recent}</h3><ul class="list">${p.recent.map(a => `<li><span class="k">${KIND_ICON[a.kind] || '•'}</span><span><code>${esc(a.tool)}</code> ${esc(a.what)}</span><span class="t">${esc(ago(data.now - a.ts))}</span></li>`).join('') || '<li>—</li>'}</ul>
-    ${tools.length ? `<h3>${P.tools}</h3><ul class="bars">${tools.map(([k, n]) => `<li><code>${esc(k)}</code><span class="bar"><i style="width:${(n / toolMax * 100).toFixed(1)}%"></i></span><span class="t">${Number(n) || 0}</span></li>`).join('')}</ul>` : ''}
+    ${tools.length ? `<h3>${P.tools}</h3><ul class="bars">${tools.map(([k, n]) => `<li><code>${esc(k)}</code><span class="tbar"><i style="width:${(n / toolMax * 100).toFixed(1)}%"></i></span><span class="t">${Number(n) || 0}</span></li>`).join('')}</ul>` : ''}
     <h3 id="certs-h">${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${Number(c.n) || 0}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
     <p class="note" style="margin-top:18px">${P.session}: <code>${esc(p.id)}</code></p>`;
   const face = Art.portrait(p.id, p.state === 'needs_you' ? 'open' : null);

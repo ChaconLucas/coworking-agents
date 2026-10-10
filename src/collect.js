@@ -111,6 +111,7 @@ function person(s, now) {
     timeline: st ? segments(st.events, now - 3600 * 1000, now, true) : [],
     files: st ? [...st.files.entries()].filter(([, at]) => now - at < EDIT_WINDOW_MS).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([f, at]) => ({ ...relFile(f), at })) : [],
     permissionMode: st ? st.permissionMode || '' : '',
+    usage: st ? { ...st.usage } : null,
     lastPrompt: st ? st.lastPrompt || '' : '', lastPromptAt: st ? st.lastPromptAt || 0 : 0,
     lastReply: st ? st.lastReply || '' : '', lastReplyLong: st ? st.lastReplyLong || '' : '', lastReplyAt: st ? st.lastReplyAt || 0 : 0,
     today: st ? todayStats(st, now) : null,
@@ -124,12 +125,13 @@ function person(s, now) {
 
 function snapshot({ privacy = false } = {}) {
   const now = Date.now();
-  const people = [], credentials = {}, agents = [];
+  const people = [], credentials = {}, agents = [], limits = {};
   for (const src of SOURCES) {
     let list = [];
     try { list = src.sessions(now); } catch {}
     for (const s of list) { try { people.push(person(s, now)); } catch {} }
     try { credentials[src.id] = src.credentials(); } catch {}
+    try { if (src.limits) limits[src.id] = src.limits(); } catch {}
     agents.push({ id: src.id, label: src.label, sessions: list.length });
   }
   people.sort((a, b) => a.startedAt - b.startedAt);
@@ -177,7 +179,7 @@ function snapshot({ privacy = false } = {}) {
     if (p.doing) p.doing.ask = '';
   }
   const hn = os.hostname().replace(/\.local$/, '');
-  return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, credentials: privacy ? {} : credentials };
+  return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, limits, credentials: privacy ? {} : credentials };
 }
 
 // Daily report: every conversation touched since midnight, open or already closed.

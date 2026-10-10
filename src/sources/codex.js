@@ -61,6 +61,12 @@ function absorb(st, d) {
       const u = p.info.last_token_usage || p.info.total_token_usage;
       if (u) st.ctx = u.input_tokens || 0;
       if (p.info.last_token_usage) addTokens(st, ts, p.info.last_token_usage.output_tokens || 0);
+      const tot = p.info.total_token_usage;
+      if (tot) st.usage = { input: Math.max(0, (tot.input_tokens || 0) - (tot.cached_input_tokens || 0)), output: tot.output_tokens || 0, cacheRead: tot.cached_input_tokens || 0, cacheWrite: 0 };
+    }
+    if (t === 'token_count' && p.rate_limits) {
+      const w = x => x && { usedPercent: Number(x.used_percent) || 0, windowMinutes: Number(x.window_minutes) || 0, resetsAt: (Number(x.resets_at) || 0) * 1000 };
+      st.limits = { at: ts, primary: w(p.rate_limits.primary), secondary: w(p.rate_limits.secondary) };
       if (p.info.model_context_window) st.ctxMax = p.info.model_context_window;
     } else if (/approval_request$/.test(t || '')) {
       // explicit approval request: needs you until the tool responds
@@ -163,6 +169,13 @@ function today(since) {
   return out;
 }
 
+// most recent rate-limit snapshot among today's/yesterday's rollouts
+function limits() {
+  let best = null;
+  for (const f of recentRollouts(Date.now(), Date.now() - 2 * 864e5)) { const st = read(f); if (st && st.limits && (!best || st.limits.at > best.at)) best = st.limits; }
+  return best;
+}
+
 function credentials() {
   let skills = [];
   for (const sub of ['skills', path.join('skills', '.system')]) {
@@ -171,4 +184,4 @@ function credentials() {
   return { topSkills: [], skills: [...new Set(skills)], mcps: [], plugins: [] };
 }
 
-module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today };
+module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today, limits };

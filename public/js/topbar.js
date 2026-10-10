@@ -30,6 +30,7 @@ function renderBar() {
     b.setAttribute('aria-pressed', on); b.title = `${label.replace(/^\S+\s/, '')}: ${on ? T.on : T.off}`; b.querySelector('.sr').textContent = b.title;
   }
   document.getElementById('btn-lang').textContent = T.lang;
+  { const ub = document.getElementById('btn-usage'); ub.title = T.usage.title; ub.querySelector('.sr').textContent = T.usage.title; }
 
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
 }
@@ -85,4 +86,6 @@ document.getElementById('btn-notify').onclick = async () => {
   notifyOn = !notifyOn; store.set('notify', notifyOn); renderBar();
 };
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
+// usage & limits panel
+document.getElementById('btn-usage').onclick = () => { selected = selected === '__usage' ? null : '__usage'; camera(null); renderOverlay(); renderPanel(); };
 document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };

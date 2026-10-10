@@ -123,6 +123,7 @@ assert.strictEqual(by('A').doing.what, 'a.txt');
 assert.deepStrictEqual({ ...by('A').skills }, { impeccable: 1 });
 assert.deepStrictEqual({ ...by('A').mcps }, { rea: 1 });
 assert.strictEqual(by('A').ctx, 1001);
+assert.strictEqual(by('A').usage.cacheRead, 3000, 'usage adds up every reply (3 replies of 1000 cached tokens)');
 assert.ok(by('A').today && by('A').today.tools >= 2, 'today stats count tools');
 assert.strictEqual(by('G').lastPrompt, 'new question', 'last prompt comes from the transcript');
 assert.strictEqual(by('A').repo.name, 'repo');
