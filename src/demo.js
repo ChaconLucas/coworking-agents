@@ -1,4 +1,5 @@
 'use strict';
+const { costOf } = require('./prices');
 // Fake office for `--demo`: shows every state without needing real sessions.
 
 const STATES = ['edit', 'terminal', 'needs_you', 'read', 'web', 'delegate', 'idle', 'waiting', 'thinking', 'asleep'];
@@ -23,13 +24,14 @@ function demoSnapshot() {
     const doing = TOOL[state] ? { tool: TOOL[state], what: WHAT[state] || '', kind: state === 'needs_you' ? 'ask' : state === 'waiting' ? 'terminal' : state, for: forMs } : null;
     const agent = [1, 4, 8].includes(i) ? 'codex' : 'claude';
     return {
-      agent, ctxMax: agent === 'codex' ? 258400 : 0,
+      agent, ctxMax: agent === 'codex' ? 258400 : 1e6,
       id: `demo-${i}-${TITLES[i % TITLES.length]}`, name: ['ada', 'grace', 'linus', 'alan', 'margaret', 'ken', 'barbara', 'dennis', 'radia', 'guido'][i % 10] + (i >= 10 ? '-' + ((i / 10) | 0) : ''),
       pid: 1000 + i, kind: 'interactive', entrypoint: 'cli', version: 'demo', status: busy ? 'busy' : 'idle', state,
       since: stepStart || now - (state === 'asleep' ? 3 * 36e5 : 4 * 6e4), startedAt: now - (i + 1) * 3.1 * 36e5,
       title: TITLES[i % TITLES.length], cwd: `/home/dev/${REPOS[i % REPOS.length]}`, branch: i % 3 ? 'main' : `feat/${REPOS[i % REPOS.length]}-${i}`,
       repo: { name: REPOS[i % REPOS.length], path: `/home/dev/${REPOS[i % REPOS.length]}`, worktree: `/home/dev/${REPOS[i % REPOS.length]}`, isWorktree: false },
-      model: agent === 'codex' ? 'gpt-5.5' : 'claude-opus-5-5', ctx: [42e3, 180e3, 610e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i % 10], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i % 10],
+      model: agent === 'codex' ? 'gpt-5.5' : 'claude-opus-5-5', ctx: [42e3, 180e3, 810e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i % 10], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i % 10],
+      usage: { input: 4e4 * (i + 1), output: 9e4 * (i + 2), cacheRead: 6e6 * (i + 1), cacheWrite: 4e5 * (i + 1) },
       doing, recent: doing ? [{ tool: doing.tool, what: doing.what, kind: doing.kind, ts: now - 3000 }, { tool: 'Read', what: 'README.md', kind: 'read', ts: now - 60000 }] : [],
       skills: i === 0 ? { 'frontend-design': 3, simplify: 1 } : i === 4 ? { 'web-research': 2 } : i === 2 ? { 'code-review': 1 } : {},
       mcps: i === 4 ? { playwright: 6 } : i === 1 ? { github: 4 } : {},
@@ -54,6 +56,7 @@ function demoSnapshot() {
         doing: { tool: 'Edit', what: 'package.json', kind: 'edit', for: now - cycle * 30000 } });
     }
   }
+  for (const p of people) if (p.usage && !p.cost) p.cost = { usd: costOf(p.model, p.usage) || 0, partial: false };
   return {
     now, host: 'demo', people,
     clashes: [{ worktree: '/home/dev/web-app', repo: 'web-app', who: [people[0].id, people[7].id] }],
@@ -80,7 +83,12 @@ function demoUsage() {
   const byDay = {}, now = Date.now();
   for (let i = 0; i < 14; i++) { const d = new Date(now - i * 864e5), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); byDay[k] = { input: 2e4, output: 4e5 + (i * 7919) % 9e5, cacheRead: 3e8, cacheWrite: 2e6 }; }
   const agent = (k, models) => ({ sessions: 40, total: { input: 3e5, output: 9e6 * k, cacheRead: 6e9 * k, cacheWrite: 5e7 * k }, byDay, byModel: Object.fromEntries(models.map((m, i) => [m, { input: 1e5, output: 3e6 / (i + 1), cacheRead: 2e9, cacheWrite: 1e7 }])) });
-  return { scanning: false, scannedAt: now, byAgent: { claude: agent(1, ['claude-opus-5-5', 'claude-sonnet-5']), codex: agent(.2, ['gpt-5.5']) } };
+  const byAgent = { claude: agent(1, ['claude-opus-5-5', 'claude-sonnet-5']), codex: agent(.2, ['gpt-5.5']) };
+  for (const o of Object.values(byAgent)) {
+    o.costByModel = Object.fromEntries(Object.entries(o.byModel).map(([m, u]) => [m, costOf(m, u)]));
+    o.cost = { usd: Object.values(o.costByModel).reduce((a, b) => a + b, 0), unpricedModels: [] };
+  }
+  return { scanning: false, scannedAt: now, byAgent };
 }
 
 module.exports = { demoSnapshot, demoReport, demoUsage };

@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { safeJson, alive, short, incremental, newest, track, baseState, event, addTokens } = require('../util');
+const { costOf } = require('../prices');
 
 const DIR = () => process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const SUBAGENT_ACTIVE_MS = 45 * 1000;
@@ -75,6 +76,11 @@ function absorb(st, d) {
       addTokens(st, ts, u.output_tokens || 0);
       st.usage.input += u.input_tokens || 0; st.usage.output += u.output_tokens || 0;
       st.usage.cacheRead += u.cache_read_input_tokens || 0; st.usage.cacheWrite += u.cache_creation_input_tokens || 0;
+      // cost per reply, with the model and the 1h/5m cache-write split of that reply (a session may switch models)
+      const one = { input: u.input_tokens || 0, output: u.output_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cacheWrite1h: (u.cache_creation && u.cache_creation.ephemeral_1h_input_tokens) || 0 };
+      st.usage.cacheWrite1h += one.cacheWrite1h;
+      const c = costOf(m.model, one);
+      if (c == null) st.costUnpriced = true; else st.cost += c;
     }
     for (const c of Array.isArray(m.content) ? m.content : []) {
       if (c.type === 'text' && c.text && c.text.trim()) { st.lastReply = short(c.text.replace(/[*_`#>]+/g, ''), 260); st.turnText = ((st.turnText ? st.turnText + '\n\n' : '') + c.text.replace(/[*_`#>]+/g, '').trim()).slice(-6000); st.lastReplyLong = st.turnText; st.lastReplyAt = ts; } // lastReplyLong = everything said this turn

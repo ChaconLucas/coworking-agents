@@ -6,13 +6,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const readline = require('readline');
+const { costOf } = require('./prices');
 
 const CACHE = path.join(os.homedir(), '.config', 'coworking-agents', 'usage-cache.json');
 const CLAUDE = () => path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects');
 const CODEX = () => path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions');
 
-const zero = () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
-const add = (a, b) => { a.input += b.input; a.output += b.output; a.cacheRead += b.cacheRead; a.cacheWrite += b.cacheWrite; return a; };
+const zero = () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 });
+const add = (a, b) => { a.input += b.input; a.output += b.output; a.cacheRead += b.cacheRead; a.cacheWrite += b.cacheWrite; a.cacheWrite1h += b.cacheWrite1h || 0; return a; };
+const SCAN_VERSION = 2; // bump when scanFile's output changes: cached files are rescanned once
 const day = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 function walk(dir, out = []) {
@@ -42,7 +44,7 @@ async function scanFile(file, kind) {
       const m = d.message || {}, u = m.usage;
       if (!u || (m.id && m.id === lastId)) continue; // one API reply is split into several entries
       lastId = m.id;
-      bump(Date.parse(d.timestamp), m.model && !m.model.startsWith('<') ? m.model : '', { input: u.input_tokens || 0, output: u.output_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0 });
+      bump(Date.parse(d.timestamp), m.model && !m.model.startsWith('<') ? m.model : '', { input: u.input_tokens || 0, output: u.output_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cacheWrite1h: (u.cache_creation && u.cache_creation.ephemeral_1h_input_tokens) || 0 });
     } else {
       if (line.indexOf('"turn_context"') >= 0) { try { const d = JSON.parse(line); if (d.payload && d.payload.model) model = d.payload.model; } catch {} continue; }
       if (line.indexOf('"token_count"') < 0) continue;
@@ -76,8 +78,8 @@ async function refresh() {
       seen.add(file);
       let st; try { st = fs.statSync(file); } catch { continue; }
       const hit = c[file];
-      if (hit && hit.size === st.size && hit.mtime === st.mtimeMs) continue;
-      try { c[file] = { size: st.size, mtime: st.mtimeMs, kind, res: await scanFile(file, kind) }; } catch {}
+      if (hit && hit.v === SCAN_VERSION && hit.size === st.size && hit.mtime === st.mtimeMs) continue;
+      try { c[file] = { v: SCAN_VERSION, size: st.size, mtime: st.mtimeMs, kind, res: await scanFile(file, kind) }; } catch {}
     }
     for (const f of Object.keys(c)) if (!seen.has(f)) delete c[f]; // deleted transcripts drop out
     saveCache();
@@ -87,6 +89,14 @@ async function refresh() {
       o.sessions++; add(o.total, res.total);
       for (const [k, v] of Object.entries(res.byDay)) add(o.byDay[k] || (o.byDay[k] = zero()), v);
       for (const [k, v] of Object.entries(res.byModel)) add(o.byModel[k] || (o.byModel[k] = zero()), v);
+    }
+    // estimated cost per model (list prices); tokens of models without a price stay out of the total
+    for (const o of Object.values(out)) {
+      o.cost = { usd: 0, unpricedModels: [] }; o.costByModel = {};
+      for (const [m, u] of Object.entries(o.byModel)) {
+        const c = costOf(m, u);
+        if (c == null) o.cost.unpricedModels.push(m); else { o.costByModel[m] = c; o.cost.usd += c; }
+      }
     }
     state.result = out; state.scannedAt = Date.now();
   } finally { state.scanning = false; }

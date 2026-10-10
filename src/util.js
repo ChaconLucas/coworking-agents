@@ -133,7 +133,7 @@ function addTokens(st, ts, n) { if (ts && n) { const k = dayKey(ts); st.outByDay
 function baseState() {
   // prototype-less counters: tool names from the transcript ("constructor", "__proto__") can't collide
   const bag = () => Object.create(null);
-  return { title: '', cwd: '', branch: '', model: '', ctx: 0, ctxMax: 0, lastTs: 0, pending: new Map(), recent: [], tools: bag(), skills: bag(), mcps: bag(), edits: new Map(), turns: 0, events: [], files: new Map(), outByDay: bag(), usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, limits: null };
+  return { title: '', cwd: '', branch: '', model: '', ctx: 0, ctxMax: 0, lastTs: 0, pending: new Map(), recent: [], tools: bag(), skills: bag(), mcps: bag(), edits: new Map(), turns: 0, events: [], files: new Map(), outByDay: bag(), usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 }, cost: 0, costUnpriced: false, limits: null };
 }
 
 module.exports = { safeJson, alive, short, resolveRepo, incremental, newest, track, baseState, event, addTokens, dayKey };

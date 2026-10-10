@@ -141,6 +141,7 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Real weather (opt-in):** click a window; the browser asks for your location and, if you allow it, fetches the current weather from Open-Meteo directly (coordinates rounded to ~1 km). Off by default; nothing goes through the server.
 - **Same file:** a red banner when two sessions edit the same file, not just the same repository.
 - **New certificates** are hung on the partition with a little animation.
+- **Estimated cost:** each session's panel and the usage report show what the tokens would cost at the official API list prices (table in `src/prices.js`, dated; add or override models in `~/.config/coworking-agents/prices.json`). Priced per reply, with Claude's 1-hour/5-minute cache-write split. Models without a published price are listed as such, never guessed. On a subscription this is not what you pay.
 
 ## Platforms
 

@@ -242,6 +242,14 @@ assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') &&
 assert.deepStrictEqual(pv.credentials, {});
 assert.ok(pv.people.every(p => !p.lastPrompt && !p.lastReply), 'private: no prompt or reply text');
 
+// estimated cost: official list prices, per reply; an unknown model has no price (never guessed)
+const prices = require('../src/prices');
+assert.strictEqual(prices.modelKey('claude-opus-5-5-20260922'), 'opus-5-5');
+assert.strictEqual(prices.modelKey('claude-opus-5-5[1m]'), 'opus-5-5');
+assert.strictEqual(prices.costOf('claude-opus-5-5', { input: 1e6, output: 1e6, cacheRead: 1e6, cacheWrite: 2e6, cacheWrite1h: 1e6 }), 4 + 20 + 0.2 + 5 + 8, 'opus 5.5: in + out + cache read + 5m write + 1h write');
+assert.strictEqual(prices.costOf('gpt-5.5', { input: 1e6, output: 1e6, cacheRead: 1e6, cacheWrite: 0 }), 5 + 30 + 0.5);
+assert.strictEqual(prices.costOf('some-new-model', { input: 1e6, output: 1e6 }), null, 'no price for an unknown model');
+
 // update notice: only a strictly higher x.y.z counts; nothing is known until the CLI asks npm
 const upd = require('../src/update');
 assert.ok(upd.newer('0.2.0', '0.1.9') && upd.newer('1.0.0', '0.9.9') && upd.newer('0.1.10', '0.1.9'), 'newer versions');

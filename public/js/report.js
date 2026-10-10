@@ -64,8 +64,9 @@ function renderReport() {
     const a = AGENT[id], g = u && u.byAgent && u.byAgent[id], l = L[id];
     const lim = l ? limitRow(U.fiveHour, l.primary) + limitRow(U.week, l.secondary) : `<p class="note">${esc(id === 'claude' ? U.claudeHint : U.none)}</p>`;
     const totals = g ? `<div class="big"><div><b>${tok(g.total.output)}</b><small>${esc(U.out)}</small></div><div><b>${tok(g.total.input + g.total.cacheWrite)}</b><small>${esc(U.in)}</small></div><div><b>${tok(g.total.cacheRead)}</b><small>${esc(U.cache)}</small></div></div>
+      ${g.cost ? `<p class="cost"><b>≈ ${esc(fmtUSD(g.cost.usd))}</b> ${esc(U.costApi)}${g.cost.unpricedModels.length ? ` <span class="note" title="${esc(g.cost.unpricedModels.join(', '))}">(${esc(U.unpriced(g.cost.unpricedModels.length))})</span>` : ''}</p>` : ''}
       <p class="note">${Number(g.sessions) || 0} ${esc(U.conversations)}</p>
-      <ul class="bars">${Object.entries(g.byModel).sort((x, y) => y[1].output - x[1].output).slice(0, 6).map(([m, v], i, arr) => `<li><code title="${esc(m)}">${esc(m)}</code><span class="tbar"><i style="width:${(v.output / arr[0][1].output * 100).toFixed(1)}%;background:${a.color}"></i></span><span class="t">${tok(v.output)}</span></li>`).join('')}</ul>` : `<p class="note">${esc(u && u.scanning ? U.scanning : U.none)}</p>`;
+      <ul class="bars">${Object.entries(g.byModel).sort((x, y) => y[1].output - x[1].output).slice(0, 6).map(([m, v], i, arr) => `<li><code title="${esc(m)}">${esc(m)}</code><span class="tbar"><i style="width:${(v.output / arr[0][1].output * 100).toFixed(1)}%;background:${a.color}"></i></span><span class="t">${tok(v.output)}${g.costByModel && g.costByModel[m] != null ? ' · ' + esc(fmtUSD(g.costByModel[m])) : ''}</span></li>`).join('')}</ul>` : `<p class="note">${esc(u && u.scanning ? U.scanning : U.none)}</p>`;
     return `<div class="rcard"><h4 style="color:${a.color}"><i class="ailogo big" data-ai="${esc(id)}"></i>${esc(a.label)}</h4>${totals}</div>`;
   };
   // last 14 days, output tokens per day stacked by AI
@@ -88,6 +89,6 @@ function renderReport() {
     <h3>${esc(U.limits)}</h3><div class="ltiles">${tiles || `<p class="note">${esc(U.none)}</p>`}</div>
     <h3>${esc(U.last14)}</h3><div class="chart-wrap"><span class="ymax">${tok(max)}</span>${chart}</div>
     <h3>${esc(U.allTime)}</h3><div class="rgrid">${Object.keys(AGENT).map(card).join('')}</div>
-    <p class="note" style="margin-top:14px">${esc(U.note)} ${esc(U.noCost)}</p>`;
+    <p class="note" style="margin-top:14px">${esc(U.note)} ${esc(U.costNote)}</p>`;
   body.querySelectorAll('.ailogo[data-ai]').forEach(el => { const id = el.dataset.ai; el.appendChild(Art.aiIconEl(id, (AGENT[id] || {}).color || '#888')); });
 }

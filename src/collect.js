@@ -99,6 +99,7 @@ function person(s, now) {
     files: st ? [...st.files.entries()].filter(([, at]) => now - at < EDIT_WINDOW_MS).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([f, at]) => ({ ...relFile(f), at })) : [],
     permissionMode: st ? st.permissionMode || '' : '',
     usage: st ? { ...st.usage } : null,
+    cost: st && !(st.costUnpriced && !st.cost) ? { usd: st.cost, partial: !!st.costUnpriced } : null,
     lastPrompt: st ? st.lastPrompt || '' : '', lastPromptAt: st ? st.lastPromptAt || 0 : 0,
     lastReply: st ? st.lastReply || '' : '', lastReplyLong: st ? st.lastReplyLong || '' : '', lastReplyAt: st ? st.lastReplyAt || 0 : 0,
     today: st ? todayStats(st, now) : null,

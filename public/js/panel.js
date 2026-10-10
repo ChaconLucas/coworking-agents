@@ -5,6 +5,8 @@ function fmtK(n) { return n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : n >= 1e6 ? (n 
 const KIND_ICON = { edit: '✎', read: '◉', terminal: '›_', web: '◍', delegate: '⚑', skill: '✦', mcp: '⚡', other: '•', ask: '?', thinking: '…' };
 
 const fmtTok = n => fmtK(Math.round(Number(n) || 0));
+// estimated money at API list prices; never shown without a price (see src/prices.js)
+const fmtUSD = n => { const d = n >= 100 ? 0 : n >= 1 ? 2 : 3; return 'US$ ' + n.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en', { minimumFractionDigits: d, maximumFractionDigits: d }); };
 const untilText = ms => { if (!ms) return ''; const d = ms - Date.now(); if (d <= 0) return T.usage.now; const h = Math.floor(d / 36e5), m = Math.round((d % 36e5) / 6e4); return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : h ? `${h}h${String(m).padStart(2, '0')}` : `${m}min`; };
 function limitRow(label, w) {
   if (!w) return '';
@@ -96,7 +98,7 @@ function renderPanel() {
       <div><b>${fmtK(Number(td.outTokens) || 0)}</b><small>${esc(P.tokensOut)}</small></div></div>
     ${p.files && p.files.length ? `<h3>${esc(P.filesNow)}</h3><ul class="list files">${p.files.map(f => `<li><span class="k">✎</span><code title="${esc(f.repo + '/' + f.rel)}">${esc(f.rel)}</code><span class="t">${esc(ago(data.now - f.at))}</span></li>`).join('')}</ul>` : ''}
     ${p.subagents.length ? `<h3>${P.team}</h3><ul class="list">${p.subagents.map(a => `<li><span class="k">${KIND_ICON[a.state] || '•'}</span><span><b>${esc(a.type)}</b> ${esc(a.description)}${a.doing ? `<br><span class="note">${esc(a.doing)}</span>` : ''}</span></li>`).join('')}</ul>` : ''}
-    ${p.usage ? `<h3>${esc(T.usage.session)}</h3><div class="stats tok"><div><b>${fmtTok(p.usage.output)}</b><small>${esc(T.usage.out)}</small></div><div><b>${fmtTok(p.usage.input + p.usage.cacheWrite)}</b><small>${esc(T.usage.in)}</small></div><div><b>${fmtTok(p.usage.cacheRead)}</b><small>${esc(T.usage.cache)}</small></div></div>` : ''}
+    ${p.usage ? `<h3>${esc(T.usage.session)}</h3><div class="stats tok"><div><b>${fmtTok(p.usage.output)}</b><small>${esc(T.usage.out)}</small></div><div><b>${fmtTok(p.usage.input + p.usage.cacheWrite)}</b><small>${esc(T.usage.in)}</small></div><div><b>${fmtTok(p.usage.cacheRead)}</b><small>${esc(T.usage.cache)}</small></div>${p.cost ? `<div title="${esc(T.usage.costNote)}"><b>≈ ${esc(fmtUSD(p.cost.usd))}${p.cost.partial ? '+' : ''}</b><small>${esc(T.usage.cost)}</small></div>` : ''}</div>` : ''}
     ${p.ctx ? `<h3>${P.context}</h3>${ctxMax ? `<div class="blocks">${blocks}</div>` : ''}<div class="ctx-row"><span>${esc(P.tokens(fmtK(p.ctx)))}</span><span>${ctxMax ? `${Math.round(ctxPct * 100)}% / ${fmtK(ctxMax)}` : esc(P.ctxUnknown)}</span></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
     <h3>${P.where}</h3><dl>
       ${p.repo ? `<dt>${P.repo}</dt><dd>${esc(p.repo.name)}${p.repo.isWorktree ? ` <span class="note">(${P.worktree})</span>` : ''}</dd>` : ''}

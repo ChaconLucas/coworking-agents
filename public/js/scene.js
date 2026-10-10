@@ -42,7 +42,7 @@ function drawUsageBoard(x, y, t) {
   const lvl = p => p > 85 ? '#ff4d57' : p > 60 ? '#ffc23a' : '#62ff7a';
   r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#2a2f45'); r(x, y, w, h, '#06070c');
   const c1 = x + 54, c2 = x + 82;
-  pixText(c1 + 4, y + 2, '5H', '#6e7894'); pixText(c2 + 2, y + 2, 'SEM', '#6e7894');
+  pixText(c1 + 4, y + 2, '5H', '#6e7894'); pixText(c2, y + 2, 'WEEK', '#6e7894'); // the panel speaks one language, like a real LED sign
   ids.forEach((id, i) => {
     const a = AGENT[id], l = L[id], ry = y + 8 + i * rowH;
     if (i) r(x + 3, ry - 2, w - 6, 1, '#151a28');

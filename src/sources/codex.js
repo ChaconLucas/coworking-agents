@@ -7,6 +7,7 @@ const os = require('os');
 const path = require('path');
 const { processList } = require('../proc');
 const { short, incremental, newest, track, baseState, event, addTokens } = require('../util');
+const { costOf } = require('../prices');
 
 const DIR = () => process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
 const OPEN_MS = 3 * 60 * 60 * 1000; // a conversation untouched for longer than this leaves the office
@@ -63,6 +64,7 @@ function absorb(st, d) {
       if (p.info.last_token_usage) addTokens(st, ts, p.info.last_token_usage.output_tokens || 0);
       const tot = p.info.total_token_usage;
       if (tot) st.usage = { input: Math.max(0, (tot.input_tokens || 0) - (tot.cached_input_tokens || 0)), output: tot.output_tokens || 0, cacheRead: tot.cached_input_tokens || 0, cacheWrite: 0 };
+      if (tot) { const c = costOf(st.model, st.usage); st.cost = c || 0; st.costUnpriced = c == null; } // running total, priced at the current model
     }
     if (t === 'token_count' && p.rate_limits) {
       const w = x => x && { usedPercent: Number(x.used_percent) || 0, windowMinutes: Number(x.window_minutes) || 0, resetsAt: (Number(x.resets_at) || 0) * 1000 };
