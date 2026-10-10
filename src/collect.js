@@ -4,7 +4,7 @@
 
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { processList } = require('./proc');
 const { resolveRepo, newest, dayKey } = require('./util');
 
 const SOURCES = [require('./sources/claude'), require('./sources/codex'), require('./sources/process')];
@@ -13,24 +13,10 @@ const PENDING_STALE_MS = 6000;           // tool stalled this long = running or 
 const ASLEEP_MS = 20 * 60 * 1000;
 const EDIT_WINDOW_MS = 15 * 60 * 1000;   // window for "two sessions editing the same checkout"
 
-// Process table (one call per snapshot): who is whose child and how long ago it started.
-let procCache = { at: 0, kids: new Map() };
+// Process table (shared, cross-platform): who is whose child and when it started.
 function processTable(now) {
-  if (now - procCache.at < 900) return procCache.kids;
   const kids = new Map();
-  try {
-    const out = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,etime=,command='], { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' }, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 8 * 1024 * 1024 });
-    for (const line of out.split('\n')) {
-      const m = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(line);
-      if (!m) continue;
-      const [, pid, ppid, et, cmd] = m;
-      const t = et.split(/[-:]/).map(Number); // [[dd-]hh:]mm:ss
-      const secs = t.length === 4 ? ((t[0] * 24 + t[1]) * 60 + t[2]) * 60 + t[3] : t.length === 3 ? (t[0] * 60 + t[1]) * 60 + t[2] : t[0] * 60 + t[1];
-      if (!kids.has(+ppid)) kids.set(+ppid, []);
-      kids.get(+ppid).push({ pid: +pid, start: now - secs * 1000, cmd });
-    }
-  } catch {}
-  procCache = { at: now, kids };
+  for (const p of processList()) { if (!kids.has(p.ppid)) kids.set(p.ppid, []); kids.get(p.ppid).push({ pid: p.pid, start: now - p.secs * 1000, cmd: p.cmd }); }
   return kids;
 }
 
@@ -38,7 +24,7 @@ function processTable(now) {
 // Shell spawned after the request = the command is running; none = still waiting for approval.
 function shellRunning(pid, since, now) {
   const kids = processTable(now).get(pid) || [];
-  return kids.some(k => k.start >= since - 2000 && /shell-snapshots|^\/bin\/(ba|z)?sh -c|^(ba|z)?sh -c/.test(k.cmd));
+  return kids.some(k => k.start >= since - 2000 && /shell-snapshots|^\/bin\/(ba|z)?sh -c|^(ba|z)?sh -c|bash(\.exe)?"? -c|powershell|pwsh|cmd\.exe/i.test(k.cmd));
 }
 
 // Stalled tool: instant ones (edit, read) only stall when awaiting approval; Bash is measured by its process;
@@ -180,7 +166,7 @@ function snapshot({ privacy = false } = {}) {
     if (p.doing) { p.doing.ask = ''; p.doing.options = null; }
   }
   const hn = os.hostname().replace(/\.local$/, '');
-  return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, limits, credentials: privacy ? {} : credentials };
+  return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, platform: process.platform, agents, people, clashes, fileClashes, limits, credentials: privacy ? {} : credentials };
 }
 
 // Daily report: every conversation touched since midnight, open or already closed.

@@ -5,7 +5,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { processList } = require('../proc');
 const { short, incremental, newest, track, baseState, event, addTokens } = require('../util');
 
 const DIR = () => process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
@@ -105,11 +105,7 @@ let procCache = { at: 0, v: false };
 function codexRunning() {
   if (process.env.COWORKING_CODEX_RUNNING) return process.env.COWORKING_CODEX_RUNNING === '1'; // tests
   if (Date.now() - procCache.at < 5000) return procCache.v;
-  let v = false;
-  try {
-    const out = execFileSync('ps', ['-axo', 'comm='], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-    v = out.split('\n').some(c => /(^|\/)codex(\s|$)/i.test(c.trim()) || /Codex\.app\//.test(c));
-  } catch {}
+  const v = processList().some(p => /(^|[\/\\])codex(\.exe)?(\s|$)/i.test(p.cmd) || /Codex\.app\//.test(p.cmd));
   procCache = { at: Date.now(), v };
   return v;
 }

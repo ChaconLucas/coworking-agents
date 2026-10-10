@@ -75,8 +75,33 @@ end tell
 return "notfound"`,
 };
 
+// Linux / Windows: bring the terminal window that hosts the session to the front (window, not tab).
+const TERMS_LINUX = /gnome-terminal|konsole|xfce4-terminal|kitty|alacritty|wezterm|tilix|terminator|xterm|foot|ghostty|code|cursor/i;
+const TERMS_WIN = /WindowsTerminal|wezterm|alacritty|conhost|Code\.exe|Cursor\.exe|powershell|pwsh|cmd\.exe/i;
+async function focusOther(person) {
+  if (!person.pid) return { ok: false, reason: 'nopid' };
+  const { ancestry: chainOf } = require('./proc');
+  const chain = chainOf(person.pid).slice(1);
+  if (process.platform === 'linux') {
+    const term = chain.find(p => TERMS_LINUX.test(p.cmd));
+    if (!term) return { ok: false, reason: 'unknown' };
+    if (await run('xdotool', ['search', '--pid', String(term.pid), 'windowactivate']) !== null) return { ok: true, app: term.cmd.split(/[\s/]/).filter(Boolean).pop() || 'terminal', exact: false };
+    const list = await run('wmctrl', ['-lp']);
+    const win = list && list.split('\n').find(l => l.split(/\s+/)[2] === String(term.pid));
+    if (win && await run('wmctrl', ['-ia', win.split(/\s+/)[0]]) !== null) return { ok: true, app: 'terminal', exact: false };
+    return { ok: false, reason: 'linuxtools' };
+  }
+  if (process.platform === 'win32') {
+    const term = chain.find(p => TERMS_WIN.test(p.cmd)) || chain[0];
+    if (!term) return { ok: false, reason: 'unknown' };
+    const res = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(New-Object -ComObject WScript.Shell).AppActivate(${Number(term.pid)})`]);
+    return res && /True/i.test(res) ? { ok: true, app: 'terminal', exact: false } : { ok: false, reason: 'unknown' };
+  }
+  return { ok: false, reason: 'platform' };
+}
+
 async function focus(person) {
-  if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
+  if (process.platform !== 'darwin') return focusOther(person);
   if (person.agent === 'codex' && !person.pid) {
     const ok = await run('open', ['-a', 'Codex']);
     return ok === null ? { ok: false, reason: 'codex' } : { ok: true, app: 'Codex', exact: false };

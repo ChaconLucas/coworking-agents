@@ -7,6 +7,7 @@
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { processList } = require('../proc');
 const { safeJson } = require('../util');
 
 const KNOWN = [
@@ -30,6 +31,8 @@ function tools() {
 }
 
 function cwdOf(pid) {
+  if (process.platform === 'linux') { try { return require('fs').readlinkSync(`/proc/${pid}/cwd`); } catch { return ''; } }
+  if (process.platform === 'win32') return ''; // not exposed without native code
   try {
     const out = execFileSync('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 });
     const line = out.split('\n').find(l => l.startsWith('n'));
@@ -43,15 +46,10 @@ function sessions(now) {
   if (now - cache.at < 2500) return cache.list;
   const ts = tools(), out = [];
   if (ts.length) {
-    let rows = [];
-    try {
-      rows = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,pcpu=,etime=,tty=,command='], { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' }, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 8 * 1024 * 1024 })
-        .split('\n').map(l => /^\s*(\d+)\s+(\d+)\s+([\d.]+)\s+(\S+)\s+(\S+)\s+(.*)$/.exec(l)).filter(Boolean)
-        .map(m => ({ pid: +m[1], ppid: +m[2], cpu: +m[3], etime: m[4], tty: m[5], cmd: m[6] }));
-    } catch {}
+    const rows = processList();
     const hits = [];
     for (const row of rows) {
-      if (row.pid === process.pid || row.tty === '??') continue; // only tools living in a terminal
+      if (row.pid === process.pid || (process.platform !== 'win32' && !row.tty)) continue; // only tools living in a terminal (Windows has no tty)
       const t = ts.find(x => x.re.test(row.cmd));
       if (t) hits.push({ ...row, tool: t });
     }
@@ -59,8 +57,7 @@ function sessions(now) {
     const pids = new Set(hits.map(h => h.pid));
     for (const h of hits) {
       if (pids.has(h.ppid) && hits.find(x => x.pid === h.ppid && x.tool.id === h.tool.id)) continue;
-      const t = h.etime.split(/[-:]/).map(Number);
-      const secs = t.length === 4 ? ((t[0] * 24 + t[1]) * 60 + t[2]) * 60 + t[3] : t.length === 3 ? (t[0] * 60 + t[1]) * 60 + t[2] : t[0] * 60 + t[1];
+      const secs = h.secs;
       const cpu = hits.filter(x => x.tool.id === h.tool.id && (x.pid === h.pid || x.ppid === h.pid)).reduce((n, x) => n + x.cpu, 0);
       let cwd = cwdCache.get(h.pid);
       if (cwd === undefined) { cwd = cwdOf(h.pid); cwdCache.set(h.pid, cwd); }
@@ -68,7 +65,7 @@ function sessions(now) {
       out.push({
         agent: h.tool.id, agentLabel: h.tool.label, agentColor: h.tool.color || '#8a8f98', coarse: true,
         id: `${h.tool.id}-${h.pid}`, name: `${h.tool.id}-${String(h.pid).slice(-4)}`, pid: h.pid, kind: 'cli', version: '',
-        status: cpu > BUSY_CPU ? 'busy' : 'idle', since: startedAt, startedAt, cwd, st: null, subagents: [],
+        status: process.platform === 'win32' ? 'idle' : cpu > BUSY_CPU ? 'busy' : 'idle', since: startedAt, startedAt, cwd, st: null, subagents: [],
       });
     }
   }

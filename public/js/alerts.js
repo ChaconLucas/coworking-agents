@@ -5,7 +5,8 @@ const LIMIT_STEPS = [80, 95];       // notify once per window when usage crosses
 const alerted = new Set();
 
 const ctxPct = p => p.ctx && (p.ctxMax || (p.ctx > 2e5 ? 1e6 : 2e5)) ? p.ctx / (p.ctxMax || (p.ctx > 2e5 ? 1e6 : 2e5)) : 0;
-const canCompact = p => p.agent === 'claude' && !p.leaving && (p.state === 'idle' || p.state === 'asleep') && ctxPct(p) >= CTX_WARN && p.entrypoint !== 'claude-desktop';
+const canType = () => !data || !data.platform || data.platform === 'darwin'; // typing into a terminal tab is macOS-only
+const canCompact = p => canType() && p.agent === 'claude' && !p.leaving && (p.state === 'idle' || p.state === 'asleep') && ctxPct(p) >= CTX_WARN && p.entrypoint !== 'claude-desktop';
 
 const toastEl = document.createElement('div');
 toastEl.className = 'toasts'; toastEl.setAttribute('aria-live', 'polite');
