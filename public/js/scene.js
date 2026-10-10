@@ -479,6 +479,8 @@ function drawScene(t, dt) {
   partyLights(t);
   // the LED panel is self-lit: drawn again over the dark, so it shines when the lights are off
   if (sky.phase !== 'day' && usageBox) drawUsageBoard(usageBox.x, usageBox.y, t);
+  if (sky.phase !== 'day') { const lit = wallLit; wallLit = []; for (const f of lit) f(); }
+  wallLit = [];
   // the rest room keeps its lights off, day or night
   if (napBox) { ctx.fillStyle = 'rgba(8, 8, 26, .55)'; ctx.fillRect(napBox.x, napBox.y, napBox.w, napBox.h); }
   for (const c of layout) {

@@ -122,13 +122,16 @@ function officeMood() {
   return 'normal';
 }
 function drawMoodSign(x, y, t, glows) {
-  const rush = officeMood() === 'rush', blink = rush && ((t / 900) | 0) % 6 !== 0;
-  r(x - 1, y - 1, 26, 10, PAL.ink); r(x, y, 24, 8, blink ? '#5a0f16' : '#1b1622');
-  pixText(x + 2, y + 2, 'ON AIR', blink ? '#ff4d57' : '#4a2a30');
-  if (blink) glows.push({ x: x + 12, y: y + 4, r: 22, c: '#ff4d57' });
+  const live = data ? data.people.filter(p => !p.leaving && !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length : 0;
+  const rush = officeMood() === 'rush', on = live > 0 && (!rush || ((t / 450) | 0) % 2 === 0); // lit while anyone works, blinks in a rush
+  r(x - 1, y - 1, 26, 10, PAL.ink); r(x, y, 24, 8, on ? '#5a0f16' : '#1b1622');
+  pixText(x + 2, y + 2, 'ON AIR', on ? '#ff4d57' : '#4a2a30');
+  if (on) { glows.push({ x: x + 12, y: y + 4, r: 22, c: '#ff4d57' }); wallLit.push(() => drawMoodSign(x, y, t, [])); }
   moodBox = { x: x - 1, y: y - 1, w: 26, h: 10 };
 }
 let moodBox = null;
+// lit things on the wall are redrawn over the night shade (like the LED panel)
+let wallLit = [];
 function moodShade() { // drawn over everything but the lit things, before the lights
   if (officeMood() !== 'calm') return;
   ctx.fillStyle = 'rgba(20, 18, 40, .12)'; ctx.fillRect(0, 0, W, H);

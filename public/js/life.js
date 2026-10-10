@@ -181,9 +181,9 @@ let tvBox = null;
 // ---- notice board in the dev corner: today's most edited files as post-its (from the daily report) ----
 let boardFiles = [], boardAt = 0;
 function refreshBoardFiles() {
-  if (Date.now() - boardAt < 5 * 60000) return;
+  if (Date.now() - boardAt < 2 * 60000) return;
   boardAt = Date.now();
-  fetch('api/report').then(r => r.json()).then(j => { boardFiles = (j.topFiles || []).slice(0, 4); }).catch(() => {});
+  fetch('api/report').then(r => r.json()).then(j => { boardFiles = (j.topFiles || []).slice(0, 4); boardRows = j.rows || []; }).catch(() => {});
 }
 function drawNoticeBoard(x, y) {
   refreshBoardFiles();
@@ -215,3 +215,7 @@ function drawTrophyCase(x, y, t, glows) {
   caseBox = { x: x - 1, y: y - 1, w: 52, h: 32 };
 }
 let caseBox = null;
+
+// the punch clock reads the daily report (refreshed with the notice board): who started working today, and when
+const clockIns = () => (boardRows || []).filter(x => x.first).sort((a, b) => a.first - b.first);
+let boardRows = [];

@@ -194,7 +194,7 @@ function report({ privacy = false } = {}) {
       rows.push({
         agent, id, name: p ? p.name : '', live: !!p, title: privacy ? '' : (st.title || title || ''),
         repo: repo ? repo.name : '', activeMs, tools, turns: evToday.filter(e => e.kind === 'idle').length,
-        files: files.length, outTokens: st.outByDay[key] || 0,
+        files: files.length, outTokens: st.outByDay[key] || 0, first: evToday.length ? evToday[0].ts : 0,
       });
     }
   }
