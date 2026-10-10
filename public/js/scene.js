@@ -223,8 +223,20 @@ function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
   if (cell) {
     const certs = certsOf(p), fit = Math.floor((pw - 8) / 13);
     cell.certs = [];
+    // a newly earned certificate is hung on the partition: drops in, swings, sparkles
+    const keyOf = c => c.kind + ':' + (c.key || c.name);
+    const known = certSeen.get(p.id);
+    if (!known) certSeen.set(p.id, new Map(certs.map(c => [keyOf(c), 0])));
+    else for (const c of certs) if (!known.has(keyOf(c))) { known.set(keyOf(c), Date.now()); toast(`<b>${esc(T.alerts.newCert)}</b>${esc(p.name)} · ${esc(c.name)}`, 'ok'); playTune('done'); }
     certs.slice(0, fit).forEach((c, i) => {
-      const cx = px + 5 + i * 13, cy = py + 6 + (i % 2) * 3;
+      let cx = px + 5 + i * 13, cy = py + 6 + (i % 2) * 3;
+      const born = known && known.get(keyOf(c)), age = born ? Date.now() - born : Infinity;
+      if (age < 1600) {
+        const k = Math.min(1, age / 500), swing = age > 500 ? Math.round(Math.sin((age - 500) / 90) * 2 * (1 - (age - 500) / 1100)) : 0;
+        cy = Math.round(cy - (1 - k) * 22); cx += swing;
+        r(cx + 5, py + 2, 1, cy - py - 2, '#8b7a5a'); // the string it hangs from
+        if (age > 450 && age < 1300) for (let q = 0; q < 4; q++) { const a = (age / 120 + q * 1.6); r(Math.round(cx + 5 + Math.cos(a) * 8), Math.round(cy + 4 + Math.sin(a) * 6), 1, 1, '#ffe08a'); }
+      }
       Art.drawCertificate(cx, cy, certColor(c), c.kind === 'badge');
       cell.certs.push({ c, x: cx, y: cy, w: 11, h: 9 });
     });
@@ -292,6 +304,7 @@ function drawDevCorner(t, glows) {
 }
 
 let napBox = null;
+const certSeen = new Map(); // person -> certificate key -> when it appeared (0 = was there on load)
 function drawWing(t, lights, glows, pingPlaying, meeting) {
   r(CX - 6, TOP, 1, H - TOP, '#00000018');
   // kitchen with tiled floor
