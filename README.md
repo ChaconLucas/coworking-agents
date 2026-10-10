@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/logo.png" width="128" alt="coworking-agents logo">
+  <img src="docs/logo.png" width="128" alt="coworking-agents logo">
 </p>
 
 <h1 align="center">coworking-agents</h1>
@@ -10,28 +10,28 @@
 
 **A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
 
-![The office by day](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-day.png)
+![The office by day](docs/office-day.png)
 
-![The office at night: monitors and desk lamps light the room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-night.png)
+![The office at night: monitors and desk lamps light the room](docs/office-night.png)
 
 ## Tour
 
 | | |
 |---|---|
-| ![Top bar](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
-| ![Talk](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (typed into its Terminal/iTerm tab for Claude Code and Codex CLI) or jump to it. |
-| ![Camera](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
-| ![Panel](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
-| ![Usage](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
-| ![Work site](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** 75 of them, five tiers each, coins for every tier, the agent of the month on top. |
-| ![Paper](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
-| ![Trophy room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
-| ![Christmas](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
-| ![Building](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
-| ![House wall](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
-| ![Night](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-night.png) | **Day and night.** Lighting follows your clock; a wall switch turns the ceiling lights on or off; the rest room stays dark. |
-| ![Mobile](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/mobile.png) | **Phone.** Works on small screens too. |
+| ![Top bar](docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
+| ![Talk](docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (typed into its Terminal/iTerm tab for Claude Code and Codex CLI) or jump to it. |
+| ![Camera](docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
+| ![Panel](docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
+| ![Usage](docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
+| ![Work site](docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
+| ![Achievements](docs/achievements.png) | **Achievements.** 75 of them, five tiers each, coins for every tier, the agent of the month on top. |
+| ![Paper](docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
+| ![Trophy room](docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
+| ![Christmas](docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
+| ![Building](docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
+| ![House wall](docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
+| ![Night](docs/office-night.png) | **Day and night.** Lighting follows your clock; a wall switch turns the ceiling lights on or off; the rest room stays dark. |
+| ![Mobile](docs/mobile.png) | **Phone.** Works on small screens too. |
 
 ## Why
 
@@ -85,7 +85,7 @@ Running `npx coworking-agents` a second time reuses the office that is already r
   - **Nap corner:** sessions idle for a long time (20+ min) lie down on bean bags.
 - **Floors and Building view.** With many rooms the office gains floors, each with its own shared wing. A floor picker appears at the top, and **Building view** shows every floor as a live thumbnail with counts of who is working and who needs you; click one to go there.
 
-![Building view: every floor as a live thumbnail](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png)
+![Building view: every floor as a live thumbnail](docs/building.png)
 
 ## States
 
@@ -106,7 +106,7 @@ Running `npx coworking-agents` a second time reuses the office that is already r
 
 Click a person for the side panel: repository, branch, worktree, model, context size, turns, recent actions, subagents, most-used tools and certificates.
 
-![Side panel for one agent](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png)
+![Side panel for one agent](docs/panel.png)
 
 ## Help toasts
 
@@ -135,13 +135,13 @@ You're in the office too, with a **YOU** tag. **WASD** or the arrow keys walk (h
 
 ## The game room and the trophy room
 
-![The game room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/game-room.png)
+![The game room](docs/game-room.png)
 
 Under the team rooms there's a game room with four doors: arcades, foosball, a pool table, an aquarium, a water cooler and bean bags, where idle agents hang out. Its props open the reports: the **newspaper rack** (the weekly paper), the **vending machine** (the shop), the **easel** (customise), the **guestbook** (history) and the **cork board** (today's date, files edited today, the daily report).
 
 A marble portal leads to the **trophy room**, its own screen: legends with wings and a flame in lit niches between marble columns, a stained-glass arch over the crown of **Legend of Legends**, every other trophy under its own glass dome or in the side cabinets, locked ones as silhouettes. Each tier has its own award (bronze cup, silver star cup, gold ruby cup, diamond crystal, winged legend). Click one for its card.
 
-![The trophy room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/trophy-room.png)
+![The trophy room](docs/trophy-room.png)
 
 ## Achievements, coins and the shop
 
@@ -154,7 +154,7 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 
 ## Make it yours
 
-![Customise](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/customise.png)
+![Customise](docs/customise.png)
 
 ☰ → **Customise** has 13 options: the office name (on a plaque by the elevator and in the top bar), your own look, floor (wood, dark wood, carpet, concrete, tiles, checker, marble, grass), walls (10 colours), room carpets (5 palettes), desks (5), the window view (city, beach, mountains, forest, space), the sky (automatic, always day, sunset, always night), lighting (natural, warm, cool, neon), the mascot (cat, dog, robot, fox, penguin, bunny), plants (normal or jungle), the radio station and the accent colour. The die next to an agent's face in its panel gives that agent a new look.
 
@@ -169,7 +169,7 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 - **Office photo:** ☰ → Office photo saves the scene as a PNG. And something happens if you click the `</>` neon three times.
 - **Languages:** English and Brazilian Portuguese.
 
-<p align="center"><img src="https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/mobile.png" alt="The office on a phone" width="300"></p>
+<p align="center"><img src="docs/mobile.png" alt="The office on a phone" width="300"></p>
 
 ## Shortcuts
 

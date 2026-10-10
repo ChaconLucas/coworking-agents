@@ -15,7 +15,8 @@
     "commands",
     "skills",
     "AGENTS.md",
-    "ROADMAP.md"
+    "ROADMAP.md",
+    "docs/*.png"
   ],
   "engines": {
     "node": ">=18"
