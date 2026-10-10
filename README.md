@@ -6,7 +6,7 @@
 
 <p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Claude Code · Codex · zero dependencies · local only</p>
 
-<p align="center"><a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/v/coworking-agents" alt="npm"></a> <a href="https://github.com/ChaconLucas/coworking-agents/actions/workflows/test.yml"><img src="https://github.com/ChaconLucas/coworking-agents/actions/workflows/test.yml/badge.svg" alt="tests"></a></p>
+<p align="center"><a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/v/coworking-agents" alt="npm"></a></p>
 
 **A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
 
