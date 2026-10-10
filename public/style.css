@@ -548,3 +548,20 @@ main:has(#office.cam) { overflow: visible; }
 .talk-box, .report-box { outline-offset: -6px; }
 .talk-x, .report-x, .panel .close { padding: 0 !important; font-size: 0 !important; color: #b9a88a; }
 .talk-x svg, .report-x svg, .panel .close svg { display: block; }
+
+/* ---- side panel v3 ---- */
+.panel { padding-top: 22px !important; }
+.panel .close { position: fixed !important; top: 16px; right: 18px; float: none !important; margin: 0 !important; width: 30px; height: 30px; z-index: 12; }
+.panel > #panel-body > h2 { padding-right: 44px; font-size: 14px; }
+.panel h3 .ailogo { margin-right: 2px; }
+.grp { background: #1d1823; border: 1px solid #2a2333; border-radius: 8px; padding: 10px 12px 12px; margin-bottom: 10px; }
+.grp-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; color: #8b9bb4; text-transform: uppercase; letter-spacing: .05em; }
+.grp-h b { font: 700 9px/1 var(--pix); color: #d9cdb0; background: #2a2333; border-radius: 999px; padding: 3px 7px; }
+.grp .chips { margin-bottom: 0; }
+.more-chips summary { cursor: pointer; margin-top: 8px; font-size: 12px; color: #d97757; list-style: none; }
+.more-chips summary::-webkit-details-marker { display: none; }
+.more-chips summary::before { content: '▸ '; } .more-chips[open] summary::before { content: '▾ '; }
+.more-chips .chips { margin-top: 8px; }
+.podium { margin: 4px 0 12px; } .pod i { max-height: 36px; } .pod.p1 i { height: 36px; } .pod.p2 i { height: 26px; } .pod.p3 i { height: 18px; }
+.pod b { font-size: 11px; }
+.grp .bars li { grid-template-columns: 120px 1fr 28px; padding: 2px 0; }

@@ -45,15 +45,21 @@ function renderPanel() {
       const order = [1, 0, 2].filter(i => top[i]);
       const podium = top.length ? `<div class="podium">${order.map(i => `<div class="pod p${i + 1}"><span class="medal">${i + 1}</span><b title="${esc(top[i].name)}">${esc(top[i].name)}</b><small>${Number(top[i].count) || 0}×</small><i></i></div>`).join('')}</div>` : '';
       const bars = rest.length ? `<ul class="bars">${rest.map(x => `<li><code title="${esc(x.name)}">${esc(x.name)}</code><span class="tbar"><i style="width:${(x.count / max * 100).toFixed(1)}%"></i></span><span class="t">${Number(x.count) || 0}</span></li>`).join('')}</ul>` : '';
-      const chips = (list, kind) => list.length ? `<div class="chips">${list.map(n => `<span class="chip-s ${used.has(n) ? 'on' : ''} ${kind}" title="${esc(n)}${used.has(n) ? ' · ' + used.get(n) + '×' : ''}">${esc(n)}</span>`).join('')}</div>` : '';
-      return `<h3 style="color:${a.color}">${esc(a.label)}</h3>
-        ${top.length ? `<p class="note">${esc(P.topSkills)}</p>${podium}${bars}` : ''}
-        ${c.skills.length ? `<p class="note">${esc(P.installed)} · ${c.skills.length}</p>${chips(c.skills, 'skill')}` : ''}
-        ${c.mcps.length ? `<p class="note">${esc(P.mcps)} · ${c.mcps.length}</p>${chips(c.mcps, 'mcp')}` : ''}
-        ${c.plugins.length ? `<p class="note">${esc(P.plugins)} · ${c.plugins.length}</p>${chips(c.plugins.map(x => x.name), 'plugin')}` : ''}`;
+      // used ones first; long lists fold after 10 behind "show all"
+      const chip = (n, kind) => `<span class="chip-s ${used.has(n) ? 'on' : ''} ${kind}" title="${esc(n)}${used.has(n) ? ' · ' + used.get(n) + '×' : ''}">${esc(n)}</span>`;
+      const chips = (list, kind) => {
+        if (!list.length) return '';
+        const sorted = [...list].sort((x, y) => (used.has(y) - used.has(x)) || x.localeCompare(y)), head = sorted.slice(0, 10), rest = sorted.slice(10);
+        return `<div class="chips">${head.map(n => chip(n, kind)).join('')}</div>${rest.length ? `<details class="more-chips"><summary>${esc(P.showAll(sorted.length))}</summary><div class="chips">${rest.map(n => chip(n, kind)).join('')}</div></details>` : ''}`;
+      };
+      const grp = (label, list, kind) => list.length ? `<div class="grp"><div class="grp-h"><span>${esc(label)}</span><b>${list.length}</b></div>${chips(list, kind)}</div>` : '';
+      return `<h3 style="color:${a.color}"><i class="ailogo" data-ai="${esc(id)}"></i>${esc(a.label)}</h3>
+        ${top.length ? `<div class="grp"><div class="grp-h"><span>${esc(P.topSkills)}</span></div>${podium}${bars}</div>` : ''}
+        ${grp(P.installed, c.skills, 'skill')}${grp(P.mcps, c.mcps, 'mcp')}${grp(P.plugins, c.plugins.map(x => x.name), 'plugin')}`;
     };
     panelBody.innerHTML = `<h2>${esc(P.hall)}</h2><p class="sub">${esc(data.host)}</p>` +
       Object.entries(data.credentials || {}).map(([id, c]) => section(id, c)).join('');
+    panelBody.querySelectorAll('.ailogo[data-ai]').forEach(el => { const id = el.dataset.ai; el.appendChild(Art.aiIconEl(id, (AGENT[id] || {}).color || '#888')); });
     return;
   }
   const p = data.people.find(x => x.id === selected);
