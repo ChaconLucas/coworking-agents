@@ -12,10 +12,22 @@ const overlay = document.getElementById('overlay');
 let S = 3, W = 480, H = 300, CX = 320, RX = 330;
 let data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
 
-function roomKey(p) {
+function rawRoomKey(p) {
   if (p.repo && p.repo.name) return p.repo.name;
   const base = (p.cwd || '').split('/').filter(Boolean).pop();
   return base ? '~' + base : '—';
+}
+// sticky: a quick `cd` elsewhere doesn't move anyone; they change rooms after a minute in the new place
+const ROOM_STICK_MS = 60000;
+const stickyRoom = new Map();
+function roomKey(p) {
+  const now = Date.now(), raw = rawRoomKey(p);
+  let s = stickyRoom.get(p.id);
+  if (!s) { s = { key: raw, pending: null, since: 0 }; stickyRoom.set(p.id, s); }
+  if (raw === s.key) s.pending = null;
+  else if (s.pending !== raw) { s.pending = raw; s.since = now; }
+  else if (now - s.since > ROOM_STICK_MS) { s.key = raw; s.pending = null; }
+  return s.key;
 }
 
 function planFloors(people, leftW) {
@@ -86,8 +98,9 @@ function relayout() {
   const now = Date.now();
   for (const f of floorStates) for (const R of f.rooms) {
     const prev = roomRects.get(R.name);
-    if (!prev && roomsSeen) R.anim = { from: { x: R.doorX, y: R.y + R.h - 4, w: 18, h: 4 }, at: now, fresh: true };
-    else if (prev && (prev.w !== R.w || prev.h !== R.h || prev.x !== R.x || prev.y !== R.y)) R.anim = { from: prev, at: now };
+    const arrived = R.people.some(p => (arrivals.get(p.id) || 0) > now - 3000);
+    if (!prev && roomsSeen && arrived) R.anim = { from: { x: R.doorX, y: R.y + R.h - 4, w: 18, h: 4 }, at: now, fresh: true };
+    else if (prev && arrived && (prev.w !== R.w || prev.h !== R.h)) R.anim = { from: prev, at: now };
     roomRects.set(R.name, { x: R.x, y: R.y, w: R.w, h: R.h });
   }
   roomsSeen = !!(data && data.people.length);

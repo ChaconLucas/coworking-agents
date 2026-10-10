@@ -29,7 +29,7 @@ function renderUsagePill() {
   pill.innerHTML = parts.filter(Boolean).join('<span class="sep"></span>');
   pill.title = U.open;
 }
-document.getElementById('usage-pill').addEventListener('click', () => openReport());
+
 
 const reportEl = document.createElement('div');
 reportEl.className = 'report'; reportEl.hidden = true;

@@ -1,6 +1,50 @@
 'use strict';
 // ---------------- scene ----------------
-let wallGlows = [];
+let wallGlows = [], usageBox = null;
+// usage meters as a wall display, like a clock in the office: one gauge per limit window + today's tokens
+function usageGauges() {
+  const out = [], L = (data && data.limits) || {};
+  for (const id of Object.keys(AGENT)) {
+    const l = L[id];
+    if (l && l.primary) out.push({ id, label: AGENT[id].label + ' · ' + T.usage.fiveHour, win: '5h', pct: l.primary.usedPercent, resetsAt: l.primary.resetsAt, color: AGENT[id].color });
+    if (l && l.secondary) out.push({ id, label: AGENT[id].label + ' · ' + T.usage.week, win: 'week', pct: l.secondary.usedPercent, resetsAt: l.secondary.resetsAt, color: AGENT[id].color });
+  }
+  return out.slice(0, 4);
+}
+// 3x5 pixel font for the wall display
+const PIXFONT = { '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111', '6': '111100111101111', '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', '%': '101001010100101', 'H': '101101111101101', 'W': '101101101111101', 'K': '101101110101101', '5h': '' };
+function pixText(x, y, str, c) {
+  let cx = x;
+  for (const ch of String(str)) { const g = PIXFONT[ch]; if (g) for (let i = 0; i < 15; i++) if (g[i] === '1') r(cx + (i % 3), y + ((i / 3) | 0), 1, 1, c); cx += 4; }
+  return cx - x;
+}
+function drawUsageBoard(x, y, t) {
+  const w = 60, h = 34, f = (t / 300) | 0;
+  usageBox = { x, y, w, h };
+  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#3a4466'); r(x, y, w, h, '#0e1220');
+  const g = usageGauges().slice(0, 3);
+  if (!g.length) { for (let i = 0; i < 3; i++) r(x + 6, y + 8 + i * 7, 20 + ((f + i) % 3) * 8, 2, '#2a3350'); return; }
+  const slot = w / g.length;
+  g.forEach((m, i) => {
+    const cx = Math.round(x + slot * i + slot / 2), cy = y + 15, R = 8, pct = Math.max(0, Math.min(100, m.pct));
+    const col = pct > 85 ? '#e43b44' : pct > 60 ? '#feae34' : '#63c74d';
+    // dial: arc of ticks from left (0%) to right (100%), filled up to the value
+    for (let k = 0; k <= 12; k++) {
+      const ang = Math.PI + (k / 12) * Math.PI, px = Math.round(cx + Math.cos(ang) * R), py = Math.round(cy + Math.sin(ang) * R);
+      r(px, py, 1, 1, k / 12 * 100 <= pct ? col : '#2a3350');
+    }
+    // needle
+    const na = Math.PI + (pct / 100) * Math.PI;
+    for (let k = 1; k < R - 1; k++) r(Math.round(cx + Math.cos(na) * k), Math.round(cy + Math.sin(na) * k), 1, 1, '#f4ecd8');
+    r(cx - 1, cy - 1, 2, 2, m.color);
+    // value and window under the dial
+    const txt = Math.round(pct) + '%', tw = txt.length * 4 - 1;
+    pixText(cx - (tw >> 1), cy + 3, txt, '#ffffff');
+    const lbl = m.win === 'week' ? 'WK' : '5H', lw = lbl.length * 4 - 1;
+    pixText(cx - (lw >> 1), cy + 10, lbl, m.color);
+  });
+  r(x + w - 4, y + 2, 2, 2, f % 2 ? '#63c74d' : '#1f3a24'); // live led
+}
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
@@ -11,6 +55,7 @@ function drawWall(t, sky) {
   for (let i = 0; i < nWin; i++) {
     const wx = 16 + i * 74;
     if (i === 2 && nWin >= 4) { Art.drawNeon(wx + 9, 10, t, wallGlows); Art.drawPoster(wx - 4, 28 - 8, 0); Art.drawPoster(wx + 34, 28 - 8, 2); }
+    else if (i === 1) drawUsageBoard(wx - 4, 7, t);
     else if (i === 5) Art.drawPoster(wx + 14, 12, 1);
     else Art.drawWindow(wx, 9, 48, 30, sky, t, i);
   }

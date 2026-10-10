@@ -9,7 +9,7 @@ const { focus, sendText } = require('./focus');
 const { usage } = require('./usage');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png', '.ico': 'image/x-icon' };
 const MAX_CLIENTS = 16;
 const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
 const LOCAL_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
@@ -72,7 +72,9 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       res.writeHead(302, { 'Set-Cookie': `cw=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' + (url.searchParams.get('lang') ? '?lang=' + encodeURIComponent(url.searchParams.get('lang')) : '') });
       return res.end();
     }
-    if (!sameSecret(cookie(req, 'cw'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
+    // icons are public: browsers fetch them without cookies and cache the 401 otherwise
+    const PUBLIC_ICONS = new Set(['/favicon.ico', '/favicon.png', '/apple-touch-icon.png', '/logo.svg']);
+    if (!PUBLIC_ICONS.has(url.pathname) && !sameSecret(cookie(req, 'cw'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
 
     if (url.pathname === '/events') {
       if (clients.size >= MAX_CLIENTS) { res.writeHead(503); return res.end(); }

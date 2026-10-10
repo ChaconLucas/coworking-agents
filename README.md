@@ -1,6 +1,10 @@
-<img src="docs/logo.svg" width="96" alt="" style="image-rendering:pixelated">
+<p align="center">
+  <img src="docs/logo.png" width="128" alt="coworking-agents logo">
+</p>
 
-# coworking-agents
+<h1 align="center">coworking-agents</h1>
+
+<p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Claude Code · Codex · zero dependencies · local only</p>
 
 **A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
 

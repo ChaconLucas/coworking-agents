@@ -108,6 +108,7 @@ function renderPanel() {
 
 
 overlay.addEventListener('click', e => {
+  if (e.target.closest('[data-usage]')) return openReport();
   if (e.target.closest('[data-switch]')) { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); return; } // wall light switch
   const mc = e.target.closest('[data-certs]');
   if (mc) { showPerson(mc.dataset.certs); setTimeout(() => { const h = document.getElementById('certs-h'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); return; }
