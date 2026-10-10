@@ -8,7 +8,7 @@ function renderAll() {
   else {
     // same people: only swap each desk's data, otherwise the drawing stays stuck on the old state
     const byId = new Map(data.people.map(p => [p.id, p]));
-    for (const f of floorStates) { for (const c of f.layout) c.p = byId.get(c.p.id) || c.p; for (const d of f.desks) d.p = byId.get(d.p.id) || d.p; }
+    for (const f of floorStates) { for (const c of f.layout) c.p = byId.get(c.p.id) || c.p; for (const d of f.desks) if (d.p) d.p = byId.get(d.p.id) || d.p; }
     for (const f of floors) for (const sh of f.shelves) for (const R of sh.rooms) R.people = R.people.map(p => byId.get(p.id) || p);
     renderFloors();
   }

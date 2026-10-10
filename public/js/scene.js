@@ -209,17 +209,38 @@ function drawMugInHand(a, t) {
   if (f % 8 < 5) r(a.x + 14, a.y + 11 - (f % 3), 1, 2, '#ffffffaa');
 }
 
+// a little robot vacuum patrols the corridor and the dev corner
+const robot = { x: 0, y: 0, k: 0, ready: false };
+function updateRobot(dt) {
+  const devY = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 10;
+  const path = [{ x: CX - 5, y: TOP + 16 }, { x: CX - 5, y: Math.min(H - 14, devY) }, { x: 14, y: Math.min(H - 14, devY) }, { x: CX - 5, y: Math.min(H - 14, devY) }];
+  if (!robot.ready) { Object.assign(robot, path[0], { ready: true }); }
+  const w = path[robot.k % path.length], dx = w.x - robot.x, dy = w.y - robot.y, d = Math.hypot(dx, dy), step = 16 * dt;
+  if (d <= step) { robot.x = w.x; robot.y = w.y; robot.k++; } else { robot.x += dx / d * step; robot.y += dy / d * step; }
+}
+function drawRobot(t) {
+  const x = Math.round(robot.x), y = Math.round(robot.y), on = ((t / 400) | 0) % 2;
+  r(x, y + 5, 11, 2, '#00000030');
+  r(x, y, 11, 6, PAL.ink); r(x + 1, y, 9, 5, '#d9d9e0'); r(x + 2, y + 1, 7, 1, '#ffffff'); r(x + 3, y + 3, 5, 1, '#8b9bb4');
+  r(x + 8, y + 1, 1, 1, on ? '#63c74d' : '#2a5a2a');
+}
+
 function drawScene(t, dt) {
   const now = Date.now();
   const hr = new Date().getHours() + new Date().getMinutes() / 60;
   const sky = Art.skyFor(qs.get('hour') ? Number(qs.get('hour')) : hr);
   updateActors(dt, now);
   updateCat(dt, t);
+  updateRobot(dt);
   const lights = [], glows = [];
   Art.drawFloor(W, H, TOP);
   wallGlows = glows;
   const nWin = drawWall(t, sky);
   drawShafts(sky, nWin);
+  // corridor runner rug with plants along it
+  r(CX - 8, TOP, 16, H - TOP, '#6e2f3f'); r(CX - 6, TOP, 12, H - TOP, '#8e3e52');
+  for (let y = TOP + 6; y < H; y += 10) { r(CX - 1, y, 2, 4, '#c96f84'); r(CX - 5, y + 5, 1, 1, '#c96f84'); r(CX + 4, y + 5, 1, 1, '#c96f84'); }
+  for (let y = TOP + 70; y < H - 30; y += 150) Art.drawPlant(CX + 9, y, false);
   if (sky.phase !== 'night') for (let i = 0; i < nWin; i++) lights.push({ x: 40 + i * 74, y: TOP + 20, r: 60 });
   const arrived = z => layout.filter(c => c.actor && c.actor.mode === z);
   const meet = arrived('meet').map(c => ({ spot: c.actor.spot, lk: look(c.p.id), label: c.p.name, lead: true }));
@@ -237,7 +258,7 @@ function drawScene(t, dt) {
   for (const R of rooms) drawRoom(R, t);
   drawDevCorner(t, glows);
   const cs = clashSet();
-  for (const d of desks) drawDesk(d, t, cs.has(d.p.id), lights, glows, sky);
+  for (const d of desks) drawDesk(d, t, !!d.p && cs.has(d.p.id), lights, glows, sky);
   const movers = [];
   for (const c of layout) {
     const a = c.actor;
@@ -249,6 +270,7 @@ function drawScene(t, dt) {
     else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') drawMugInHand(a, t); } });
   }
   movers.push({ y: cat.y, draw: () => Art.drawCat(cat.x, cat.y, cat.mode, t, cat.flip) });
+  movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
   // ceiling lights: every room and shared area is lit, except the nap corner (it's a rest room)
   if (lightsOn) {

@@ -30,8 +30,9 @@ function planFloors(people, leftW) {
     for (let k = 0; k < ps.length; k += ROOM_MAX) chunks.push([`${name} ${k / ROOM_MAX + 1}`, ps.slice(k, k + ROOM_MAX)]);
   }
   const list = chunks.map(([name, ps]) => {
-    const cols = Math.min(maxCols, Math.max(1, Math.min(3, ps.length)));
-    return { name, people: ps, cols, rows: Math.ceil(ps.length / cols), w: cols * CELL_W + ROOM_PAD * 2 };
+    // at least 3 desks per room, like a real office: the spare ones stay empty (chair pushed in, screen off)
+    const cols = Math.min(maxCols, 3), seats = Math.max(ps.length, Math.min(3, maxCols));
+    return { name, people: ps, cols, seats, rows: Math.ceil(seats / cols), w: cols * CELL_W + ROOM_PAD * 2 };
   });
   // pack rooms into rows (shelves) and rows into floors
   const out = [];
@@ -88,17 +89,18 @@ function buildFloor(i) {
     for (const room of shelf.rooms) {
       const h = ROOM_HEAD + room.rows * CELL_H + 4;
       const R = { ...room, x, y, h, doorX: x + Math.round(room.w / 2) - 9 };
-      R.people.forEach((p, k) => {
+      for (let k = 0; k < room.seats; k++) {
         const dx = x + ROOM_PAD + (k % room.cols) * CELL_W, dy = y + ROOM_HEAD + ((k / room.cols) | 0) * CELL_H;
-        ds.push({ p, room: R, x: dx, y: dy, chair: { x: dx + CELL_W / 2 - 8, y: dy + 38 }, aisle: dy + 72 });
-      });
+        ds.push({ p: R.people[k] || null, room: R, x: dx, y: dy, chair: { x: dx + CELL_W / 2 - 8, y: dy + 38 }, aisle: dy + 72 });
+      }
       rs.push(R);
       x += room.w + 8; shelfH = Math.max(shelfH, h);
     }
     y += shelfH + SHELF_GAP;
   }
-  const lay = ds.map(d => Object.assign({}, d));
-  lay.forEach((c, k) => { ds[k].cell = c; });
+  const occupied = ds.filter(d => d.p);
+  const lay = occupied.map(d => Object.assign({}, d));
+  lay.forEach((c, k) => { occupied[k].cell = c; });
   return { rooms: rs, desks: ds, layout: lay, bottom: y, H: 0 };
 }
 
