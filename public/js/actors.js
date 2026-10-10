@@ -72,7 +72,7 @@ function updateActors(dt, now) {
       if (born && now - born < 4000 && cell.room) {
         // comes up the corridor, waits for the desk to be built, then walks in through the door
         const R = cell.room, door = { x: R.doorX + 1, y: R.y + R.h + 8 };
-        Object.assign(a, { x: CX - 8, y: door.y + 30, mode: 'walk', carry: true, next: t, waitUntil: born + 1200,
+        Object.assign(a, { x: CX - 8, y: door.y + 30, mode: 'walk', carry: true, next: t, waitUntil: born + 2100,
           path: [{ x: CX - 8, y: door.y }, { x: door.x, y: door.y }, { x: door.x, y: cell.aisle }, { x: t.x, y: cell.aisle }, { x: t.x, y: t.y }] });
       }
       actors.set(cell.p.id, a);

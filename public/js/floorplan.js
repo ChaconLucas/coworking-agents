@@ -52,6 +52,10 @@ function planFloors(people, leftW) {
   return out;
 }
 
+// last known rectangle of each room, to animate rooms being built or extended
+const roomRects = new Map();
+let roomsSeen = false;
+
 function relayout() {
   const stage = document.getElementById('stage');
   const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // hidden (building view) measures 0
@@ -79,6 +83,14 @@ function relayout() {
     nap: [{ x: RX + 8, y: wing.nap + 30 }, { x: RX + 46, y: wing.nap + 46 }, { x: RX + 84, y: wing.nap + 30 }].map(p => ({ ...p, zone: 'nap' })),
   };
   for (const f of floorStates) f.H = Math.max(f.bottom, wing.bottom) + 6;
+  const now = Date.now();
+  for (const f of floorStates) for (const R of f.rooms) {
+    const prev = roomRects.get(R.name);
+    if (!prev && roomsSeen) R.anim = { from: { x: R.doorX, y: R.y + R.h - 4, w: 18, h: 4 }, at: now, fresh: true };
+    else if (prev && (prev.w !== R.w || prev.h !== R.h || prev.x !== R.x || prev.y !== R.y)) R.anim = { from: prev, at: now };
+    roomRects.set(R.name, { x: R.x, y: R.y, w: R.w, h: R.h });
+  }
+  roomsSeen = !!(data && data.people.length);
   useFloor(floor);
   fitScale();
   renderFloors();

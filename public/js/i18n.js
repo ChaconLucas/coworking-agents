@@ -33,7 +33,7 @@ const I18N = {
       ctxNote: 'Tokens enviados na última resposta. Quando enche, a conversa é resumida.',
       goto: 'Ir para o terminal', gotoCodex: 'Abrir o Codex',
       lastPrompt: 'Seu último pedido', lastReply: 'Última resposta', timeline: 'Última hora', nowLabel: 'agora', today: 'Hoje',
-      activeToday: 'ativo', toolsToday: 'ferramentas', promptsToday: 'pedidos', filesToday: 'arquivos', tokensOut: 'tokens gerados',
+      activeToday: 'ativo', toolsToday: 'tools', promptsToday: 'pedidos', filesToday: 'arquivos', tokensOut: 'tokens',
       filesNow: 'Mexendo agora', mode: 'Modo de permissão', modes: { auto: 'auto', default: 'pergunta tudo', acceptEdits: 'aceita edições', plan: 'plano', bypassPermissions: 'sem perguntas' },
       focus: {
         ok: app => `Pronto: aba do ${app} na frente.`, app: app => `Abri o ${app}, mas ele não deixa escolher a aba.`,
@@ -83,7 +83,7 @@ const I18N = {
       ctxNote: 'Tokens sent on the last reply. When it fills up, the conversation gets compacted.',
       goto: 'Go to terminal', gotoCodex: 'Open Codex',
       lastPrompt: 'Your last request', lastReply: 'Last reply', timeline: 'Last hour', nowLabel: 'now', today: 'Today',
-      activeToday: 'active', toolsToday: 'tools', promptsToday: 'requests', filesToday: 'files', tokensOut: 'tokens out',
+      activeToday: 'active', toolsToday: 'tools', promptsToday: 'requests', filesToday: 'files', tokensOut: 'tokens',
       filesNow: 'Touching now', mode: 'Permission mode', modes: { auto: 'auto', default: 'asks everything', acceptEdits: 'accepts edits', plan: 'plan', bypassPermissions: 'no prompts' },
       focus: {
         ok: app => `Done: ${app} tab brought to front.`, app: app => `Opened ${app}, but it doesn't let me pick the tab.`,

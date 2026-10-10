@@ -39,7 +39,28 @@ function drawShafts(sky, nWin) {
 }
 
 // a repository's room seen from above: carpet in the repo color, walls, door and sign
-function drawRoom(R, t) {
+const ROOM_BUILD_MS = 1100;
+function drawRoom(R0, t) {
+  // being built or extended: the walls slide from the old rectangle (or the door) to the new one
+  let R = R0;
+  const age = R0.anim ? Date.now() - R0.anim.at : Infinity;
+  if (age < ROOM_BUILD_MS) {
+    const k = 1 - Math.pow(1 - age / ROOM_BUILD_MS, 3), F = R0.anim.from, lerp = (a, b) => Math.round(a + (b - a) * k);
+    R = { ...R0, x: lerp(F.x, R0.x), y: lerp(F.y, R0.y), w: Math.max(18, lerp(F.w, R0.w)), h: Math.max(6, lerp(F.h, R0.h)) };
+    R.doorX = R.x + Math.round(R.w / 2) - 9;
+  }
+  drawRoomShell(R, t);
+  if (age < ROOM_BUILD_MS + 400) drawRoomWork(R, t, Math.min(1, age / ROOM_BUILD_MS));
+}
+// scaffolding along the walls and dust while a room is under construction
+function drawRoomWork(R, t, k) {
+  const f = (t / 90) | 0;
+  for (let x = R.x; x < R.x + R.w; x += 10) { r(x, R.y - 6, 1, 8, '#feae34'); r(x, R.y + R.h - 2, 1, 8, '#feae34'); }
+  r(R.x, R.y - 6, R.w, 1, '#feae34'); r(R.x, R.y + R.h + 5, R.w, 1, '#feae34');
+  for (let i = 0; i < 18; i++) { const h = hash('rd' + i + R.name + ((f / 2) | 0)); r(R.x + h % R.w, R.y + (h >>> 7) % Math.max(1, R.h), 2, 2, i % 2 ? 'rgba(230,210,180,.6)' : 'rgba(255,255,255,.45)'); }
+  if (k < 1) for (let i = 0; i < 3; i++) { const h = hash('rs' + i + f); r(R.x + R.w - 2 + (h % 4), R.y + (h >>> 5) % Math.max(1, R.h), 1, 3, '#feae34'); }
+}
+function drawRoomShell(R, t) {
   const h = hash(R.name), hue = ['#6b5a7a', '#5a6b7a', '#5a7a6b', '#7a6b5a', '#7a5a62', '#5f6f8a', '#6f8a5f'][h % 7];
   r(R.x, R.y, R.w, R.h, hue);
   for (let yy = 2; yy < R.h; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < R.w; xx += 4) r(R.x + xx, R.y + yy, 1, 1, shade(hue, .9));
@@ -78,7 +99,7 @@ function drawConstruction(x, y, k, t) {
 function drawDesk(d, t, clashing, lights, glows, sky) {
   const { x, y } = d, p = d.cell ? d.cell.p : d.p, f = (t / 140) | 0, seed = hash(p ? p.id : 'empty' + x + y) % 997;
   // a newcomer's desk is built first: it rises from the floor over the first second
-  const born = p && arrivals.get(p.id), build = born ? Math.min(1, (Date.now() - born) / 1100) : 1;
+  const born = p && arrivals.get(p.id), build = born ? Math.min(1, Math.max(0, (Date.now() - born - 900) / 1100)) : 1; // the room goes up first
   // leaving: once they've walked off, the desk sinks into dust (demolition) and is gone
   if (p && p.leaving) {
     const away = d.cell && d.cell.actor && d.cell.actor.mode !== 'desk';

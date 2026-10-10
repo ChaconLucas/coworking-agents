@@ -37,8 +37,8 @@ let dockList = [], dockLeaving = [], dockPage = 0, slide = null; // slide = { fr
 function renderDock() {
   const since = p => helpSeen.get(p.id + ':' + p.state) || 0;
   const rank = p => p.state === 'needs_you' || p.state === 'waiting' ? 0 : 1;
-  // only pending requests (a question or an approval); finished agents wait in the lounge, not up here
-  const list = data.people.filter(p => ['needs_you', 'waiting'].includes(p.state))
+  // requests first (red badge), then agents that finished and wait for your next message (green check)
+  const list = data.people.filter(p => ['needs_you', 'waiting', 'idle'].includes(p.state) && !p.leaving)
     .sort((a, b) => rank(a) - rank(b) || since(b) - since(a));
   const now = Date.now(), keep = new Set(list.map(p => p.id));
   for (const d of dockList) {
