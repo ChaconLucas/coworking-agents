@@ -76,51 +76,90 @@ function youPortrait() { // the portrait with the outfit drawn on top
   return c;
 }
 
-// ---- the arcade: Bug Catcher, a 30-second game; best score saved ----
+// ---- the arcade: Bug Catcher. Catch falling bugs with your laptop; 3 lives, gentle start, speeds up slowly ----
 const arcadeEl = document.createElement('div');
 arcadeEl.className = 'trophy-card'; arcadeEl.hidden = true;
 document.body.appendChild(arcadeEl);
+const AW = 240, AH = 160;
 let game2 = null;
 function openArcade() {
-  arcadeEl.innerHTML = `<div class="tc-box arcade-box"><div><b>🕹 ${esc(T.arcade.title)}</b><p>${esc(T.arcade.help)}</p><canvas width="160" height="120" class="arcade-cv"></canvas>
-    <div class="ach-foot"><span id="arcade-score"></span><span>${esc(T.arcade.best)}: ${Number(store.get('arcadeBest', 0)) || 0}</span></div><button class="btn small" data-arcade-start>${esc(T.arcade.start)}</button></div></div>`;
+  arcadeEl.innerHTML = `<div class="tc-box arcade-box"><div><b>🕹 ${esc(T.arcade.title)}</b><p>${esc(T.arcade.help)}</p><canvas width="${AW}" height="${AH}" class="arcade-cv"></canvas>
+    <div class="ach-foot"><span id="arcade-score"></span><span>${esc(T.arcade.best)}: <b id="arcade-best">${Number(store.get('arcadeBest', 0)) || 0}</b></span></div><button class="btn small" data-arcade-start>▶ ${esc(T.arcade.start)}</button></div></div>`;
   arcadeEl.hidden = false; achBump('arcadeOpens');
+  drawArcadeTitle();
+}
+function drawArcadeTitle() {
+  const c = arcadeEl.querySelector('.arcade-cv'); if (!c) return;
+  const g = c.getContext('2d'); arcadeBg(g, performance.now());
+  g.fillStyle = '#ffd84d'; g.font = 'bold 18px monospace'; g.textAlign = 'center'; g.fillText('BUG CATCHER', AW / 2, 62);
+  g.fillStyle = '#c0cbdc'; g.font = '10px monospace'; g.fillText(T.arcade.press, AW / 2, 86); g.textAlign = 'left';
+  drawBug(g, AW / 2 - 30, 100, false, 0); drawBug(g, AW / 2 - 4, 104, true, 1); drawBug(g, AW / 2 + 22, 100, false, 0);
+}
+function arcadeBg(g, now) {
+  g.fillStyle = '#141826'; g.fillRect(0, 0, AW, AH);
+  g.fillStyle = '#1c2236'; for (let y = 0; y < AH; y += 8) { const sh = (y * 13) % 70; g.fillRect(6 + sh % 20, (y + now / 60) % AH, 30 + sh, 2); }   // code scrolling behind
+  g.fillStyle = '#2a2f45'; g.fillRect(0, AH - 8, AW, 8);
+}
+function drawBug(g, x, y, gold, f) {
+  const body = gold ? '#ffd84d' : '#63c74d', dark = gold ? '#b07d2a' : '#2f7a3b';
+  g.fillStyle = '#1b1622'; for (const dx of [-2, 9]) for (const dy of [2, 5]) g.fillRect(x + dx + (f && dx < 0 ? -1 : 0), y + dy + (f ? 1 : 0), 3, 1);
+  g.fillStyle = dark; g.fillRect(x, y, 10, 8); g.fillStyle = body; g.fillRect(x + 1, y + 1, 8, 6); g.fillStyle = dark; g.fillRect(x + 4, y + 1, 2, 6);
+  g.fillStyle = '#1b1622'; g.fillRect(x + 2, y - 2, 6, 3); g.fillRect(x + 2, y - 4, 1, 2); g.fillRect(x + 7, y - 4, 1, 2);
+  if (gold) { g.fillStyle = '#ffffff'; g.fillRect(x + 2, y + 2, 1, 1); }
 }
 function startArcade() {
   const cv2 = arcadeEl.querySelector('.arcade-cv'); if (!cv2) return;
-  game2 = { cv: cv2, g: cv2.getContext('2d'), x: 72, bugs: [], score: 0, ends: performance.now() + 30000, last: performance.now(), keys: new Set() };
+  game2 = { cv: cv2, g: cv2.getContext('2d'), x: AW / 2 - 14, bugs: [], sparks: [], score: 0, lives: 3, combo: 0, t0: performance.now(), last: performance.now(), keys: new Set(), spawn: 0 };
   requestAnimationFrame(tickArcade);
 }
 function tickArcade(now) {
   const G = game2; if (!G || arcadeEl.hidden) { game2 = null; return; }
-  const dt = Math.min(.05, (now - G.last) / 1000); G.last = now;
-  if (G.keys.has('ArrowLeft') || G.keys.has('a')) G.x -= 110 * dt; if (G.keys.has('ArrowRight') || G.keys.has('d')) G.x += 110 * dt;
-  G.x = Math.max(0, Math.min(144, G.x));
-  if (Math.random() < dt * (1.6 + G.score / 15)) G.bugs.push({ x: 4 + Math.random() * 148, y: -6, v: 30 + Math.random() * 30 + G.score * 1.5, gold: Math.random() < .1 });
-  const g = G.g; g.fillStyle = '#11131c'; g.fillRect(0, 0, 160, 120);
-  for (let i = 0; i < 20; i++) { g.fillStyle = '#1e2233'; g.fillRect((i * 37) % 160, (i * 53 + now / 40) % 120, 1, 1); }
+  const dt = Math.min(.05, (now - G.last) / 1000), age = (now - G.t0) / 1000; G.last = now;
+  if (G.keys.has('ArrowLeft') || G.keys.has('a')) G.x -= 190 * dt; if (G.keys.has('ArrowRight') || G.keys.has('d')) G.x += 190 * dt;
+  G.x = Math.max(0, Math.min(AW - 28, G.x));
+  // gentle start: one bug every ~1.4s, slowly more and faster
+  G.spawn -= dt; if (G.spawn <= 0) { G.spawn = Math.max(.45, 1.4 - age * .02); G.bugs.push({ x: 6 + Math.random() * (AW - 20), y: -8, v: 26 + Math.min(70, age * 1.6) + Math.random() * 10, gold: Math.random() < .12, f: 0 }); }
+  const g = G.g; arcadeBg(g, now);
   for (const b of G.bugs) {
-    b.y += b.v * dt;
-    g.fillStyle = b.gold ? '#ffd84d' : '#63c74d'; g.fillRect(b.x, b.y, 6, 4); g.fillStyle = '#1b1622'; g.fillRect(b.x + 1, b.y + 1, 1, 1); g.fillRect(b.x + 4, b.y + 1, 1, 1); g.fillRect(b.x - 1, b.y + 2, 1, 1); g.fillRect(b.x + 6, b.y + 2, 1, 1);
-    if (b.y > 106 && b.y < 112 && b.x + 6 > G.x && b.x < G.x + 16) { b.hit = true; G.score += b.gold ? 5 : 1; beep(b.gold); }
+    b.y += b.v * dt; b.f = ((now / 160) | 0) % 2;
+    drawBug(g, b.x, b.y, b.gold, b.f);
+    if (b.y + 8 >= AH - 22 && b.y <= AH - 14 && b.x + 10 > G.x && b.x < G.x + 28) {
+      b.hit = true; G.combo++; const pts = (b.gold ? 5 : 1) * (G.combo >= 5 ? 2 : 1); G.score += pts; beep(b.gold);
+      for (let i = 0; i < 8; i++) G.sparks.push({ x: b.x + 5, y: b.y + 4, vx: (Math.random() - .5) * 60, vy: -Math.random() * 50, life: .5, c: b.gold ? '#ffd84d' : '#63c74d', txt: i ? '' : '+' + pts });
+    } else if (b.y > AH - 8) { b.miss = true; G.lives--; G.combo = 0; }
   }
-  G.bugs = G.bugs.filter(b => !b.hit && b.y < 120);
-  g.fillStyle = '#d97757'; g.fillRect(G.x, 110, 16, 4); g.fillStyle = '#ffd84d'; g.fillRect(G.x + 2, 109, 12, 1);
-  const left = Math.max(0, Math.ceil((G.ends - now) / 1000)), sc = arcadeEl.querySelector('#arcade-score');
-  if (sc) sc.textContent = `${T.arcade.score}: ${G.score} · ${left}s`;
-  if (now >= G.ends) {
+  G.bugs = G.bugs.filter(b => !b.hit && !b.miss);
+  for (const s of G.sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 80 * dt; s.life -= dt; g.fillStyle = s.c; if (s.txt) { g.font = 'bold 9px monospace'; g.fillText(s.txt, s.x, s.y); } else g.fillRect(s.x, s.y, 2, 2); }
+  G.sparks = G.sparks.filter(s => s.life > 0);
+  // the laptop paddle
+  const px = Math.round(G.x), py = AH - 18;
+  g.fillStyle = '#1b1622'; g.fillRect(px - 1, py - 9, 30, 19); g.fillStyle = '#c0cbdc'; g.fillRect(px + 2, py - 8, 24, 10); g.fillStyle = '#2ce8f5'; g.fillRect(px + 4, py - 6, 20, 6);
+  g.fillStyle = '#8b9bb4'; g.fillRect(px, py + 2, 28, 4); g.fillStyle = '#d97757'; g.fillRect(px + 11, py - 4, 6, 2);
+  // HUD: hearts, score, combo
+  for (let i = 0; i < 3; i++) { g.fillStyle = i < G.lives ? '#e43b44' : '#3a3448'; g.fillRect(6 + i * 10, 6, 3, 2); g.fillRect(10 + i * 10, 6, 3, 2); g.fillRect(6 + i * 10, 8, 7, 2); g.fillRect(7 + i * 10, 10, 5, 1); g.fillRect(8 + i * 10, 11, 3, 1); }
+  g.fillStyle = '#ffffff'; g.font = 'bold 10px monospace'; g.textAlign = 'right'; g.fillText(String(G.score), AW - 6, 14); g.textAlign = 'left';
+  if (G.combo >= 5) { g.fillStyle = '#ff6ec7'; g.font = 'bold 9px monospace'; g.fillText('COMBO x2', AW / 2 - 22, 14); }
+  const sc = arcadeEl.querySelector('#arcade-score'); if (sc) sc.textContent = `${T.arcade.score}: ${G.score}`;
+  if (G.lives <= 0) {
     const best = Number(store.get('arcadeBest', 0)) || 0;
-    if (G.score > best) { store.set('arcadeBest', G.score); toast(`<b>${esc(T.arcade.record)}</b>${G.score}`, 'ok'); }
+    if (G.score > best) { store.set('arcadeBest', G.score); toast(`<b>${esc(T.arcade.record)}</b>${G.score}`, 'ok'); const be = arcadeEl.querySelector('#arcade-best'); if (be) be.textContent = G.score; }
     achRecord.arcadeBest = Math.max(achRecord.arcadeBest || 0, G.score); achBump('arcadeGames');
-    g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 44, 160, 30); g.fillStyle = '#ffd84d'; g.font = 'bold 10px monospace'; g.fillText(`${T.arcade.over} ${G.score}`, 40, 62);
+    g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(0, 56, AW, 46); g.fillStyle = '#ffd84d'; g.font = 'bold 14px monospace'; g.textAlign = 'center'; g.fillText(T.arcade.over, AW / 2, 76); g.fillStyle = '#ffffff'; g.font = '10px monospace'; g.fillText(`${T.arcade.score}: ${G.score}`, AW / 2, 92); g.textAlign = 'left';
     game2 = null; return;
   }
   requestAnimationFrame(tickArcade);
 }
 arcadeEl.addEventListener('click', e => { if (e.target === arcadeEl) { arcadeEl.hidden = true; game2 = null; } if (e.target.closest('[data-arcade-start]')) startArcade(); });
-document.addEventListener('keydown', e => { if (!game2) return; const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(k)) { game2.keys.add(k); e.preventDefault(); e.stopImmediatePropagation(); } if (e.key === 'Escape') { arcadeEl.hidden = true; game2 = null; } }, true);
+document.addEventListener('keydown', e => {
+  if (arcadeEl.hidden) return;
+  if (!game2 && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); e.stopImmediatePropagation(); return startArcade(); }
+  if (!game2) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(k)) { game2.keys.add(k); e.preventDefault(); e.stopImmediatePropagation(); }
+  if (e.key === 'Escape') { arcadeEl.hidden = true; game2 = null; }
+}, true);
 document.addEventListener('keyup', e => { if (game2) { game2.keys.delete(e.key); game2.keys.delete(e.key.toLowerCase()); } });
-arcadeEl.addEventListener('pointermove', e => { if (!game2) return; const rc = game2.cv.getBoundingClientRect(); game2.x = (e.clientX - rc.left) / rc.width * 160 - 8; });
+arcadeEl.addEventListener('pointermove', e => { if (!game2) return; const rc = game2.cv.getBoundingClientRect(); game2.x = (e.clientX - rc.left) / rc.width * AW - 14; });
 
 // ---- surprise events: now and then something appears; click it for coins ----
 let surprise = null; // { kind, x, y, until, coins }

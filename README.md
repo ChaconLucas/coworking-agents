@@ -163,7 +163,7 @@ Click the elevator (or press Enter next to it) to ride between floors, up to the
 - **The weekly paper**, *The Office Times*, tells your week in headlines, all from measured data.
 - **Weekly missions:** three new challenges every week (hours, actions, days worked, commits, pushes, quick replies, pets, fast answers, long tasks), 100 coins each.
 - **Your outfit:** caps, headphones, shades, a party hat, shirts and a crown from the shop; your character wears them (pick in Customise).
-- **Bug Catcher:** click an arcade in the game room for a 30-second game; the best score is kept.
+- **Bug Catcher:** click an arcade in the game room: catch falling bugs with your laptop, golden ones and combos score more, three misses end the game; the best score is kept.
 - **Surprises:** now and then a cake, a pigeon at the window or a golden ticket shows up; click it for coins.
 - **Share:** the paper tab makes a weekly card (hours, actions, trophies, a slice of the office) and a visitor photo of the office without names, branches or the office name. It also shows this week's AI scoreboard (hours, actions, tokens per AI).
 - **Progress file:** achievements, coins, purchases, avatars and settings live in `~/.config/coworking-agents/progress.json` (mode `0600`). No account needed: the app runs on your machine, so the progress is yours.

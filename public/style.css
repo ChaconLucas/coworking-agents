@@ -756,7 +756,8 @@ body:has(.deco-bar:not([hidden])) #overlay { cursor: move; }
 .lift-btn:hover { border-color: #ffd84d; }
 .lift-btn.on { border-color: #63c74d; box-shadow: inset 0 0 0 2px rgba(99,199,77,.3); }
 .arcade-box { grid-template-columns: 1fr; }
-.arcade-cv { width: 100%; max-width: 420px; aspect-ratio: 4/3; image-rendering: pixelated; border: 2px solid #ffd84d; border-radius: 6px; margin: 8px 0; background: #11131c; }
+.tc-box .arcade-cv { display: block; width: 100%; height: auto; max-width: 480px; aspect-ratio: 3/2; image-rendering: pixelated; border: 2px solid #ffd84d; border-radius: 6px; margin: 8px 0; background: #141826; }
+.arcade-box { width: min(540px, calc(100vw - 32px)); }
 table.score { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.score th, table.score td { padding: 3px 6px; text-align: right; border-bottom: 1px solid #c9b896; }
 table.score th:first-child, table.score td:first-child { text-align: left; }
