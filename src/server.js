@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { snapshot: real, report } = require('./collect');
 const { demoSnapshot, demoReport } = require('./demo');
-const { focus, sendText } = require('./focus');
+const { focus, sendText, launch } = require('./focus');
 const { usage } = require('./usage');
 const { updateInfo } = require('./update');
 const progress = require('./progress');
@@ -162,6 +162,17 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
             : await sendText(person, String(n));
           send(res, 200, 'application/json', JSON.stringify(out));
         } catch { if (!res.headersSent) send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
+      });
+      return;
+    }
+    if (url.pathname === '/api/launch' && req.method === 'POST') {
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 4e3) req.destroy(); });
+      req.on('end', async () => {
+        try { let m = {}; try { m = JSON.parse(body); } catch {} send(res, 200, 'application/json', JSON.stringify(demo ? { ok: false, reason: 'demo' } : await launch(m.dir, m.agent))); }
+        catch { if (!res.headersSent) send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
       });
       return;
     }

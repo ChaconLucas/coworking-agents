@@ -116,7 +116,7 @@ function renderOffice() {
   const O = T.office, body = reportEl.querySelector('.report-body'), L = O.labels;
   const row = (k, values, swatch) => `<h3>${esc(O.groups[k])}</h3><div class="opts">${values.map(v => `<button class="opt ${swatch ? 'swatch' : ''} ${opt(k) === v ? 'on' : ''}" data-opt="${k}" data-val="${v}">${swatch ? `<i style="background:${swatch(v)}"></i>` : ''}${esc((L[k] && L[k][v]) || v)}</button>`).join('')}</div>`;
   const m = MASCOTS.includes(prog.mascot) ? prog.mascot : 'cat';
-  body.innerHTML = tabsHtml() + `<p class="sub">${esc(O.sub)}</p>
+  body.innerHTML = tabsHtml() + `<div class="office-preview"><canvas id="office-preview"></canvas><small>${esc(O.preview)}</small></div><p class="sub">${esc(O.sub)}</p>
     <h3>${esc(O.name)}</h3><div class="office-name"><input id="office-name" maxlength="14" value="${esc(prog.officeName || '')}" placeholder="${esc(O.namePh)}"><button class="btn small" data-save-name>${esc(O.save)}</button></div>
     <h3>${esc(O.you)}</h3><div class="office-name"><span class="you-face" id="you-face"></span><button class="btn small" data-you-look>⚄ ${esc(O.youRoll)}</button></div>
     ${row('floor', STYLE.floor)}
@@ -143,3 +143,13 @@ reportEl.addEventListener('click', e => {
   if (e.target.closest('[data-save-name]')) { const v = document.getElementById('office-name').value.trim().slice(0, 14); setProgress('officeName', v); achBump('decorate'); renderOffice(); if (data) renderBar(); }
 });
 reportEl.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'office-name') reportEl.querySelector('[data-save-name]').click(); });
+
+// live preview: a scaled copy of the office (which keeps drawing behind the modal), refreshed twice a second
+setInterval(() => {
+  const pv = document.getElementById('office-preview');
+  if (!pv || reportEl.hidden || reportTab !== 'office') return;
+  const src = document.getElementById('cv'), crop = Math.min(src.height, Math.round(src.width * .42));
+  const h = Math.round(Math.min(innerHeight * .3, 240)), w = Math.round(h * src.width / crop);
+  pv.style.height = h + 'px'; pv.width = w; pv.height = h;
+  const c = pv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(src, 0, 0, src.width, crop, 0, 0, pv.width, pv.height);
+}, 500);

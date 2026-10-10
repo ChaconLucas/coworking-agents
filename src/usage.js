@@ -14,7 +14,7 @@ const CODEX = () => path.join(process.env.CODEX_HOME || path.join(os.homedir(), 
 
 const zero = () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 });
 const add = (a, b) => { a.input += b.input; a.output += b.output; a.cacheRead += b.cacheRead; a.cacheWrite += b.cacheWrite; a.cacheWrite1h += b.cacheWrite1h || 0; return a; };
-const SCAN_VERSION = 3; // bump when scanFile's output changes: cached files are rescanned once
+const SCAN_VERSION = 4; // bump when scanFile's output changes: cached files are rescanned once
 const day = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 function walk(dir, out = []) {
@@ -32,7 +32,7 @@ function walk(dir, out = []) {
 const GAP = 5 * 60000;
 const TS_RE = /"timestamp":"([^"]+)"/;
 async function scanFile(file, kind) {
-  const res = { total: zero(), byDay: {}, byModel: {}, act: {}, title: '' };
+  const res = { total: zero(), byDay: {}, byModel: {}, act: {}, title: '', usdByDay: {} };
   let prevTs = 0;
   const activity = (line, isTool) => {
     const m = TS_RE.exec(line); if (!m) return;
@@ -48,6 +48,7 @@ async function scanFile(file, kind) {
     const k = day(ts || Date.now());
     add(res.byDay[k] || (res.byDay[k] = zero()), u);
     if (model) add(res.byModel[model] || (res.byModel[model] = zero()), u);
+    const c = model ? costOf(model, u) : null; if (c) res.usdByDay[k] = (res.usdByDay[k] || 0) + c; // estimated cost per day
   };
   const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
   let lastId = null, model = '';
@@ -126,6 +127,7 @@ async function refresh() {
         d.first = Math.min(d.first, a.first); d.last = Math.max(d.last, a.last);
         if (k.startsWith(month)) { m.activeMs += a.activeMs; m.tools += a.tools; m.last = Math.max(m.last, a.last); }
       }
+      for (const [k, c] of Object.entries(res.usdByDay || {})) if (days[k]) days[k].usd = (days[k].usd || 0) + c;
       for (const [k, u] of Object.entries(res.byDay)) {
         if (days[k]) days[k].output = (days[k].output || 0) + u.output;
         if (k.startsWith(month)) m.output += u.output;

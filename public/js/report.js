@@ -41,7 +41,7 @@ let reportTab = 'usage', todayData = null;
 function openReport(tab) { reportTab = tab || 'usage'; achBump('tab_' + reportTab); reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
 async function loadToday() { try { todayData = await fetch('api/report').then(r => r.json()); } catch {} if (!reportEl.hidden) renderReport(); }
 reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; achBump('tab_' + reportTab); if (reportTab === 'today') loadToday(); renderReport(); } });
-function tabsHtml() { return `<div class="rtabs">${[['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['office', T.office.tab], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
+function tabsHtml() { return `<div class="rtabs">${[['queue', T.queue.tab(typeof queueList === 'function' ? queueList().filter(p => p.state !== 'idle').length : 0)], ['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['office', T.office.tab], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
 // activity feed: newest first, grouped by hour
 function renderFeed() {
   const F = T.feed, body = reportEl.querySelector('.report-body');
@@ -73,6 +73,7 @@ function renderToday() {
     <h3>${esc(D.who)}</h3>
     <ul class="bars today-list">${r.rows.map(x => `<li><code title="${esc(x.title)}"><i class="ailogo" data-ai="${esc(x.agent)}"></i>${esc(x.name || x.title || x.id.slice(0, 8))}</code><span class="tbar"><i style="width:${(x.activeMs / max * 100).toFixed(1)}%;background:${(AGENT[x.agent] || {}).color || '#888'}"></i></span><span class="t">${esc(hrs(x.activeMs))} · ${Number(x.tools) || 0} ${esc(D.toolsShort)} · ${fmtK(x.outTokens)}</span></li>`).join('')}</ul>
     ${repliesHtml()}
+    ${goalHtml()}
     ${r.topFiles.length ? `<h3>${esc(D.filesTop)}</h3><ul class="list">${r.topFiles.map(f => `<li><span class="k">✎</span><code>${esc(f.rel)}</code><span class="t">${esc(f.repo)}${f.n > 1 ? ' · ' + f.n + '×' : ''}</span></li>`).join('')}</ul>` : ''}`;
   body.querySelectorAll('.ailogo[data-ai]').forEach(el => { const id = el.dataset.ai; el.appendChild(Art.aiIconEl(id, (AGENT[id] || {}).color || '#888')); });
 }
@@ -100,6 +101,8 @@ function renderReport() {
   if (reportTab === 'feed') return renderFeed();
   if (reportTab === 'ach') return renderAchievements();
   if (reportTab === 'paper') return renderPaper();
+  if (reportTab === 'queue') return renderQueue();
+  if (reportTab === 'launch') return renderLaunch();
   if (reportTab === 'shop') return renderShop();
   if (reportTab === 'office') return renderOffice();
   const U = T.usage, u = usageData, body = reportEl.querySelector('.report-body'), L = (data && data.limits) || {};

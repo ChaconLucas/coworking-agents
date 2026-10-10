@@ -323,6 +323,11 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: { Host: '127.0.0.1:' + port, 'X-Coworking': '1' }, body: '{"id":"B","text":"hi"}' })).code, 401, 'reply without the token');
   const busy = JSON.parse((await req(port, '/api/reply', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A","text":"hi"}' })).body);
   assert.deepStrictEqual(busy, { ok: false, reason: 'busy' }, 'a working session never receives typed text');
+  // launch: only through the page; a missing folder or an unknown command is refused before anything runs
+  assert.strictEqual((await req(port, '/api/launch', { method: 'POST', headers: ck, body: '{"dir":"/tmp","agent":"claude"}' })).code, 403, 'launch without the custom header');
+  { const { launch } = require('../src/focus');
+    assert.strictEqual((await launch('/tmp', 'rm -rf /')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform', 'only claude or codex can be launched');
+    assert.strictEqual((await launch('/no/such/dir', 'claude')).reason, process.platform === 'darwin' ? 'nodir' : 'platform', 'only an existing folder'); }
   // progress: saved only through the page (custom header + local origin), unknown keys dropped
   assert.strictEqual((await req(port, '/api/progress', { method: 'POST', headers: ck, body: '{"spent":3}' })).code, 403, 'progress without the custom header');
   assert.strictEqual((await req(port, '/api/progress', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"spent":3}' })).code, 403, 'progress from another origin');

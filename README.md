@@ -24,7 +24,7 @@
 | ![Panel](docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
 | ![Usage](docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Achievements](docs/achievements.png) | **Achievements.** 75 of them, five tiers each, coins for every tier, the agent of the month on top. |
+| ![Achievements](docs/achievements.png) | **Achievements.** 78 of them, five tiers each, coins for every tier, the agent of the month on top. |
 | ![Paper](docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
 | ![Trophy room](docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
 | ![Christmas](docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
@@ -126,6 +126,11 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Git on the door:** each room sign shows uncommitted files (●), commits to push (↑) and to pull (↓), read with `git status` in the background (no fetch).
 - **History and daily report:** the last 24 hours of arrivals, departures, requests and finished work; a daily report with active time, tools and files that copies as Markdown for a standup; your reply times.
 - **Estimated cost:** what the tokens would cost at official API list prices (table in `src/prices.js`, dated; override in `~/.config/coworking-agents/prices.json`), priced per reply with Claude's cache-write split. Unknown models are never guessed. On a subscription this is not what you pay.
+- **The queue** (`Q`): everyone waiting on you, longest wait first, with a button to answer each one.
+- **Quick replies:** one click fills the reply box with "Go ahead", "Run the tests", "Commit and push" and more; you still choose to send.
+- **Welcome back:** after 15+ minutes away, a card tells you what finished, who arrived or left and who is waiting.
+- **Daily goal and cost alert:** set a goal of agent hours and a limit for the estimated cost of the day (daily report tab); you get told when either is reached.
+- **New session:** ☰ → New session opens a Terminal tab in one of your folders and starts Claude Code or Codex (macOS; only an existing folder and those two commands are accepted).
 - **Focus mode:** sounds and system notifications pause for 25 or 50 minutes.
 - **Replay:** scrub or play back the last hour.
 
@@ -145,7 +150,7 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 
 ## Achievements, coins and the shop
 
-- **75 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
+- **78 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
 - **Legend of Legends** when every achievement is at legend.
 - **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain. ☰ → **Decorate** lets you drag what you bought anywhere in the office (saved in your progress file).
 - **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month; the top 5 are in the achievements tab.
@@ -156,7 +161,7 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 
 ![Customise](docs/customise.png)
 
-☰ → **Customise** has 13 options: the office name (on a plaque by the elevator and in the top bar), your own look, floor (wood, dark wood, carpet, concrete, tiles, checker, marble, grass), walls (10 colours), room carpets (5 palettes), desks (5), the window view (city, beach, mountains, forest, space), the sky (automatic, always day, sunset, always night), lighting (natural, warm, cool, neon), the mascot (cat, dog, robot, fox, penguin, bunny), plants (normal or jungle), the radio station and the accent colour. The die next to an agent's face in its panel gives that agent a new look.
+☰ → **Customise** shows a live preview of the office on top and has 13 options: the office name (on a plaque by the elevator and in the top bar), your own look, floor (wood, dark wood, carpet, concrete, tiles, checker, marble, grass), walls (10 colours), room carpets (5 palettes), desks (5), the window view (city, beach, mountains, forest, space), the sky (automatic, always day, sunset, always night), lighting (natural, warm, cool, neon), the mascot (cat, dog, robot, fox, penguin, bunny), plants (normal or jungle), the radio station and the accent colour. The die next to an agent's face in its panel gives that agent a new look.
 
 ## A living office
 
@@ -178,7 +183,7 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 | `1`–`9` | open the n-th agent |
 | `N` | next agent that needs you (opens its talk modal) |
 | `/` | quick search by name, title, repository or state |
-| `R` / `T` / `G` / `C` | usage report / daily report (today) / history / achievements |
+| `Q` / `R` / `T` / `G` / `C` | queue / usage report / daily report (today) / history / achievements |
 | WASD or arrows, Shift, Enter | walk, run, interact with what's near you |
 | `F` | focus mode (25 min, again 50, again off) |
 | `H` | replay the last hour |

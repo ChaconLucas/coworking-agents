@@ -183,4 +183,17 @@ async function sendText(person, text) {
   return { ok: false, reason: res.fail || 'notfound', app: app.name, detail: res.detail };
 }
 
-module.exports = { focus, sendText };
+// open a new terminal tab in a folder and start an AI there (macOS Terminal/iTerm). Only an existing folder
+// and one of two fixed commands: nothing typed by the page reaches the shell except the quoted path.
+const LAUNCH = { claude: 'claude', codex: 'codex' };
+async function launch(dir, agent) {
+  if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
+  const cmd = LAUNCH[agent]; if (!cmd) return { ok: false, reason: 'unsupported' };
+  let st = null; try { st = require('fs').statSync(String(dir || '')); } catch {}
+  if (!st || !st.isDirectory()) return { ok: false, reason: 'nodir' };
+  const script = 'on run argv\n tell application "Terminal"\n activate\n do script "cd " & quoted form of (item 1 of argv) & " && " & (item 2 of argv)\n end tell\n return "ok"\nend run';
+  const res = await osa(['-e', script, String(dir), cmd]);
+  return res.out === 'ok' ? { ok: true, app: 'Terminal' } : { ok: false, reason: res.fail || 'unknown' };
+}
+
+module.exports = { focus, sendText, launch };

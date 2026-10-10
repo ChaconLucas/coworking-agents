@@ -46,6 +46,7 @@ document.addEventListener('keydown', e => {
   else if (k === 't' || k === 'T') openReport('today');
   else if (k === 'g' || k === 'G') openReport('feed');
   else if (k === 'c' || k === 'C') openReport('ach');
+  else if (k === 'q' || k === 'Q') openReport('queue');
   else if (k === 'e' || k === 'E') { decorOn = !decorOn; store.set('decor', decorOn); toast(`<b>${esc(decorOn ? T.decorOn : T.decorOff)}</b>`, 'ok'); }
   else if (k === 'f' || k === 'F') document.getElementById('btn-focus').click();
   else if (k === 'l' || k === 'L') { achBump('lights'); lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); }
