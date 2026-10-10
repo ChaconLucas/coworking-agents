@@ -267,6 +267,10 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   const port = hq.server.address().port, ck = { Cookie: 'cw=' + hq.token };
   for (const pth of ['/api/state', '/api/report', '/events', '/js/main.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'no token: ' + pth);
   assert.strictEqual((await req(port, '/?t=wrong')).code, 401, 'wrong token');
+  // every icon the page links is served without the cookie (browsers fetch icons cookieless and cache a 401)
+  const icons = [...fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8').matchAll(/rel="(?:icon|apple-touch-icon)" href="([^"?]+)/g)].map(m => m[1]);
+  assert.ok(icons.length >= 3, 'icons linked');
+  for (const ic of icons) assert.strictEqual((await req(port, '/' + ic)).code, 200, 'public icon: ' + ic);
   const login = await req(port, '/?t=' + hq.token);
   assert.strictEqual(login.code, 302);
   assert.ok(/HttpOnly/.test(login.headers['set-cookie']) && /SameSite=Strict/.test(login.headers['set-cookie']), 'protected cookie');
