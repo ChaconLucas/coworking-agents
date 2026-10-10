@@ -289,7 +289,7 @@ function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
     Art.drawChairBack(cx, cy + 8);
     Art.drawFront(cx, cy - 2, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', wave: st === 'needs_you', mouth: st === 'needs_you' ? 'open' : 'flat' });
   } else if (st === 'asleep') { Art.drawSleeping(cx, cy, lk, t); Art.drawChairBack(cx, cy + 14); }
-  else { const j = celebrateJump(p.id, t); Art.drawSeatedBack(cx, cy + j, lk, t, { typing: st === 'edit' || st === 'terminal', reading: st === 'read' }); Art.drawChairBack(cx, cy + 14); }
+  else { const j = celebrateJump(p.id, t) + partyBounce(p.id, t); Art.drawSeatedBack(cx, cy + j, lk, t, { typing: st === 'edit' || st === 'terminal', reading: st === 'read' }); Art.drawChairBack(cx, cy + 14); }
   cell.interns = [];
 }
 
@@ -417,6 +417,7 @@ function drawScene(t, dt) {
   wallGlows = glows;
   const nWin = drawWall(t, sky);
   drawHolidayWall(t, nWin);
+  drawShopWall(t, wallGlows);
   drawShafts(sky, nWin);
   // corridor runner rug with plants along it
   r(CX - 8, TOP, 16, H - TOP, '#6e2f3f'); r(CX - 6, TOP, 12, H - TOP, '#8e3e52');
@@ -439,6 +440,7 @@ function drawScene(t, dt) {
   for (const R of rooms) drawRoom(R, t);
   drawDevCorner(t, glows);
   drawHolidayFloor(t, glows);
+  drawShopFloor(t, glows);
   const cs = clashSet();
   sites = [];
   for (const d of desks) drawDesk(d, t, !!d.p && cs.has(d.p.id), lights, glows, sky);
@@ -452,10 +454,11 @@ function drawScene(t, dt) {
     if (a.mode === 'walk') movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, true); if (a.carry) drawCarriedBox(a.x, a.y); } });
     else if (a.mode === 'nap') movers.push({ y: a.y, draw: () => Art.drawLying(a.x, a.y, lk, t) });
     else if (a.spot && a.spot.pose === 'sit') movers.push({ y: a.y, draw: () => Art.drawFront(a.x, a.y, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', mug: true }) });
-    else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') (isLunch() ? drawFoodInHand : drawMugInHand)(a, t); } });
+    else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y + partyBounce(c.p.id, t), lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') (isLunch() ? drawFoodInHand : drawMugInHand)(a, t); } });
   }
   movers.push({ y: cat.y, draw: () => Art.drawCat(cat.x, cat.y, cat.mode, t, cat.flip) });
   movers.push(...extraWalkers(t));
+  drawPets(t, movers);
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
   drawCatExtras(t);
@@ -471,6 +474,7 @@ function drawScene(t, dt) {
   }
   moodShade(); seasonTint();
   Art.applyLight(W, H, sky, lights, glows, lightsOn);
+  partyLights(t);
   // the LED panel is self-lit: drawn again over the dark, so it shines when the lights are off
   if (sky.phase !== 'day' && usageBox) drawUsageBoard(usageBox.x, usageBox.y, t);
   // the rest room keeps its lights off, day or night
