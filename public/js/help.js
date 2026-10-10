@@ -78,14 +78,12 @@ function drawOffice(ox, B, t, page) {
   people.forEach((d, k) => {
     const x = ox + k * SLOT;
     Art.blit(Art.portrait(d.p.id), x + 6, desk - 18);
-    r(x + 12, desk - 7, 14, 8, PAL.ink); r(x + 13, desk - 6, 12, 6, '#c0cbdc'); r(x + 18, desk - 4, 2, 2, '#ffffff');
+    r(x + 12, desk - 7, 14, 8, PAL.ink); r(x + 13, desk - 6, 12, 6, '#c0cbdc');
     const urgent = d.p.state === 'needs_you' || d.p.state === 'waiting';
-    // small speech bubble to the right of the head, fully inside the bar, tail pointing at the face
-    const bx = x + 21, by = desk - 19;
-    r(bx, by, 9, 7, PAL.ink); r(bx + 1, by + 1, 7, 5, '#fff'); r(bx - 1, by + 4, 2, 1, PAL.ink); r(bx, by + 4, 1, 1, '#fff');
-    if (urgent) { r(bx + 4, by + 2, 1, 2, '#e43b44'); r(bx + 4, by + 5, 1, 1, '#e43b44'); }
-    else { r(bx + 2, by + 3, 1, 1, '#3e8948'); r(bx + 3, by + 4, 1, 1, '#3e8948'); r(bx + 4, by + 3, 1, 1, '#3e8948'); r(bx + 5, by + 2, 1, 1, '#3e8948'); r(bx + 6, by + 1, 1, 1, '#3e8948'); }
-    if (urgent && f % 4 < 2) { r(x + 4, desk - 21, 1, 2, '#feae34'); r(x + 8, desk - 22, 1, 2, '#feae34'); }
+    // the status glows on the back of the laptop lid: green check = done, red "!" (blinking) = asks you
+    const lx = x + 14, ly = desk - 6;
+    if (urgent) { if (f % 4 < 3) { r(lx + 2, ly, 4, 5, '#e43b44'); r(lx + 3, ly + 1, 2, 2, '#fff'); r(lx + 3, ly + 4, 2, 1, '#fff'); } if (f % 4 < 2) { r(x + 4, desk - 21, 1, 2, '#feae34'); r(x + 8, desk - 22, 1, 2, '#feae34'); } }
+    else { r(lx + 1, ly + 2, 1, 1, '#3e8948'); r(lx + 2, ly + 3, 1, 1, '#3e8948'); r(lx + 3, ly + 2, 1, 1, '#3e8948'); r(lx + 4, ly + 1, 1, 1, '#3e8948'); r(lx + 5, ly, 1, 1, '#3e8948'); }
     // something on the counter between people
     if (k % 2) { r(x + 31, desk - 5, 5, 5, PAL.ink); r(x + 32, desk - 4, 3, 3, Art.SHIRT[Art.hash(d.p.id) % Art.SHIRT.length]); if (f % 8 < 5) r(x + 33, desk - 8 - (f % 3), 1, 2, '#ffffff88'); }
     else if (k < 3) { r(x + 31, desk - 5, 6, 5, PAL.pot); r(x + 32, desk - 10, 1, 5, PAL.leafLight); r(x + 34, desk - 11, 1, 6, PAL.leaf); r(x + 35, desk - 9, 1, 4, PAL.leafLight); }

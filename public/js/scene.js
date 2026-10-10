@@ -19,32 +19,38 @@ function pixText(x, y, str, c) {
   return cx - x;
 }
 function drawUsageBoard(x, y, t) {
-  // wall screen: per AI a logo + name, then 5H and WK as segmented meters with the value
+  // one wall clock per AI: white face, rim in the AI colour, logo in the middle;
+  // long hand + coloured arc = 5-hour window, short hand = week; numbers on a plate below
   const L = (data && data.limits) || {}, all = Object.keys(AGENT).filter(id => L[id] && (L[id].primary || L[id].secondary));
-  const PER = 2, pages = Math.max(1, Math.ceil(all.length / PER)), page = Math.floor(t / 5000) % pages;
-  const ids = all.slice(page * PER, page * PER + PER);
-  const colW = 66, w = Math.max(1, Math.min(PER, all.length)) * colW + 4, h = 36;
+  const PER = 3, pages = Math.max(1, Math.ceil(all.length / PER)), page = Math.floor(t / 5000) % pages;
+  const ids = all.slice(page * PER, page * PER + PER), slot = 50;
+  const w = Math.max(1, ids.length) * slot, h = 46;
   usageBox = { x, y, w, h };
-  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#262b44'); r(x, y, w, h, '#090b13');
-  r(x, y, w, 1, '#ffffff10');
+  const lvl = p => p > 85 ? '#e43b44' : p > 60 ? '#f0a020' : '#3fae4a';
   ids.forEach((id, i) => {
-    const cx = x + 3 + i * colW, a = AGENT[id], l = L[id];
-    if (i) r(cx - 2, y + 4, 1, h - 8, '#1e2436');
-    ctx.drawImage(Art.aiIcon(id, a.color), cx, y + 2);
-    pixText(cx + 18, y + 7, a.label.split(' ')[0].toUpperCase().slice(0, 6), '#e8ecf4');
-    [['5H', l.primary], ['WK', l.secondary]].forEach(([lbl, wdw], k) => {
-      if (!wdw) return;
-      const gy = y + 20 + k * 8, pct = Math.max(0, Math.min(100, wdw.usedPercent));
-      const col = pct > 85 ? '#ff4d57' : pct > 60 ? '#ffc23a' : '#6ee05a';
-      pixText(cx, gy, lbl, '#7d8aa8');
-      const bx = cx + 10, segs = 9, sw = 3;
-      for (let q = 0; q < segs; q++) r(bx + q * (sw + 1), gy, sw, 5, q < Math.round(pct / 100 * segs) ? col : '#1a2033');
-      const txt = Math.round(pct) + '%';
-      pixText(cx + colW - 6 - (txt.length * 4 - 1), gy, txt, col);
-    });
+    const a = AGENT[id], l = L[id], cx = x + i * slot + slot / 2, cy = y + 14, R = 13;
+    const p5 = l.primary ? Math.max(0, Math.min(100, l.primary.usedPercent)) : 0, pw = l.secondary ? Math.max(0, Math.min(100, l.secondary.usedPercent)) : 0;
+    for (let yy = -R - 2; yy <= R + 2; yy++) for (let xx = -R - 2; xx <= R + 2; xx++) {
+      const d = Math.hypot(xx, yy);
+      if (d > R + 2.2) continue;
+      let c = d > R + 1.2 ? PAL.ink : d > R - .8 ? a.color : '#f7f3ea';
+      if (d <= R - .8 && d > R - 3.2) { // usage arc (clockwise from 12)
+        const ang = (Math.atan2(xx, -yy) / (Math.PI * 2) + 1) % 1;
+        if (ang * 100 <= p5) c = lvl(p5);
+      }
+      r(cx + xx, cy + yy, 1, 1, c);
+    }
+    for (let k = 0; k < 12; k++) { const an = k / 12 * Math.PI * 2; r(Math.round(cx + Math.sin(an) * (R - 4.5)), Math.round(cy - Math.cos(an) * (R - 4.5)), 1, 1, k % 3 ? '#c9c2b4' : '#2a1d27'); }
+    const hand = (pct, len, col) => { const an = pct / 100 * Math.PI * 2; for (let k = 1; k <= len; k++) r(Math.round(cx + Math.sin(an) * k), Math.round(cy - Math.cos(an) * k), 1, 1, col); };
+    hand(pw, 5, '#2a1d27'); hand(p5, 9, lvl(p5)); r(cx - 1, cy - 1, 2, 2, PAL.ink);
+    // plate: AI logo on the left, 5H and WK values stacked on the right
+    const px0 = cx - 21, py0 = y + 30;
+    r(px0 - 1, py0 - 1, 44, 16, PAL.ink); r(px0, py0, 42, 14, '#1b1f30');
+    ctx.drawImage(Art.aiIcon(id, a.color), px0 + 1, py0 - 1 + 0);
+    pixText(px0 + 18, py0 + 2, '5H', '#8b9bb4'); pixText(px0 + 28, py0 + 2, Math.round(p5) + '%', lvl(p5));
+    pixText(px0 + 18, py0 + 8, 'WK', '#8b9bb4'); pixText(px0 + 28, py0 + 8, Math.round(pw) + '%', lvl(pw));
   });
-  if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h - 2, 2, 1, k === page ? '#ffffff' : '#3a4466');
-  if (!ids.length) for (let i = 0; i < 3; i++) r(x + 6, y + 8 + i * 7, 20 + i * 8, 2, '#2a3350');
+  if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h + 1, 2, 1, k === page ? '#2a1d27' : '#c9c2b4');
 }
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
