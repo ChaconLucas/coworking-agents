@@ -20,7 +20,7 @@ function renderBar() {
   ].join('');
   // busy bar: how the office is split right now (working stripes move)
   // busy bar: one lane per AI — its mark, then its agents split by state
-  const busy = document.getElementById('busy');
+  const busy = document.getElementById('busy') || document.createElement('div');
   const lanes = new Map();
   for (const p of data.people) {
     if (p.leaving) continue;

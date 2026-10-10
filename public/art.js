@@ -707,10 +707,16 @@ function aiIcon(id, color) {
   if (aiIconCache.has(k)) return aiIconCache.get(k);
   const cv = document.createElement('canvas'); cv.width = 11; cv.height = 11;
   const c = cv.getContext('2d'), P = (x, y, w = 1, h = 1, col = color) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-  if (id === 'claude') { // spark: eight rays
-    P(5, 0, 1, 11); P(0, 5, 11, 1); P(2, 2); P(3, 3); P(8, 2); P(7, 3); P(2, 8); P(3, 7); P(8, 8); P(7, 7); P(4, 4, 3, 3, '#fff3'); P(5, 5, 1, 1, '#fff');
-  } else if (id === 'codex') { // hexagon knot
-    P(3, 0, 5, 1); P(1, 1, 2, 1); P(8, 1, 2, 1); P(0, 2, 1, 7); P(10, 2, 1, 7); P(1, 9, 2, 1); P(8, 9, 2, 1); P(3, 10, 5, 1); P(4, 3, 3, 1); P(3, 4, 1, 3); P(7, 4, 1, 3); P(4, 7, 3, 1);
+  if (id === 'claude') { // Claude's spark: a burst of rounded rays
+    const rays = [[5,0,1,4],[5,7,1,4],[0,5,4,1],[7,5,4,1],[1,1,1,1],[2,2,2,2],[9,1,1,1],[7,2,2,2],[1,9,1,1],[2,7,2,2],[9,9,1,1],[7,7,2,2],[3,0,1,2],[7,0,1,2],[3,9,1,2],[7,9,1,2],[0,3,2,1],[0,7,2,1],[9,3,2,1],[9,7,2,1]];
+    for (const [x, y, w, h] of rays) P(x, y, w, h);
+    P(4, 4, 3, 3);
+  } else if (id === 'codex') { // OpenAI's knot: a hexagonal blossom of interlocking loops
+    P(3, 0, 5, 1); P(1, 1, 2, 2); P(8, 1, 2, 2); P(0, 3, 1, 5); P(10, 3, 1, 5); P(1, 8, 2, 2); P(8, 8, 2, 2); P(3, 10, 5, 1);
+    P(4, 2, 3, 1); P(2, 4, 1, 3); P(8, 4, 1, 3); P(4, 8, 3, 1); P(3, 3, 1, 1); P(7, 3, 1, 1); P(3, 7, 1, 1); P(7, 7, 1, 1);
+    P(5, 1, 1, 4); P(5, 6, 1, 4); P(4, 5, 3, 1, '#0006');
+  } else if (id === 'gemini') { // four-point sparkle
+    P(5, 0, 1, 11); P(0, 5, 11, 1); P(4, 2, 3, 7); P(2, 4, 7, 3); P(3, 3, 5, 5, '#ffffff22');
   } else { // others: a diamond
     for (let i = 0; i < 6; i++) { P(5 - i, i, i * 2 + 1, 1); P(5 - i, 10 - i, i * 2 + 1, 1); }
     P(4, 4, 3, 3, '#0006');

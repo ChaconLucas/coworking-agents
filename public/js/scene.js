@@ -30,7 +30,8 @@ function drawUsageBoard(x, y, t) {
   ids.forEach((id, i) => {
     const cx = x + 3 + i * colW, a = AGENT[id], l = L[id];
     if (i) r(cx - 2, y + 3, 1, h - 6, '#2a3350');
-    pixText(cx + 1, y + 3, a.label.split(' ')[0].toUpperCase().slice(0, 6), a.color);
+    ctx.drawImage(Art.aiIcon(id, a.color), cx + 1, y + 1);
+    pixText(cx + 15, y + 4, a.label.split(' ')[0].toUpperCase().slice(0, 6), a.color);
     [['5H', l.primary], ['WK', l.secondary]].forEach(([lbl, wdw], k) => {
       if (!wdw) return;
       const gy = y + 13 + k * 9, pct = Math.max(0, Math.min(100, wdw.usedPercent));

@@ -507,3 +507,5 @@ main:has(#office.cam) { overflow: visible; }
 .busy .lane .segs { height: 10px; border-radius: 3px; }
 .busy .lane b { font-size: 10px; color: #fff; min-width: 14px; text-align: right; }
 .bar { padding-top: 38px !important; min-height: 128px; }
+
+.bar { padding-top: 12px !important; min-height: 114px; }
