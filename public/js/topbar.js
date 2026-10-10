@@ -47,6 +47,7 @@ function renderBar() {
     b.setAttribute('aria-pressed', on); b.title = `${label.replace(/^\S+\s/, '')}: ${on ? T.on : T.off}`; b.querySelector('.sr').textContent = b.title;
   }
   document.getElementById('btn-lang').textContent = T.lang;
+  { const rb = document.getElementById('btn-replay'); rb.title = T.replay.title; rb.querySelector('.sr').textContent = T.replay.title; rb.setAttribute('aria-pressed', !replayEl.hidden); }
   { const sb = document.getElementById('btn-search'); sb.title = T.keys.searchTitle; sb.querySelector('.sr').textContent = T.keys.searchTitle; }
   renderUsagePill();
 
@@ -125,4 +126,5 @@ document.getElementById('btn-notify').onclick = async () => {
 };
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
 document.getElementById('btn-search').onclick = () => openSearch();
+document.getElementById('btn-replay').onclick = () => toggleReplay(replayEl.hidden);
 document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };

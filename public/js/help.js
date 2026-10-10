@@ -147,7 +147,8 @@ function drawDock(t) {
     }
     ctx.restore();
     // place the "+" right after the fourth seat
-    dock.style.left = ((x0 + span) * DOCK_S + 2) + 'px'; dock.style.top = ((desk - 17) * DOCK_S) + 'px';
+    const toolsLeft = document.querySelector('.bar .tools').getBoundingClientRect().left - bar.getBoundingClientRect().left;
+    dock.style.left = Math.min((x0 + span) * DOCK_S + 2, toolsLeft - 70) + 'px'; dock.style.top = ((desk - 17) * DOCK_S) + 'px';
   } finally { ctx = prev; Art.setCtx(prev); }
 }
 setInterval(() => { if (data) drawDock(performance.now()); }, 90);

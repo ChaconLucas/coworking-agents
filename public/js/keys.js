@@ -46,5 +46,6 @@ document.addEventListener('keydown', e => {
   else if (k === 'd' || k === 'D') openReport('today');
   else if (k === 'l' || k === 'L') { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); }
   else if (k === 'b' || k === 'B') { if (floors.length > 1) setBuilding(!building); }
+  else if (k === 'h' || k === 'H') toggleReplay(replayEl.hidden);
   else if (k === '?') toast(`<b>${esc(T.keys.helpTitle)}</b>${esc(T.keys.help)}`, '');
 });

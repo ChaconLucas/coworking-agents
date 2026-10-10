@@ -592,3 +592,9 @@ main:has(#office.cam) { overflow: visible; }
 .rtabs button.on { border-color: #d97757; color: #fff; background: #2a2333; }
 .today-list li { grid-template-columns: 200px 1fr 170px; }
 .today-list code { display: flex; align-items: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.replay { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 25; display: flex; align-items: center; gap: 10px; background: #1d1823; border: 3px solid var(--edge); outline: 2px solid #3a3045; border-radius: 10px; padding: 8px 12px; box-shadow: 4px 6px 0 rgba(0,0,0,.45); width: min(620px, calc(100vw - 32px)); }
+.replay input { flex: 1; accent-color: #d97757; }
+.replay .rt { font: 700 10px/1 var(--pix); color: #ece7df; min-width: 120px; text-align: center; }
+.replay.past { outline-color: #feae34; }
+body.replaying #office { filter: sepia(.35) saturate(.85); }
