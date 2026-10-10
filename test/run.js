@@ -105,6 +105,9 @@ execFileSync('sleep', ['0.3']);
 session(shellH.pid, 'H', 'busy', [permMode('auto'), use('bH', 'Bash', { command: 'npm test' }, now - 9000)]);
 fs.utimesSync(path.join(claude, 'projects', 'p', 'H.jsonl'), new Date(now - 9000), new Date(now - 9000));
 
+// a fake "aider" running in a terminal: detected by process (tty needed, so only checked when we have one)
+const fakeAider = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 20000)', 'aider'], { stdio: 'ignore' });
+
 const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
@@ -132,6 +135,12 @@ assert.ok(by('A').today && by('A').today.tools >= 2, 'today stats count tools');
 assert.strictEqual(by('G').lastPrompt, 'new question', 'last prompt comes from the transcript');
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
+{ // process source: matching and dedupe work without a terminal too (tty filter skipped by checking the matcher directly)
+  const { KNOWN } = require('../src/sources/process');
+  const re = new RegExp(KNOWN.find(k => k.id === 'aider').match);
+  assert.ok(re.test('node -e x aider') && !re.test('/usr/bin/aidermark'), 'aider matcher');
+  assert.ok(new RegExp(KNOWN.find(k => k.id === 'gemini').match).test('/opt/homebrew/bin/gemini'), 'gemini matcher');
+}
 assert.strictEqual(by('I').state, 'needs_you', 'a pending question beats the registry saying idle');
 assert.deepStrictEqual(by('I').doing.options.map(o => o.label), ['Sim', 'Não'], 'question options reach the screen');
 assert.strictEqual(by('G').status, 'busy', 'a new message in the transcript beats the lagging registry');
@@ -215,7 +224,7 @@ assert.strictEqual(short('npm test'), 'npm test');
 
 // private mode: nothing that identifies a project, person or machine
 const pv = snapshot({ privacy: true }), pvJson = JSON.stringify(pv);
-assert.ok(pv.people.every(p => !p.branch && /^(claude|codex)-\d+$/.test(p.name)), 'private: no branch or name');
+assert.ok(pv.people.every(p => !p.branch && /^[a-z]+-\d+$/.test(p.name)), 'private: no branch or name');
 assert.ok(!pvJson.includes('"repo":"repo"') && !pvJson.includes('impeccable') && !pvJson.includes('Codex conversation'), 'private: repo aliased, no skills, no titles');
 assert.deepStrictEqual(pv.credentials, {});
 assert.ok(pv.people.every(p => !p.lastPrompt && !p.lastReply), 'private: no prompt or reply text');
@@ -272,7 +281,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, '')).reason, 'text', 'empty text is refused');
   }
 
-  sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
+  fakeAider.kill(); sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
   fs.rmSync(root, { recursive: true, force: true });
   console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
 })().catch(e => { console.error(e); process.exit(1); });

@@ -138,6 +138,19 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Waiting vs. running** is told apart by inspecting processes (`ps`): for Claude Code's Bash it checks whether the command's shell was spawned. When the disk can't tell, the panel says so instead of guessing.
 - **"Go to terminal" is macOS only.**
 
+
+### Other AIs
+
+Besides the full readers for Claude Code and Codex, these CLIs are **detected by their running process** when open in a terminal: Gemini CLI, OpenCode, Aider, Cursor Agent, Amp, Goose, Qwen Code, Crush, Droid and Kimi CLI. They get their own colour and sit in the room of their working directory; their state is coarse (CPU in use = working, otherwise idle) and "Go to terminal" works for them too.
+
+Any other tool can be added in `~/.config/coworking-agents/agents.json`:
+
+```json
+[{ "id": "mytool", "label": "My Tool", "color": "#ff8800", "match": "(^|/)mytool(\\s|$)" }]
+```
+
+`match` is a regular expression tested against the process command line.
+
 ## Adding a new AI source
 
 Each AI is one file in `src/sources/` that exports:

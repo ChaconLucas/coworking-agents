@@ -7,7 +7,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { resolveRepo, newest, dayKey } = require('./util');
 
-const SOURCES = [require('./sources/claude'), require('./sources/codex')];
+const SOURCES = [require('./sources/claude'), require('./sources/codex'), require('./sources/process')];
 
 const PENDING_STALE_MS = 6000;           // tool stalled this long = running or waiting for permission
 const ASLEEP_MS = 20 * 60 * 1000;
@@ -102,7 +102,7 @@ function person(s, now) {
   const pend = st ? newest(st.pending) : null;
   const edits = st ? [...st.edits.values()].filter(e => now - e.at < EDIT_WINDOW_MS) : [];
   return {
-    agent: s.agent, id: s.id, name: s.name, pid: s.pid, kind: s.kind, entrypoint: s.entrypoint || '', version: s.version,
+    agent: s.agent, agentLabel: s.agentLabel || '', agentColor: s.agentColor || '', coarse: !!s.coarse, id: s.id, name: s.name, pid: s.pid, kind: s.kind, entrypoint: s.entrypoint || '', version: s.version,
     compactedAt: st ? st.compactedAt || 0 : 0,
     status: s.status, state: stateOf(s.status, st, now, s.pid), since: s.since, startedAt: s.startedAt,
     title: st ? st.title : '', cwd, branch: st ? st.branch : '',
@@ -131,7 +131,7 @@ function snapshot({ privacy = false } = {}) {
     let list = [];
     try { list = src.sessions(now); } catch {}
     for (const s of list) { try { people.push(person(s, now)); } catch {} }
-    try { credentials[src.id] = src.credentials(); } catch {}
+    if (src.id !== 'process') { try { credentials[src.id] = src.credentials(); } catch {} }
     try { if (src.limits) limits[src.id] = src.limits(); } catch {}
     agents.push({ id: src.id, label: src.label, sessions: list.length });
   }

@@ -53,6 +53,7 @@ function connect() {
     const d = JSON.parse(e.data);
     if (d.error) return;
     keepLeavers(d);
+    for (const p of d.people) if (p.agentLabel && !AGENT[p.agent]) AGENT[p.agent] = { label: p.agentLabel, color: p.agentColor || '#8a8f98' }; // AIs found by process
     data = d;
     notifyChanges();
     renderAll();
