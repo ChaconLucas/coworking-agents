@@ -529,3 +529,16 @@ main:has(#office.cam) { overflow: visible; }
 .scene-more { top: auto !important; transform: none !important; width: auto !important; height: 30px !important; padding: 0 10px 0 8px; display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--edge) !important; border-radius: 4px !important; background: #f4ecd8 !important; color: #2a1d27 !important; font: 700 11px/1 var(--pix) !important; box-shadow: 3px 3px 0 rgba(0,0,0,.45) !important; animation: none !important; }
 .scene-more::after { content: ''; border: 6px solid transparent; border-left: 7px solid #d97757; border-right: 0; }
 .scene-more:hover { background: #fff !important; transform: translateX(2px) !important; }
+
+/* ---- modals: frame and close button stay put, only the inside scrolls ---- */
+.talk-box, .report-box { display: flex; flex-direction: column; overflow: hidden !important; padding: 0 !important; }
+.talk-scroll, .report-body { overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px 18px; min-height: 0; }
+.report-body { padding: 20px 22px; }
+.talk-x, .report-x { position: absolute; top: 12px; right: 14px; z-index: 3; width: 30px; height: 30px; display: grid; place-items: center; background: #1d1823 !important; border: 2px solid #3a3045 !important; border-radius: 6px; line-height: 1; }
+.talk-x:hover, .report-x:hover { border-color: #d97757 !important; color: #fff; }
+.talk-scroll::-webkit-scrollbar, .report-body::-webkit-scrollbar, .panel::-webkit-scrollbar { width: 8px; }
+.talk-scroll::-webkit-scrollbar-thumb, .report-body::-webkit-scrollbar-thumb, .panel::-webkit-scrollbar-thumb { background: #3a3045; border-radius: 4px; }
+.talk-stage { margin-right: 40px; }
+/* side panel: sticky close button */
+.panel .close { position: sticky !important; top: 0; float: right; margin: -6px -6px 0 0; z-index: 3; width: 30px; height: 30px; display: grid; place-items: center; background: #1d1823 !important; border: 2px solid #3a3045 !important; border-radius: 6px; }
+.rcard h4 .ailogo { display: inline-flex; width: auto; padding: 0; background: none; flex: none; }

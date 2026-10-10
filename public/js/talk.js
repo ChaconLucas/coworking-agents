@@ -6,9 +6,11 @@ const talkEl = document.createElement('div');
 talkEl.className = 'talk'; talkEl.hidden = true;
 talkEl.innerHTML = `<div class="talk-box" role="dialog" aria-modal="true">
   <button class="talk-x" aria-label="×">×</button>
+  <div class="talk-scroll">
   <div class="talk-stage"><canvas class="talk-cv" width="200" height="96"></canvas><div class="talk-say"><p></p></div></div>
   <div class="talk-info"></div>
   <div class="talk-reply"></div>
+  </div>
 </div>`;
 document.body.appendChild(talkEl);
 const talkCv = talkEl.querySelector('.talk-cv'), talkCtx = talkCv.getContext('2d');
