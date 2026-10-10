@@ -77,6 +77,11 @@ function renderOverlay() {
   if (usageBox) parts.push(`<button class="wall-switch usage-hit" data-usage="1" title="${esc(usageGauges().map(m => `${m.label}: ${Math.round(m.pct)}%${m.resetsAt ? ` (${T.usage.resets} ${untilText(m.resetsAt)})` : ''}`).concat([T.usage.open]).join('\n'))}" style="left:${usageBox.x * S}px;top:${usageBox.y * S}px;width:${usageBox.w * S}px;height:${usageBox.h * S}px"></button>`);
   if (switchBox) parts.push(`<button class="wall-switch" data-switch="1" title="${esc(T.lights)}" aria-pressed="${lightsOn}" style="left:${switchBox.x * S}px;top:${switchBox.y * S}px;width:${switchBox.w * S}px;height:${switchBox.h * S}px"></button>`);
   if (boardBox && data) { const c = counts(); parts.push(`<div class="hit" title="${c.work} ${esc(T.working)} · ${c.need} ${esc(T.needYou)} · ${c.turn} ${esc(T.yourTurn)} · ${c.sleep} ${esc(T.asleep)}" style="left:${boardBox.x * S}px;top:${boardBox.y * S}px;width:${boardBox.w * S}px;height:${boardBox.h * S}px"></div>`); }
+  const box = (b, attr, title) => b ? parts.push(`<button class="wall-switch" ${attr} title="${esc(title)}" style="left:${b.x * S}px;top:${b.y * S}px;width:${b.w * S}px;height:${b.h * S}px"></button>`) : 0;
+  { const m = usageData && usageData.month && usageData.month.top && usageData.month.top[0], live = m && data && data.people.find(p => p.id === m.id);
+    box(aotmBox, 'data-ach="1"', m ? T.ach.aotmTip((live && live.name) || m.title || m.id.slice(0, 8), Math.round(m.activeMs / 36e5), m.tools) : T.ach.noMonth); }
+  box(trophyBox, 'data-ach="1"', T.ach.shelfTip);
+  box(moodBox, '', T.mood[officeMood()]);
   if (hallBox) parts.push(`<div class="desk-hit" data-hall="1" title="${esc(T.panel.hall)}" style="left:${hallBox.x * S}px;top:${hallBox.y * S}px;width:${hallBox.w * S}px;height:${hallBox.h * S}px"></div>`);
   const h = parts.join(''), g = tags.join('');
   if (h !== lastHits) { hitsLayer.innerHTML = h; lastHits = h; }

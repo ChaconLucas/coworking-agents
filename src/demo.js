@@ -89,7 +89,15 @@ function demoUsage() {
     o.costByModel = Object.fromEntries(Object.entries(o.byModel).map(([m, u]) => [m, costOf(m, u)]));
     o.cost = { usd: Object.values(o.costByModel).reduce((a, b) => a + b, 0), unpricedModels: [] };
   }
-  return { scanning: false, scannedAt: now, byAgent };
+  const days = {};
+  for (let i = 0; i < 40; i++) {
+    const d = new Date(now - i * 864e5), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const first = new Date(d.getFullYear(), d.getMonth(), d.getDate(), i % 9 === 0 ? 2 : 9).getTime();
+    if (i % 11 !== 10) days[k] = { tools: 300 + (i * 97) % 900, activeMs: (3 + (i * 7) % 9) * 36e5, sessions: 4, agents: i % 3 ? ['claude'] : ['claude', 'codex'], first, last: first + 8 * 36e5, output: 4e5 };
+  }
+  const ppl = demoSnapshot().people;
+  const top = ppl.slice(0, 5).map((p, i) => ({ id: p.id, agent: p.agent, title: p.title, activeMs: (40 - i * 7) * 36e5, tools: 2400 - i * 380, output: 3e6 - i * 4e5, last: now }));
+  return { scanning: false, scannedAt: now, byAgent, days, month: { key: Object.keys(days)[0].slice(0, 7), top } };
 }
 
 module.exports = { demoSnapshot, demoReport, demoUsage };

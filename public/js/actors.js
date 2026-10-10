@@ -41,7 +41,7 @@ function noteArrivals() {
   for (const p of data.people) { if (!seenPeople.has(p.id)) { seenPeople.add(p.id); if (!firstLoad) arrivals.set(p.id, now); } }
   firstLoad = false;
 }
-const cat = { x: 0, y: 0, tx: 0, ty: 0, mode: 'sit', until: 0, flip: false, ready: false };
+const cat = { x: 0, y: 0, tx: 0, ty: 0, mode: 'sit', until: 0, flip: false, ready: false, visit: null };
 const SPEED = 52;
 
 // every spot knows its way out to the vertical corridor (CX); the path is: exit, corridor, enter
@@ -103,9 +103,12 @@ function updateCat(dt, t) {
   if (!cat.ready) { cat.x = RX + 60; cat.y = TOP + 90; cat.tx = cat.x; cat.ty = cat.y; cat.ready = true; }
   if (cat.mode === 'walk') {
     const dx = cat.tx - cat.x, dy = cat.ty - cat.y, d = Math.hypot(dx, dy), step = 22 * dt;
-    if (d <= step) { cat.x = cat.tx; cat.y = cat.ty; cat.mode = Math.random() < .5 ? 'sit' : 'sleep'; cat.until = t + (cat.mode === 'sleep' ? 15000 : 4000) + Math.random() * 6000; }
+    if (d <= step) { cat.x = cat.tx; cat.y = cat.ty; cat.mode = cat.visit ? 'sit' : Math.random() < .5 ? 'sit' : 'sleep'; cat.until = t + (cat.mode === 'sleep' ? 15000 : 4000) + Math.random() * 6000; }
     else { cat.x += dx / d * step; cat.y += dy / d * step; cat.flip = dx < 0; }
-  } else if (t > cat.until) {
+  } else if (cat.visit && !(catErrand() || {}).id) { cat.visit = null; cat.until = 0; // the wait is over: back to cat things
+  } else if (t > cat.until || (!cat.visit && catErrand())) {
+    const errand = catErrand();
+    if (errand) { cat.visit = errand.id; cat.tx = errand.x; cat.ty = errand.y; cat.mode = 'walk'; cat.until = t + 1e9; return; }
     const places = [{ x: RX + 40, y: TOP + 90 }, { x: RX + 100, y: TOP + 96 }, { x: CX - 4, y: TOP + 40 + Math.random() * (H - TOP - 60) }, { x: RX + 60, y: wing.nap + 66 }];
     const sleeper = layout.find(c => c.actor && c.actor.mode === 'nap');
     const p = sleeper && Math.random() < .5 ? { x: sleeper.actor.x + 22, y: sleeper.actor.y + 10 } : places[(Math.random() * places.length) | 0];

@@ -31,7 +31,8 @@ const dockCtx = dockCv.getContext('2d');
 const dock = document.createElement('button'); // the "+" that slides to the next office
 dock.className = 'scene-more'; dock.hidden = true;
 bar.appendChild(dock);
-const DOCK_S = 3, SLOT = 34, PER_OFFICE = 4;
+const DOCK_S = 3, SLOT = 34;
+let PER_OFFICE = 4; // up to 4 per office, fewer when the tools leave less room (see sceneBox)
 let dockList = [], dockLeaving = [], dockPage = 0, slide = null; // slide = { from, to, at }
 
 function renderDock() {
@@ -53,7 +54,7 @@ function renderDock() {
   dock.hidden = pages < 2;
   dock.textContent = '+' + (dockList.length - PER_OFFICE * (dockPage + 1) > 0 ? dockList.length - PER_OFFICE * (dockPage + 1) : dockList.length - PER_OFFICE);
   dock.title = T.help.nextOffice;
-  if (popFor && !pop.hidden) { const d = dockList.find(x => x.p.id === popFor); if (d && pageOf(d.i) === dockPage) showPop(d); }
+  if (popFor && !pop.hidden) { const d = dockList.find(x => x.p.id === popFor); if (d && pageOf(d.i) === dockPage) showPop(d, true); else { pop.hidden = true; popFor = null; } } // refresh the text, never cancel a pending hide
 }
 const pageOf = i => Math.floor(i / PER_OFFICE);
 dock.addEventListener('click', () => {
@@ -69,6 +70,10 @@ function sceneBox() {
   // the agents sit right after the counters panel
   const c = document.getElementById('counts').getBoundingClientRect(), b0 = bar.getBoundingClientRect();
   const x0 = Math.max(Math.round(W * .3), Math.ceil((c.right - b0.left) / DOCK_S) + 18);
+  // the office must end before the tools (and their speech clouds before the "+N" tag)
+  const tools = document.querySelector('.bar .tools'), tl = tools ? (tools.getBoundingClientRect().left - b0.left) / DOCK_S : W;
+  const fit = Math.max(1, Math.min(4, Math.floor((tl - x0 - 30) / SLOT)));
+  if (fit !== PER_OFFICE) { PER_OFFICE = fit; if (data) renderDock(); }
   return { W, H, x0, desk: H - 7 };
 }
 
@@ -164,9 +169,9 @@ function slotAt(e) {
 const pop = document.createElement('div');
 pop.className = 'dpop'; pop.hidden = true;
 document.body.appendChild(pop);
-let popFor = null, popHide = 0;
-function showPop(d) {
-  clearTimeout(popHide);
+let popFor = null, popHide = 0, popHover = false; // popHover: the mouse is on the agent or on the card
+function showPop(d, refresh) {
+  if (!refresh) { clearTimeout(popHide); popHover = true; }
   const p = data && data.people.find(x => x.id === d.p.id);
   if (!p) return;
   popFor = p.id;
@@ -183,11 +188,11 @@ function showPop(d) {
   pop.style.top = (r0.bottom + 10) + 'px';
   pop.style.setProperty('--arrow', (cx - left) + 'px');
 }
-function hidePop() { popHide = setTimeout(() => { pop.hidden = true; popFor = null; }, 220); }
-dockCv.addEventListener('mousemove', e => { const d = slotAt(e); dockCv.style.cursor = d ? 'pointer' : 'default'; if (d && d.p.id !== popFor) showPop(d); else if (d) clearTimeout(popHide); });
+function hidePop() { popHover = false; clearTimeout(popHide); popHide = setTimeout(() => { if (!popHover) { pop.hidden = true; popFor = null; } }, 220); }
+dockCv.addEventListener('mousemove', e => { const d = slotAt(e); dockCv.style.cursor = d ? 'pointer' : 'default'; if (d && d.p.id !== popFor) showPop(d); else if (d) { clearTimeout(popHide); popHover = true; } else if (popHover) hidePop(); }); // off an agent: the card goes too
 dockCv.addEventListener('mouseleave', hidePop);
 dockCv.addEventListener('click', e => { const d = slotAt(e); if (d) { pop.hidden = true; openTalk(d.p.id); } });
-pop.addEventListener('mouseenter', () => clearTimeout(popHide));
+pop.addEventListener('mouseenter', () => { clearTimeout(popHide); popHover = true; });
 pop.addEventListener('mouseleave', hidePop);
 pop.addEventListener('click', async e => {
   const b = e.target.closest('[data-pop]');

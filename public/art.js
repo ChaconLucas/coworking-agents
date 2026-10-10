@@ -128,6 +128,29 @@ function hairExtras(lk, x, y, front) {
   }
   // hair highlight
   r(x + 5, y + 1, 3, 1, shade(lk.h, 1.35));
+  if (HAT) drawHat(HAT, x, y);
+}
+// holiday hats over the head (16px wide, top at y)
+let HAT = null;
+function setHat(k) { HAT = k; }
+function drawHat(k, x, y) {
+  const o = PAL.ink;
+  if (k === 'santa') {
+    r(x + 3, y - 4, 10, 4, o); r(x + 4, y - 3, 8, 3, '#e43b44'); r(x + 7, y - 6, 6, 3, o); r(x + 8, y - 5, 4, 2, '#e43b44'); r(x + 11, y - 7, 4, 3, o); r(x + 12, y - 6, 2, 2, '#ffffff');
+    r(x + 1, y - 1, 14, 3, o); r(x + 2, y, 12, 1, '#ffffff'); r(x + 2, y - 1, 12, 1, '#e8e8f0');
+  } else if (k === 'witch') {
+    r(x - 1, y, 18, 3, o); r(x, y + 1, 16, 1, '#3b2a5a');
+    r(x + 4, y - 4, 8, 5, o); r(x + 5, y - 3, 6, 3, '#3b2a5a'); r(x + 5, y - 1, 6, 1, '#feae34');
+    r(x + 7, y - 8, 4, 5, o); r(x + 8, y - 7, 2, 4, '#3b2a5a'); r(x + 10, y - 9, 3, 2, o); r(x + 11, y - 9, 1, 1, '#3b2a5a');
+  } else if (k === 'party') {
+    r(x + 5, y - 2, 6, 3, o); r(x + 6, y - 1, 4, 1, '#ff6ec7'); r(x + 6, y, 4, 1, '#2ce8f5');
+    r(x + 6, y - 5, 4, 3, o); r(x + 7, y - 4, 2, 1, '#ffd84d'); r(x + 7, y - 3, 2, 1, '#ff6ec7');
+    r(x + 7, y - 7, 2, 2, '#ffd84d');
+  } else if (k === 'straw') {
+    r(x - 2, y, 20, 3, o); r(x - 1, y + 1, 18, 1, '#e8c170');
+    r(x + 3, y - 4, 10, 5, o); r(x + 4, y - 3, 8, 3, '#e8c170'); r(x + 4, y - 1, 8, 1, '#e43b44');
+    for (let i = 0; i < 4; i++) r(x + 4 + i * 2, y - 3, 1, 1, '#c99a4a');
+  }
 }
 
 // Person seated with their back to us, facing the monitor.
@@ -736,7 +759,7 @@ function aiIconEl(id, color) {
 
 window.Art = {
   aiIcon, aiIconEl, portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
-  PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setLookSeeds, setCtx, r, sprite, blit,
+  PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setLookSeeds, setHat, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,
   drawCooler, drawRug, drawFloor, applyLight, LEGS_SIT,

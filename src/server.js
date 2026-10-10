@@ -70,7 +70,9 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     // access token: the ?t= link becomes an HttpOnly/SameSite=Strict cookie; without it nothing answers
     if (url.pathname === '/' && url.searchParams.has('t')) {
       if (!sameSecret(url.searchParams.get('t'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
-      res.writeHead(302, { 'Set-Cookie': `cw=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' + (url.searchParams.get('lang') ? '?lang=' + encodeURIComponent(url.searchParams.get('lang')) : '') });
+      // keep the other parameters (lang, hour, date…), drop only the token; always a same-origin path
+      const rest = new URLSearchParams(url.searchParams); rest.delete('t');
+      res.writeHead(302, { 'Set-Cookie': `cw=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' + (rest.toString() ? '?' + rest.toString() : '') });
       return res.end();
     }
     // icons are public: browsers fetch them without cookies and cache the 401 otherwise

@@ -46,9 +46,16 @@ function renderBar() {
     const b = document.getElementById(id);
     b.setAttribute('aria-pressed', on); b.title = `${label.replace(/^\S+\s/, '')}: ${on ? T.on : T.off}`; b.querySelector('.sr').textContent = b.title;
   }
-  document.getElementById('btn-lang').textContent = T.lang;
+  document.getElementById('btn-lang').innerHTML = `<b class="lg">${esc(T.lang)}</b><span class="ml">${esc(T.menuItems.lang)}</span>`; document.getElementById('btn-lang').title = T.langName;
+  { const mb = document.getElementById('btn-menu'); mb.title = T.menu; mb.querySelector('.sr').textContent = T.menu; mb.querySelector('.menu-dot').hidden = !focusing(); }
   { const rb = document.getElementById('btn-replay'); rb.title = T.replay.title; rb.querySelector('.sr').textContent = T.replay.title; rb.setAttribute('aria-pressed', !replayEl.hidden); }
   renderFocus();
+  // short visible labels in the ☰ menu (the long explanation stays in the tooltip)
+  for (const [id, k] of [['btn-notify', 'notify'], ['btn-sound', 'sound'], ['btn-focus', 'focus'], ['btn-replay', 'replay'], ['btn-search', 'search']]) {
+    const b = document.getElementById(id); let ml = b.querySelector('.ml');
+    if (!ml) { ml = document.createElement('span'); ml.className = 'ml'; b.insertBefore(ml, b.querySelector('.focus-left')); }
+    ml.textContent = T.menuItems[k];
+  }
   { const sb = document.getElementById('btn-search'); sb.title = T.keys.searchTitle; sb.querySelector('.sr').textContent = T.keys.searchTitle; }
   renderUsagePill();
 
@@ -74,7 +81,7 @@ function beep(urgent) {
   } catch {}
 }
 // a little chiptune per event: request (two rising beeps), done (soft chime), arrival (three notes up), leaving (two notes down)
-const TUNES = { need: [[880, 0], [1175, .12]], done: [[784, 0], [1047, .1]], arrive: [[523, 0], [659, .09], [784, .18]], leave: [[659, 0], [440, .12]], limit: [[440, 0], [440, .18], [440, .36]] };
+const TUNES = { need: [[880, 0], [1175, .12]], done: [[784, 0], [1047, .1]], arrive: [[523, 0], [659, .09], [784, .18]], leave: [[659, 0], [440, .12]], limit: [[440, 0], [440, .18], [440, .36]], trophy: [[523, 0], [659, .08], [784, .16], [1047, .24], [1319, .36]], purr: [[196, 0], [185, .1], [196, .2]] };
 function playTune(kind) {
   if (!soundOn || focusing() || !TUNES[kind]) return;
   try {
@@ -168,3 +175,16 @@ document.getElementById('btn-focus').onclick = () => {
   renderFocus();
 };
 setInterval(() => { if (focusUntil && !focusing()) { focusUntil = 0; store.set('focusUntil', 0); toast(`<b>${esc(T.focus.ended)}</b>`, 'ok'); } renderFocus(); }, 20000);
+
+// the tools live in a menu behind ☰ (the bar keeps room for the office); toggles keep it open
+const menuEl = document.getElementById('tools-menu'), menuBtn = document.getElementById('btn-menu');
+document.body.appendChild(menuEl); // out of the bar: its overflow would clip the menu in some browsers
+function setMenu(open) {
+  menuEl.hidden = !open; menuBtn.setAttribute('aria-expanded', open);
+  if (open) { const b = menuBtn.getBoundingClientRect(); menuEl.style.top = (b.bottom + 8) + 'px'; menuEl.style.right = Math.max(8, innerWidth - b.right) + 'px'; }
+}
+menuBtn.onclick = e => { e.stopPropagation(); setMenu(menuEl.hidden); };
+menuEl.addEventListener('click', e => { if (e.target.closest('#btn-search,#btn-replay')) setMenu(false); });
+document.addEventListener('click', e => { if (!menuEl.hidden && !e.target.closest('#tools-menu,#btn-menu')) setMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menuEl.hidden) setMenu(false); });
+addEventListener('resize', () => { if (!menuEl.hidden) setMenu(true); });

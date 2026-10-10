@@ -14,7 +14,7 @@ const CODEX = () => path.join(process.env.CODEX_HOME || path.join(os.homedir(), 
 
 const zero = () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 });
 const add = (a, b) => { a.input += b.input; a.output += b.output; a.cacheRead += b.cacheRead; a.cacheWrite += b.cacheWrite; a.cacheWrite1h += b.cacheWrite1h || 0; return a; };
-const SCAN_VERSION = 2; // bump when scanFile's output changes: cached files are rescanned once
+const SCAN_VERSION = 3; // bump when scanFile's output changes: cached files are rescanned once
 const day = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 function walk(dir, out = []) {
@@ -27,8 +27,22 @@ function walk(dir, out = []) {
   return out;
 }
 
+// activity per day for one conversation: tool calls, and "active time" = the gaps between consecutive
+// transcript entries that are shorter than 5 minutes (longer gaps are someone away, not work)
+const GAP = 5 * 60000;
+const TS_RE = /"timestamp":"([^"]+)"/;
 async function scanFile(file, kind) {
-  const res = { total: zero(), byDay: {}, byModel: {} };
+  const res = { total: zero(), byDay: {}, byModel: {}, act: {}, title: '' };
+  let prevTs = 0;
+  const activity = (line, isTool) => {
+    const m = TS_RE.exec(line); if (!m) return;
+    const ts = Date.parse(m[1]); if (!ts) return;
+    const a = res.act[day(ts)] || (res.act[day(ts)] = { tools: 0, activeMs: 0, first: ts, last: ts });
+    if (prevTs && ts > prevTs && ts - prevTs < GAP) a.activeMs += ts - prevTs;
+    if (isTool) a.tools++;
+    if (ts < a.first) a.first = ts; if (ts > a.last) a.last = ts;
+    prevTs = Math.max(prevTs, ts);
+  };
   const bump = (ts, model, u) => {
     add(res.total, u);
     const k = day(ts || Date.now());
@@ -39,6 +53,8 @@ async function scanFile(file, kind) {
   let lastId = null, model = '';
   for await (const line of rl) {
     if (kind === 'claude') {
+      if (!res.title && line.indexOf('"ai-title"') >= 0) { try { res.title = String(JSON.parse(line).aiTitle || '').slice(0, 120); } catch {} }
+      activity(line, line.indexOf('"type":"tool_use"') >= 0);
       if (line.indexOf('"usage"') < 0 || line.indexOf('"assistant"') < 0) continue;
       let d; try { d = JSON.parse(line); } catch { continue; }
       const m = d.message || {}, u = m.usage;
@@ -46,6 +62,7 @@ async function scanFile(file, kind) {
       lastId = m.id;
       bump(Date.parse(d.timestamp), m.model && !m.model.startsWith('<') ? m.model : '', { input: u.input_tokens || 0, output: u.output_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cacheWrite1h: (u.cache_creation && u.cache_creation.ephemeral_1h_input_tokens) || 0 });
     } else {
+      activity(line, line.indexOf('"type":"function_call"') >= 0 || line.indexOf('"type":"custom_tool_call"') >= 0 || line.indexOf('"type":"local_shell_call"') >= 0);
       if (line.indexOf('"turn_context"') >= 0) { try { const d = JSON.parse(line); if (d.payload && d.payload.model) model = d.payload.model; } catch {} continue; }
       if (line.indexOf('"token_count"') < 0) continue;
       let d; try { d = JSON.parse(line); } catch { continue; }
@@ -98,6 +115,25 @@ async function refresh() {
         if (c == null) o.cost.unpricedModels.push(m); else { o.costByModel[m] = c; o.cost.usd += c; }
       }
     }
+    // per day across everything (achievements) and the month's ranking per conversation (agent of the month)
+    const days = {}, month = day(Date.now()).slice(0, 7), board = [];
+    for (const [file, { kind, res }] of Object.entries(c)) {
+      const m = { id: path.basename(file, '.jsonl'), agent: kind, title: res.title || '', activeMs: 0, tools: 0, output: 0, last: 0 };
+      for (const [k, a] of Object.entries(res.act || {})) {
+        const d = days[k] || (days[k] = { tools: 0, activeMs: 0, sessions: 0, agents: [], first: a.first, last: a.last });
+        d.tools += a.tools; d.activeMs += a.activeMs; d.sessions++;
+        if (!d.agents.includes(kind)) d.agents.push(kind);
+        d.first = Math.min(d.first, a.first); d.last = Math.max(d.last, a.last);
+        if (k.startsWith(month)) { m.activeMs += a.activeMs; m.tools += a.tools; m.last = Math.max(m.last, a.last); }
+      }
+      for (const [k, u] of Object.entries(res.byDay)) {
+        if (days[k]) days[k].output = (days[k].output || 0) + u.output;
+        if (k.startsWith(month)) m.output += u.output;
+      }
+      if (m.activeMs || m.tools) board.push(m);
+    }
+    board.sort((a, b) => b.activeMs - a.activeMs || b.tools - a.tools);
+    state.days = days; state.month = { key: month, top: board.slice(0, 5) };
     state.result = out; state.scannedAt = Date.now();
   } finally { state.scanning = false; }
 }
@@ -105,7 +141,7 @@ async function refresh() {
 // returns what we have now and refreshes in the background when older than a minute
 function usage() {
   if (!state.scanning && Date.now() - state.scannedAt > 60000) refresh();
-  return { scanning: state.scanning, scannedAt: state.scannedAt, byAgent: state.result };
+  return { scanning: state.scanning, scannedAt: state.scannedAt, byAgent: state.result, days: state.days || null, month: state.month || null };
 }
 
 module.exports = { usage, refresh, scanFile };

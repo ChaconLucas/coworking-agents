@@ -12,7 +12,7 @@ function usageGauges() {
   return out.slice(0, 4);
 }
 // 3x5 pixel font for the wall display
-const PIXFONT = { '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111', '6': '111100111101111', '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', '%': '101001010100101', 'H': '101101111101101', 'W': '101101101111101', 'K': '101101110101101', 'S': '111100111001111', 'M': '101111111101101', 'N': '110101101101101', 'I': '111010010010111', 'C': '111100100100111', 'L': '100100100100111', 'A': '010101111101101', 'U': '101101101101111', 'D': '110101101101110', 'E': '111100110100111', 'O': '111101101101111', 'X': '101101010101101', '5h': '' };
+const PIXFONT = { 'B': '110101110101110', 'F': '111100110100100', 'G': '011100101101011', 'J': '001001001101010', 'P': '110101110100100', 'Q': '010101101110011', 'R': '110101110101101', 'T': '111010010010010', 'V': '101101101101010', 'Y': '101101010010010', 'Z': '111001010100111', '!': '010010010000010', '+': '000010111010000', '.': '000000000000010', ':': '000010000010000', '/': '001001010100100', '$': '011110010011110', '#': '101111101111101',  '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111', '6': '111100111101111', '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', '%': '101001010100101', 'H': '101101111101101', 'W': '101101101111101', 'K': '101101110101101', 'S': '111100111001111', 'M': '101111111101101', 'N': '110101101101101', 'I': '111010010010111', 'C': '111100100100111', 'L': '100100100100111', 'A': '010101111101101', 'U': '101101101101111', 'D': '110101101101110', 'E': '111100110100111', 'O': '111101101101111', 'X': '101101010101101', '5h': '' };
 function pixText(x, y, str, c) {
   let cx = x;
   for (const ch of String(str)) { const g = PIXFONT[ch]; if (g) for (let i = 0; i < 15; i++) if (g[i] === '1') r(cx + (i % 3), y + ((i / 3) | 0), 1, 1, c); cx += 4; }
@@ -67,9 +67,12 @@ function drawWall(t, sky) {
     if (i === 1) drawUsageBoard(wx - 6, 7, t);
     else if (i === 2) continue; // covered by the usage screen
     else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, t, wallGlows); Art.drawPoster(wx - 4, 28 - 8, 0); Art.drawPoster(wx + 34, 28 - 8, 2); }
-    else if (i === 5) Art.drawPoster(wx + 14, 12, 1);
-    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawWeather(wx, 9, 48, 30, t); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
+    else if (i === 4 && nWin >= 7) drawTrophyShelf(wx - 8, 9, 64, t);
+    else if (i === 5) { if (nWin >= 7) drawAgentOfMonth(wx, 10, t, wallGlows); else Art.drawPoster(wx + 14, 12, 1); }
+    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawWeather(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
   }
+  // the ON AIR sign takes the gap between the last window and the whiteboard, when there is one
+  { const lastEnd = 16 + (nWin - 1) * 74 + 48, gap = RX - 14 - lastEnd; moodBox = null; if (gap >= 32) drawMoodSign(lastEnd + ((gap - 24) / 2 | 0), 16, t, wallGlows); }
   boardBox = { x: RX - 14, y: 8, w: 56, h: 30 };
   Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);
   Art.drawClock(RX + 58, 20);
@@ -401,6 +404,7 @@ function drawScene(t, dt) {
   Art.drawFloor(W, H, TOP);
   wallGlows = glows;
   const nWin = drawWall(t, sky);
+  drawHolidayWall(t, nWin);
   drawShafts(sky, nWin);
   // corridor runner rug with plants along it
   r(CX - 8, TOP, 16, H - TOP, '#6e2f3f'); r(CX - 6, TOP, 12, H - TOP, '#8e3e52');
@@ -422,6 +426,7 @@ function drawScene(t, dt) {
   drawMeeting(t, meet);
   for (const R of rooms) drawRoom(R, t);
   drawDevCorner(t, glows);
+  drawHolidayFloor(t, glows);
   const cs = clashSet();
   sites = [];
   for (const d of desks) drawDesk(d, t, !!d.p && cs.has(d.p.id), lights, glows, sky);
@@ -439,6 +444,7 @@ function drawScene(t, dt) {
   movers.push({ y: cat.y, draw: () => Art.drawCat(cat.x, cat.y, cat.mode, t, cat.flip) });
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
+  drawCatExtras(t);
   // ceiling lights: every room and shared area is lit, except the nap corner (it's a rest room)
   if (lightsOn) {
     for (const R of rooms) lights.push({ x: R.x + R.w / 2, y: R.y + R.h / 2, r: Math.max(R.w, R.h) * .8 });
@@ -447,6 +453,7 @@ function drawScene(t, dt) {
     const devTop = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 30;
     if (devTop < H) lights.push({ x: CX / 2, y: devTop + 20, r: CX / 2 });
   }
+  moodShade();
   Art.applyLight(W, H, sky, lights, glows, lightsOn);
   // the LED panel is self-lit: drawn again over the dark, so it shines when the lights are off
   if (sky.phase !== 'day' && usageBox) drawUsageBoard(usageBox.x, usageBox.y, t);

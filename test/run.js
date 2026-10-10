@@ -289,6 +289,8 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   for (const ic of icons) assert.strictEqual((await req(port, '/' + ic)).code, 200, 'public icon: ' + ic);
   const login = await req(port, '/?t=' + hq.token);
   assert.strictEqual(login.code, 302);
+  const keep = await req(port, '/?t=' + hq.token + '&lang=en&hour=22');
+  assert.strictEqual(keep.headers.location, '/?lang=en&hour=22', 'login keeps the other parameters and drops the token');
   assert.ok(/HttpOnly/.test(login.headers['set-cookie']) && /SameSite=Strict/.test(login.headers['set-cookie']), 'protected cookie');
   const ok = await req(port, '/api/state', { headers: ck });
   assert.strictEqual(ok.code, 200);

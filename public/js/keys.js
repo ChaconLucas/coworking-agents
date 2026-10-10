@@ -45,6 +45,8 @@ document.addEventListener('keydown', e => {
   else if (k === 'r' || k === 'R') openReport();
   else if (k === 'd' || k === 'D') openReport('today');
   else if (k === 'a' || k === 'A') openReport('feed');
+  else if (k === 'c' || k === 'C') openReport('ach');
+  else if (k === 'e' || k === 'E') { decorOn = !decorOn; store.set('decor', decorOn); toast(`<b>${esc(decorOn ? T.decorOn : T.decorOff)}</b>`, 'ok'); }
   else if (k === 'f' || k === 'F') document.getElementById('btn-focus').click();
   else if (k === 'l' || k === 'L') { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); }
   else if (k === 'b' || k === 'B') { if (floors.length > 1) setBuilding(!building); }

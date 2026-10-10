@@ -60,6 +60,7 @@ function connect() {
     data = applyReplay(d);
     notifyChanges();
     checkAlerts();
+    checkAchievements();
     renderAll();
   };
   es.onerror = () => { offline.textContent = T.offline; offline.hidden = false; };
