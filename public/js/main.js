@@ -24,7 +24,7 @@ function loop(t) {
   if (document.hidden) return; // tab not visible: draw nothing (browsers also slow rAF, this makes it zero) // schedule first: an error in one frame must not stop the animation
   if (data && spots) {
     const f = (t / 70) | 0; // ~14 frames per second, a pixel-art pace
-    if (f !== lastFrame) {
+    if (f !== lastFrame || (playerOn && (me.moving || me.path.length || keysDown.size))) {
       const dt = lastT ? Math.min(.25, (t - lastT) / 1000) : 0;
       lastT = t; lastFrame = f;
       if (trophyView) drawTrophyRoom(t); else if (building) { if (f % 3 === 0) drawThumbs(t, dt * 3); } else drawScene(t, dt);

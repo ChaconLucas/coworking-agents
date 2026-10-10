@@ -43,8 +43,8 @@ document.addEventListener('keydown', e => {
   }
   else if (k === '/') { e.preventDefault(); openSearch(); }
   else if (k === 'r' || k === 'R') openReport();
-  else if (k === 'd' || k === 'D') openReport('today');
-  else if (k === 'a' || k === 'A') openReport('feed');
+  else if (k === 't' || k === 'T') openReport('today');
+  else if (k === 'g' || k === 'G') openReport('feed');
   else if (k === 'c' || k === 'C') openReport('ach');
   else if (k === 'e' || k === 'E') { decorOn = !decorOn; store.set('decor', decorOn); toast(`<b>${esc(decorOn ? T.decorOn : T.decorOff)}</b>`, 'ok'); }
   else if (k === 'f' || k === 'F') document.getElementById('btn-focus').click();

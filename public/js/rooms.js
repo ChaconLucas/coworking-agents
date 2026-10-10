@@ -89,73 +89,123 @@ function setTrophyView(on) {
   if (on) { achBump('trophyVisits'); camera(null); selected = null; renderPanel(); scrollTo(0, 0); }
   lastHits = ''; lastLayoutKey = ''; renderAll();
 }
-const TROPHY_W = 480, TROPHY_H = 300;
+const TROPHY_W = 560, TROPHY_H = 340;
 function drawTrophyCup(x, y, size, tier, t, i, locked) {
-  const c = locked ? '#3a3448' : TIER_COLOR[tier], d = locked ? '#2b2636' : Art.shade(TIER_COLOR[tier], .7), k = size;
-  r(x - k * 3, y, k * 6, k * 4, PAL.ink); r(x - k * 3 + 1, y + 1, k * 6 - 2, k * 4 - 2, c);         // cup
-  r(x - k * 4, y + 1, k, k * 2, PAL.ink); r(x + k * 3, y + 1, k, k * 2, PAL.ink);                       // handles
-  r(x - k * 4 + 1, y + 2, Math.max(1, k - 1), k * 2 - 2, c); r(x + k * 3, y + 2, Math.max(1, k - 1), k * 2 - 2, c);
-  r(x - Math.max(1, k / 2), y + k * 4, Math.max(2, k), k * 2, d);                                       // stem
+  const c = locked ? '#2b2636' : TIER_COLOR[tier], d = locked ? '#221e2c' : Art.shade(TIER_COLOR[tier], .7), lt = locked ? '#2b2636' : Art.shade(TIER_COLOR[tier], 1.25), k = size;
+  r(x - k * 3, y, k * 6, k * 4, PAL.ink); r(x - k * 3 + 1, y + 1, k * 6 - 2, k * 4 - 2, c);                // cup
+  r(x - k * 3 + 1, y + k * 3, k * 6 - 2, Math.max(1, k - 1), d);                                            // lower shade
+  r(x - k * 4, y + 1, k, k * 2, PAL.ink); r(x + k * 3, y + 1, k, k * 2, PAL.ink);                            // handles
+  r(x - k * 4 + 1, y + 2, Math.max(1, k - 1), Math.max(1, k * 2 - 2), c); r(x + k * 3, y + 2, Math.max(1, k - 1), Math.max(1, k * 2 - 2), c);
+  r(x - Math.max(1, k / 2), y + k * 4, Math.max(2, k), k * 2, d);                                            // stem
   r(x - k * 2, y + k * 6, k * 4, Math.max(2, k), PAL.ink); r(x - k * 2 + 1, y + k * 6, k * 4 - 2, Math.max(1, k - 1), d); // base
   if (!locked) {
-    r(x - k * 2, y + 2, Math.max(1, k - 1), k * 2, '#ffffffaa');                                        // shine
+    r(x - k * 2, y + 2, Math.max(1, k - 1), k * 2, lt); r(x - k * 2, y + 2, 1, k * 2, '#ffffffcc');            // shine
     const s = ((t / 140) | 0) + i * 5; if (s % 14 < 2) { r(x + k * 2, y - 3, 1, 3, '#ffffff'); r(x + k * 2 - 1, y - 2, 3, 1, '#ffffff'); }
-  } else pixText(x - 1, y + k, '?', '#5a5068');
+  } else if (k >= 2) pixText(x - 1, y + k, '?', '#4a4258');
+}
+// glass: a pane with a frame, a faint tint and two diagonal reflections
+function drawGlass(x, y, w, h, frame) {
+  ctx.fillStyle = 'rgba(190, 225, 255, .10)'; ctx.fillRect(x, y, w, h);
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  for (const [o, ww] of [[.15, 10], [.32, 4], [.7, 7]]) { ctx.beginPath(); const sx = x + w * o; ctx.moveTo(sx, y); ctx.lineTo(sx + ww, y); ctx.lineTo(sx + ww - h * .6, y + h); ctx.lineTo(sx - h * .6, y + h); ctx.fill(); }
+  ctx.restore();
+  r(x - 1, y - 1, w + 2, 1, frame); r(x - 1, y + h, w + 2, 1, frame); r(x - 1, y, 1, h, frame); r(x + w, y, 1, h, frame);
+}
+function drawChandelier(x, y, t) {
+  r(x, 0, 1, y, '#8a6420');
+  r(x - 14, y, 29, 3, '#d9a441'); r(x - 10, y + 3, 21, 2, '#b07d2a');
+  for (let k = -2; k <= 2; k++) { const cx = x + k * 6; r(cx, y - 4, 1, 4, '#f4ecd8'); r(cx, y - 6 - (((t / 180 + k) | 0) % 2), 1, 2, '#ffd27a'); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(x, y, 0, x, y, 46); g.addColorStop(0, 'rgba(255,210,122,.35)'); g.addColorStop(1, 'rgba(255,210,122,0)'); ctx.fillStyle = g; ctx.fillRect(x - 46, y - 46, 92, 92);
+  ctx.restore();
 }
 function drawTrophyRoom(t) {
-  const Wt = TROPHY_W, Ht = TROPHY_H, st = achState(), hits = [];
-  // marble floor, dark velvet walls, gold trim
-  for (let y = 70; y < Ht; y += 16) for (let x = 0; x < Wt; x += 16) r(x, y, 16, 16, ((x + y) / 16) % 2 ? '#e8e2d6' : '#d6cfc0');
-  r(0, 0, Wt, 70, '#3b1f3f'); for (let x = 0; x < Wt; x += 12) r(x, 0, 6, 70, '#43244a');
-  r(0, 66, Wt, 4, '#d9a441'); r(0, 70, Wt, 1, '#8a6420');
-  // red carpet from the entrance to the dais
-  r(Wt / 2 - 22, 150, 44, Ht - 150, '#a3283a'); r(Wt / 2 - 22, 150, 2, Ht - 150, '#d9a441'); r(Wt / 2 + 20, 150, 2, Ht - 150, '#d9a441');
-  // banners
-  for (const bx of [40, Wt - 64]) { r(bx, 6, 24, 40, '#a3283a'); r(bx, 44, 12, 6, '#a3283a'); r(bx + 12, 44, 12, 4, '#a3283a'); r(bx + 8, 14, 8, 8, '#d9a441'); }
-  pixText(Wt / 2 - 38, 8, 'HALL OF FAME', '#ffd84d');
-  // the dais: legends in an arc, the super crown on top when unlocked
-  const legends = st.filter(a => a.tier >= 5), cx = Wt / 2, dy = 118;
-  r(cx - 90, dy + 28, 180, 10, '#8a6420'); r(cx - 84, dy + 22, 168, 8, '#b07d2a'); r(cx - 76, dy + 16, 152, 8, '#d9a441');
-  // spotlights from the ceiling on the dais
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  for (const sx of [cx - 50, cx, cx + 50]) { const g = ctx.createLinearGradient(sx, 0, sx, dy + 30); g.addColorStop(0, 'rgba(255,240,200,.0)'); g.addColorStop(1, 'rgba(255,240,200,.18)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx - 4, 0); ctx.lineTo(sx + 4, 0); ctx.lineTo(sx + 26, dy + 30); ctx.lineTo(sx - 26, dy + 30); ctx.fill(); }
-  ctx.restore();
-  if (prog.super) {
-    const k = ((t / 300) | 0) % 2;
-    r(cx - 10, dy - 40, 20, 10, '#ffd84d'); r(cx - 10, dy - 46, 4, 6, '#ffd84d'); r(cx - 2, dy - 50, 4, 10, '#ffd84d'); r(cx + 6, dy - 46, 4, 6, '#ffd84d');
-    r(cx - 1, dy - 36, 2, 2, '#e43b44'); r(cx - 7, dy - 36, 2, 2, '#2ce8f5'); r(cx + 5, dy - 36, 2, 2, '#63c74d');
-    if (k) r(cx + 9, dy - 52, 1, 3, '#ffffff');
-    hits.push({ x: cx - 12, y: dy - 52, w: 24, h: 24, title: `${T.ach.superName} · ${T.ach.superDone}` });
-  }
-  const show = legends.length ? legends : st.slice().sort((a, b) => b.tier - a.tier || b.progress - a.progress).slice(0, 3);
-  const arc = show.slice(0, 7), n = arc.length;
-  arc.forEach((a, i) => {
-    // each trophy on its own pedestal standing on the dais; the middle one is the tallest
-    const off = i - (n - 1) / 2, ax = Math.round(cx + off * 30), ped = 14 - Math.round(Math.abs(off) * 3), top = dy + 16 - ped, big = a.tier >= 5, k = big ? 3 : 2;
-    r(ax - 9, top, 18, ped, PAL.ink); r(ax - 8, top + 1, 16, ped - 1, '#e8e2d6'); r(ax - 8, top + 1, 16, 2, '#ffffff'); r(ax - 8, top + ped - 2, 16, 1, '#c9c0ae');
-    if (big) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(ax, top - 12, 0, ax, top - 12, 22); g.addColorStop(0, 'rgba(255,110,199,.35)'); g.addColorStop(1, 'rgba(255,110,199,0)'); ctx.fillStyle = g; ctx.fillRect(ax - 22, top - 34, 44, 44); ctx.restore(); }
-    drawTrophyCup(ax, top - k * 7 - Math.max(2, k), k, Math.max(1, a.tier), t, i, !a.tier);
-    if (big) for (let q = 0; q < 3; q++) { const ang = t / 500 + q * 2.1 + i; r(Math.round(ax + Math.cos(ang) * 14), Math.round(top - 12 + Math.sin(ang) * 9), 1, 1, '#ffffff'); }
-    hits.push({ x: ax - 14, y: top - 30, w: 28, h: 30 + ped, a });
-  });
-  // wall shelves: every other achievement, best tiers first, small cups; locked ones as silhouettes
-  const rest = st.filter(a => !arc.includes(a)).sort((a, b) => b.tier - a.tier || a.id.localeCompare(b.id));
-  const shelves = [[14, 82], [14, 128], [14, 174], [Wt - 154, 82], [Wt - 154, 128], [Wt - 154, 174]];
-  let k2 = 0;
-  for (const [sx, sy] of shelves) {
-    r(sx - 2, sy + 30, 144, 4, '#6b4a33'); r(sx - 2, sy + 34, 144, 1, PAL.ink);
-    for (let j = 0; j < 7 && k2 < rest.length; j++, k2++) {
-      const a = rest[k2], tx = sx + 10 + j * 20;
-      drawTrophyCup(tx, sy + 12, 1, Math.max(1, a.tier), t, k2, !a.tier);
-      hits.push({ x: tx - 9, y: sy + 6, w: 18, h: 24, a });
+  const Wt = TROPHY_W, Ht = TROPHY_H, st = achState(), hits = [], cx = Wt / 2;
+  // back wall: burgundy damask over dark wood wainscoting, gold crown moulding
+  r(0, 0, Wt, 104, '#4a1b2b');
+  for (let y = 8; y < 74; y += 10) for (let x = (y / 10) % 2 ? 6 : 0; x < Wt; x += 12) { r(x + 2, y, 2, 1, '#6a2a3e'); r(x + 1, y + 1, 4, 1, '#6a2a3e'); r(x + 2, y + 2, 2, 1, '#6a2a3e'); }
+  r(0, 0, Wt, 4, '#d9a441'); r(0, 4, Wt, 1, '#8a6420');
+  r(0, 74, Wt, 30, '#3b2418'); for (let x = 0; x < Wt; x += 28) { r(x + 3, 78, 22, 22, '#4a2e1f'); r(x + 3, 78, 22, 1, '#5a3a28'); }
+  r(0, 72, Wt, 3, '#d9a441');
+  // floor: polished marble checker with a soft reflection band
+  for (let y = 104; y < Ht; y += 18) for (let x = 0; x < Wt; x += 18) { r(x, y, 18, 18, ((x + y) / 18) % 2 ? '#efe9dd' : '#d8d0c0'); r(x + 3, y + 4, 4, 1, '#ffffff66'); }
+  r(0, 104, Wt, 2, '#2a1810');
+  // brass plaque
+  r(cx - 46, 8, 92, 13, PAL.ink); r(cx - 45, 9, 90, 11, '#d9a441'); r(cx - 45, 9, 90, 1, '#ffd84d'); pixText(cx - 23, 12, 'HALL OF FAME', '#3b2418');
+  drawChandelier(cx - 150, 26, t); drawChandelier(cx + 150, 26, t);
+  // two tall glass cabinets with lit shelves: every achievement not on the centre stage
+  const legends = st.filter(a => a.tier >= 5);
+  const stage = (legends.length ? legends : st.slice().sort((a, b) => b.tier - a.tier || b.progress - a.progress).slice(0, 3)).slice(0, 5);
+  const rest = st.filter(a => !stage.includes(a)).sort((a, b) => b.tier - a.tier || a.id.localeCompare(b.id));
+  const cab = (x, list, off) => {
+    const w = 168, y = 24, h = 150;
+    r(x - 4, y - 6, w + 8, h + 14, '#2a1810'); r(x - 3, y - 5, w + 6, 4, '#5a3a28'); r(x - 4, y + h + 4, w + 8, 4, '#d9a441');
+    r(x, y, w, h, '#2b1d26');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(255,220,160,.22)'); g.addColorStop(1, 'rgba(255,220,160,.04)'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.restore();
+    for (let s = 0; s < 4; s++) {
+      const sy = y + 34 + s * 37;
+      r(x + 2, sy, w - 4, 2, '#cfe8ff88'); r(x + 2, sy + 2, w - 4, 1, '#00000055');
+      for (let j = 0; j < 7; j++) {
+        const a = list[off + s * 7 + j]; if (!a) continue;
+        const tx = x + 14 + j * 23, k = a.tier >= 4 ? 2 : 2;
+        drawTrophyCup(tx, sy - 18, k, Math.max(1, a.tier), t, off + s * 7 + j, !a.tier);
+        hits.push({ x: tx - 10, y: sy - 22, w: 20, h: 24, a });
+      }
     }
+    drawGlass(x, y, w, h, '#d9a441');
+  };
+  cab(12, rest, 0); cab(Wt - 180, rest, 28);
+  // centre stage: spotlights, a marble plinth, a big glass case with the legends; the crown under a dome
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const sx of [cx - 46, cx, cx + 46]) { const g = ctx.createLinearGradient(sx, 0, sx, 210); g.addColorStop(0, 'rgba(255,240,200,0)'); g.addColorStop(1, 'rgba(255,240,200,.16)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx - 3, 0); ctx.lineTo(sx + 3, 0); ctx.lineTo(sx + 30, 210); ctx.lineTo(sx - 30, 210); ctx.fill(); }
+  ctx.restore();
+  r(cx - 86, 206, 172, 16, '#b8ae9a'); r(cx - 86, 206, 172, 2, '#ffffff'); r(cx - 78, 196, 156, 12, '#d8d0c0'); r(cx - 78, 196, 156, 2, '#ffffff');
+  r(cx - 90, 221, 180, 4, '#00000030');
+  const bx = cx - 74, by = 96, bw = 148, bh = 100;
+  r(bx - 3, by - 4, bw + 6, 4, '#d9a441'); r(bx - 3, by + bh, bw + 6, 3, '#d9a441'); r(bx - 3, by, 3, bh, '#d9a441'); r(bx + bw, by, 3, bh, '#d9a441');
+  r(bx, by + bh - 14, bw, 14, '#7a1f33'); r(bx, by + bh - 14, bw, 1, '#a3283a');                              // velvet base inside
+  const n = stage.length, big = n <= 4 ? 4 : 3;
+  stage.forEach((a, i) => {
+    const off = i - (n - 1) / 2, ax = Math.round(cx + off * (big === 4 ? 34 : 28)), top = by + bh - 14 - (i === Math.floor(n / 2) ? 8 : 4);
+    r(ax - 8, top, 16, by + bh - 14 - top, '#a3283a'); r(ax - 8, top, 16, 1, '#c94a5a');
+    const k = a.tier >= 5 ? big : big - 1;
+    if (a.tier >= 5) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(ax, top - 16, 0, ax, top - 16, 26); g.addColorStop(0, 'rgba(255,110,199,.35)'); g.addColorStop(1, 'rgba(255,110,199,0)'); ctx.fillStyle = g; ctx.fillRect(ax - 26, top - 42, 52, 52); ctx.restore(); }
+    drawTrophyCup(ax, top - k * 7 - Math.max(2, k), k, Math.max(1, a.tier), t, i, !a.tier);
+    if (a.tier >= 5) for (let q = 0; q < 3; q++) { const ang = t / 500 + q * 2.1 + i; r(Math.round(ax + Math.cos(ang) * 15), Math.round(top - 16 + Math.sin(ang) * 10), 1, 1, '#ffffff'); }
+    hits.push({ x: ax - 15, y: top - 36, w: 30, h: 38, a });
+  });
+  drawGlass(bx, by, bw, bh, '#ffd84d');
+  if (prog.super) { // the crown, under a glass dome on top of the case
+    const dx = cx, dy = by - 22;
+    r(dx - 9, dy + 12, 18, 6, '#d9a441'); r(dx - 8, dy + 4, 16, 8, '#ffd84d'); r(dx - 8, dy, 3, 4, '#ffd84d'); r(dx - 1, dy - 2, 3, 6, '#ffd84d'); r(dx + 5, dy, 3, 4, '#ffd84d');
+    r(dx - 1, dy + 6, 2, 2, '#e43b44'); r(dx - 6, dy + 6, 2, 2, '#2ce8f5'); r(dx + 4, dy + 6, 2, 2, '#63c74d');
+    drawGlass(dx - 12, dy - 6, 24, 18, '#ffd84d');
+    hits.push({ x: dx - 12, y: dy - 6, w: 24, h: 24, title: `${T.ach.superName} · ${T.ach.superDone}` });
   }
-  // the entrance (back to the office) at the bottom of the carpet
-  r(cx - 18, Ht - 8, 36, 8, PAL.ink); r(cx - 16, Ht - 7, 32, 7, '#6b4a33');
-  // counters on the wall: tiers and legends
-  const got = st.reduce((n2, a) => n2 + a.tier, 0), all = st.reduce((n2, a) => n2 + a.max, 0);
-  pixText(10, 52, `${got}/${all}`, '#ffd84d'); pixText(Wt - 10 - String(legends.length).length * 4 - 8, 52, `${legends.length} L`, '#ff6ec7');
+  // plaques on the plinth: tiers reached and legends
+  const got = st.reduce((x, a) => x + a.tier, 0), all = st.reduce((x, a) => x + a.max, 0);
+  pixText(cx - 70, 211, `${got}/${all}`, '#3b2418'); { const lg = `${legends.length} LEGEND`; pixText(cx + 70 - lg.length * 4, 211, lg, '#a3283a'); }
+  // red carpet and velvet ropes
+  r(cx - 26, 225, 52, Ht - 225, '#a3283a'); r(cx - 26, 225, 2, Ht - 225, '#d9a441'); r(cx + 24, 225, 2, Ht - 225, '#d9a441');
+  for (const px of [cx - 100, cx - 40, cx + 40, cx + 100]) { r(px - 1, 228, 3, 18, '#d9a441'); r(px - 2, 226, 5, 3, '#ffd84d'); r(px - 3, 245, 7, 2, '#8a6420'); }
+  for (const [a2, b2] of [[cx - 100, cx - 40], [cx + 40, cx + 100]]) for (let x = a2; x <= b2; x++) { const k = (x - a2) / (b2 - a2); r(x, 231 + Math.round(Math.sin(k * Math.PI) * 6), 1, 2, '#a3283a'); }
+  // the way out at the bottom
+  r(cx - 22, Ht - 6, 44, 6, '#2a1810');
   trophyHits = hits;
 }
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && trophyView && reportEl.hidden) setTrophyView(false); });
+// clicking a trophy: a card with the trophy large, its tier and how far the next one is
+const trophyCard = document.createElement('div');
+trophyCard.className = 'trophy-card'; trophyCard.hidden = true;
+document.body.appendChild(trophyCard);
+function showTrophy(a) {
+  const A = T.ach, hidden = a.secret && !a.tier, info = hidden ? { name: '???', desc: () => A.secret } : A.list[a.id];
+  trophyCard.innerHTML = `<div class="tc-box"><canvas width="64" height="64"></canvas><div><b>${esc(info.name)}</b><small style="color:${TIER_COLOR[a.tier]}">${esc(a.tier ? A.tiers[a.tier] : A.locked)}</small>
+    <p>${esc(info.desc(a.next || a.steps[a.max - 1]))}</p>${hidden ? '' : `<div class="ach-bar" style="--c:${TIER_COLOR[Math.max(1, a.tier)]}"><i style="width:${(a.progress * 100).toFixed(1)}%"></i></div>
+    <div class="ach-foot"><span class="pips">${a.steps.map((s, i) => `<i style="background:${i < a.tier ? TIER_COLOR[i + 1] : 'transparent'}" title="${esc(A.tiers[i + 1])}: ${esc(fmtStep(a, s))}"></i>`).join('')}</span><span>${a.next ? `${esc(fmtStep(a, a.value))} / ${esc(fmtStep(a, a.next))}` : esc(A.maxed)}</span></div>`}</div></div>`;
+  const c = trophyCard.querySelector('canvas'), prev = ctx; ctx = c.getContext('2d'); Art.setCtx(ctx);
+  try { drawTrophyCup(32, 10, 6, Math.max(1, a.tier), performance.now(), 0, !a.tier || hidden); } finally { ctx = prev; Art.setCtx(prev); }
+  trophyCard.hidden = false;
+}
+trophyCard.addEventListener('click', e => { if (e.target === trophyCard) trophyCard.hidden = true; });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!trophyCard.hidden) { trophyCard.hidden = true; return; } if (trophyView && reportEl.hidden) setTrophyView(false); });

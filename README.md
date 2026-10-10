@@ -25,6 +25,7 @@
 | ![Usage](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
 | ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** Agent of the month, then every achievement with its tiers and progress. |
+| ![Trophy room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
 | ![Christmas](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
 | ![Building](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
 | ![House wall](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
@@ -133,9 +134,9 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 | `1`–`9` | open the n-th agent |
 | `N` | next agent that needs you (opens its talk modal) |
 | `/` | quick search by name, title, repository or state |
-| `R` / `D` / `A` / `C` | usage report / daily report / history / achievements |
+| `R` / `T` / `G` / `C` | usage report / daily report (today) / history / achievements |
 | `E` | holiday decor on/off |
-| arrows / Enter | walk around the office / interact with what's near you |
+| WASD or arrows / Enter | walk around the office / interact with what's near you |
 | `F` | focus mode: mute sounds and notifications for 25 min (again: 50, again: off) |
 | `H` | replay the last hour (scrub or play) |
 | `L` | ceiling lights on/off |
@@ -161,8 +162,8 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Sky and seasons:** the sun crosses the windows, the moon shows tonight's real phase, city lights come on at dusk and go out late; leaves fall in autumn, petals in spring (hemisphere from your time zone), and the light is a touch warmer in summer, cooler in winter. Rain slides down the glass when it rains.
 - **Office life:** after a long task (30+ min) an agent goes for a coffee; 10+ min earns a little celebration with confetti; at lunch idle agents hold a sandwich; idle ones play ping-pong and foosball or chat at the water cooler; a request waiting 2+ min rings the desk phone; uncommitted files pile up as paper on the desk; the desk plant grows with the session's age (and wilts after a day asleep); every week a session gets a cake; a room where everyone works hangs a do-not-disturb sign; after 6pm empty or idle rooms turn their lights off; a janitor mops at night when nobody works; on Friday evenings the pizza arrives; newcomers step out of the elevator, next to a punch clock with today's arrivals; agents idle for a long time think funny thoughts.
 - **More of the office:** the meeting room TV shows one bar per subagent at work (hover for what each does), a notice board pins today's most edited files as post-its, and a trophy case holds your legend-tier achievements (with a crown for Legend of Legends). A game room under the team rooms has arcades, foosball, a pool table, an aquarium, a water cooler and bean bags; its newspaper rack, vending machine, easel and guestbook open the paper, the shop, the customise tab and the history, and the whiteboard opens the daily report.
-- **Walk around (Gather-style):** you're in the office too. Arrow keys walk, a click on the floor walks you there through the doors, walls stop you. Near an agent, a prop or a door, **Enter** talks, opens or enters. Turn it off in the ☰ menu.
-- **Trophy room:** a golden door in the game room (or the trophy shelf on the wall) leads to its own screen: a Hall of Fame with your legend trophies on lit pedestals in the middle and every other achievement on the wall shelves, locked ones as silhouettes.
+- **Walk around (Gather-style):** you're in the office too. WASD or the arrow keys walk, a click on the floor walks you there through the doors, walls stop you. Near an agent, a prop or a door, **Enter** talks, opens or enters. Turn it off in the ☰ menu.
+- **Trophy room:** a golden door in the game room (or the trophy shelf on the wall) leads to its own screen: a Hall of Fame with chandeliers, glass cabinets holding every achievement (locked ones as silhouettes), the legends large in a glass case under spotlights and the crown under a dome. Click a trophy for a card with its tier and progress.
 - **Make it yours:** ☰ → Customise: the office name (on a plaque by the elevator and in the top bar), the floor (wood, carpet, concrete, tiles), the walls (cream, mint, lavender, navy, brick) and the mascot (cat, dog or a little robot).
 - **Collect:** the weekly paper (The Office Times) tells the week from your history; achievement coins buy decor in the shop (plants, rug, neon, lamps, disco ball, a golden statue of the agent of the month, piano, fountain); a dog joins at 8 achievements at gold, a parrot at 16; ☰ → Office photo saves the scene as a PNG; the daily report shows your reply times. Something happens if you click the `</>` neon three times.
 - **The cat** visits whoever has been waiting on you the longest. You can pet it.

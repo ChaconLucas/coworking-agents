@@ -718,3 +718,12 @@ body.trophy-view #clashes, body.trophy-view #floors { display: none; }
 .me-tag { position: absolute; transform: translate(-50%, -100%); font: 700 9px/1 var(--pix); color: #2a1d27; background: #ffd84d; border: 2px solid #2a1d27; border-radius: 4px; padding: 2px 5px; pointer-events: none; white-space: nowrap; }
 .me-hint { position: absolute; transform: translateX(-50%); font: 600 11px/1.2 system-ui, sans-serif; color: #f4ecd8; background: rgba(20, 16, 26, .9); border: 2px solid #ffd84d; border-radius: 6px; padding: 3px 8px; pointer-events: none; white-space: nowrap; }
 .me-hint b { color: #ffd84d; font: 700 9px/1 var(--pix); margin-right: 4px; }
+.trophy-card { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; background: rgba(10, 8, 14, .55); }
+.trophy-card[hidden] { display: none; }
+.tc-box { display: grid; grid-template-columns: 128px 1fr; gap: 16px; align-items: center; width: min(460px, calc(100vw - 32px)); padding: 18px; background: #1b1622; border: 3px solid #d9a441; border-radius: 10px; box-shadow: 6px 6px 0 #0b0a0e, 0 0 30px rgba(255,216,77,.25); color: #f4ecd8; }
+.tc-box canvas { width: 128px; height: 128px; image-rendering: pixelated; background: radial-gradient(circle, rgba(255,216,77,.25), transparent 70%); border-radius: 8px; }
+.tc-box b { display: block; font: 700 14px/1.2 var(--pix); }
+.tc-box small { font: 700 10px/1 var(--pix); text-transform: uppercase; }
+.tc-box p { margin: 8px 0; font-size: 13px; color: #c9bba3; }
+.tc-box .ach-bar i { background: var(--c); }
+body.trophy-view .help { display: none; }

@@ -49,7 +49,8 @@ function updatePlayer(dt) {
   if (!playerOn || !data || trophyView) return;
   if (!me.ready || me.y > H) { Object.assign(me, { x: CX - 8, y: H - 24, ready: true }); }
   let dx = 0, dy = 0;
-  if (keysDown.has('ArrowLeft')) dx--; if (keysDown.has('ArrowRight')) dx++; if (keysDown.has('ArrowUp')) dy--; if (keysDown.has('ArrowDown')) dy++;
+  const k = c => keysDown.has(c);
+  if (k('ArrowLeft') || k('a')) dx--; if (k('ArrowRight') || k('d')) dx++; if (k('ArrowUp') || k('w')) dy--; if (k('ArrowDown') || k('s')) dy++;
   me.moving = false;
   if (dx || dy) {
     me.path = [];
@@ -68,7 +69,8 @@ function updatePlayer(dt) {
     }
     me.moving = true;
   }
-  if (me.moving) { followPlayer(); const now = Date.now(); if (now - (me.drawnAt || 0) > 90) { me.drawnAt = now; renderOverlay(); } } // the name tag follows you
+  if (me.moving) followPlayer();
+  placePlayerTag();
 }
 // the page scrolls to keep you on screen
 function followPlayer() {
@@ -100,19 +102,34 @@ function nearThing() {
   if (clockBox && near(clockBox.x + 5, clockBox.y + 14, 24)) return { label: T.clockIn, run: () => document.querySelector('[data-clock]') && document.querySelector('[data-clock]').click() };
   return null;
 }
-function playerTag() {
-  if (!playerOn || !data || trophyView || !me.ready) return '';
-  const n = nearThing();
-  return `<span class="me-tag" style="left:${(me.x + 8) * S}px;top:${(me.y - 4) * S}px">${esc(T.walk.you)}</span>` + (n ? `<span class="me-hint" style="left:${(me.x + 8) * S}px;top:${(me.y + 30) * S}px"><b>Enter ↵</b> ${esc(n.label.split('\n')[0])}</span>` : '');
+// the name tag and the Enter hint are two fixed elements moved every frame (no overlay rebuild)
+const meTag = document.createElement('span'), meHint = document.createElement('span');
+meTag.className = 'me-tag'; meHint.className = 'me-hint'; meTag.hidden = meHint.hidden = true;
+overlay.appendChild(meTag); overlay.appendChild(meHint);
+let lastHint = '';
+function placePlayerTag() {
+  const on = playerOn && data && !trophyView && me.ready;
+  meTag.hidden = !on; if (!on) { meHint.hidden = true; return; }
+  meTag.textContent = T.walk.you;
+  meTag.style.left = (me.x + 8) * S + 'px'; meTag.style.top = (me.y - 4) * S + 'px';
+  const n = nearThing(), label = n ? n.label.split('\n')[0] : '';
+  meHint.hidden = !n;
+  if (label !== lastHint) { lastHint = label; meHint.innerHTML = `<b>Enter ↵</b> ${esc(label)}`; }
+  if (n) { meHint.style.left = (me.x + 8) * S + 'px'; meHint.style.top = (me.y + 30) * S + 'px'; }
 }
+const playerTag = () => '';
 
 document.addEventListener('keydown', e => {
   if (!playerOn || trophyView || !reportEl.hidden || !searchEl.hidden) return;
+  if (document.querySelector('.talk:not([hidden])')) return;
   const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
-  if (e.key.startsWith('Arrow')) { keysDown.add(e.key); e.preventDefault(); achBump('steps'); }
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (key.startsWith('Arrow') || (!e.metaKey && !e.ctrlKey && !e.altKey && 'wasd'.includes(key) && key.length === 1)) {
+    keysDown.add(key); e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) achBump('steps');
+  }
   if (e.key === 'Enter') { const n = nearThing(); if (n) { e.preventDefault(); n.run(); } }
-});
-document.addEventListener('keyup', e => keysDown.delete(e.key));
+}, true);
+document.addEventListener('keyup', e => { keysDown.delete(e.key); keysDown.delete(e.key.toLowerCase()); });
 addEventListener('blur', () => keysDown.clear());
 // a click on bare floor walks you there
 overlay.addEventListener('click', e => {

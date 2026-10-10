@@ -30,7 +30,7 @@ function renderOverlay() {
     const A = T.ach;
     for (const h of trophyHits) {
       const title = h.a ? (h.a.secret && !h.a.tier ? `??? · ${A.secret}` : `${A.list[h.a.id].name} · ${A.tiers[h.a.tier]}\n${A.list[h.a.id].desc(h.a.next || h.a.steps[h.a.max - 1])}${h.a.next ? `\n${fmtStep(h.a, h.a.value)} / ${fmtStep(h.a, h.a.next)}` : ''}`) : h.title;
-      parts.push(`<div class="hit" title="${esc(title)}" style="left:${h.x * S}px;top:${h.y * S}px;width:${h.w * S}px;height:${h.h * S}px"></div>`);
+      parts.push(`<button class="wall-switch" ${h.a ? `data-trophy="${esc(h.a.id)}"` : ''} title="${esc(title)}" style="left:${h.x * S}px;top:${h.y * S}px;width:${h.w * S}px;height:${h.h * S}px"></button>`);
     }
     tags.push(`<div class="trophy-bar"><button class="btn small" data-leave-trophies>← ${esc(T.trophy.back)}</button><button class="btn small" data-tab="ach">${esc(T.trophy.list)}</button></div>`);
     const h = parts.join(''), g = tags.join('');
@@ -95,11 +95,11 @@ function renderOverlay() {
   box(trophyBox, 'data-trophyroom="1"', T.trophy.shelf);
   for (const g of gameHits) box(g, g.attr, g.title);
   { const working = data ? data.people.filter(p => !p.leaving && !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length : 0;
-    box(moodBox, '', T.mood[!working ? 'calm' : officeMood() === 'rush' ? 'rush' : 'normal']); }
+    box(moodBox, 'data-mood="1"', T.mood[!working ? 'calm' : officeMood() === 'rush' ? 'rush' : 'normal']); }
   box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
   box(neonBox, 'data-neon="1"', '</>');
-  box(noticeBox, '', T.noticeTitle + '\n' + (boardFiles.map(f => `${f.rel} · ${f.repo}${f.n > 1 ? ' · ' + f.n + '×' : ''}`).join('\n') || T.noticeNone));
-  box(tvBox, '', meetInfo.people.filter(m => !m.lead).map(m => m.title || m.label).join('\n'));
+  box(noticeBox, 'data-tab="today"', T.noticeTitle + '\n' + (boardFiles.map(f => `${f.rel} · ${f.repo}${f.n > 1 ? ' · ' + f.n + '×' : ''}`).join('\n') || T.noticeNone));
+  box(tvBox, 'data-tv="1"', meetInfo.people.filter(m => !m.lead).map(m => m.title || m.label).join('\n'));
   if (clockBox && data) { // first activity today of every conversation (from the daily report), earliest first
     const ins = clockIns().slice(0, 12);
     box(clockBox, 'data-clock="1"', T.clockIn + '\n' + (ins.map(x => `${new Date(x.first).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' })}  ${x.name || x.title || x.id.slice(0, 8)}`).join('\n') || T.clockNone)); }

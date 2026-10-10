@@ -36,6 +36,7 @@ shot 12 "lang=en&hour=21&date=05-05" docs/top-bar.png "" "1440 160"
 shot 12 "lang=en&hour=15&date=05-05" docs/work-site.png "arrivals.set(layout[layout.length - 1].p.id, Date.now() - 1200); lastLayoutKey = ''; renderAll()"
 shot 12 "lang=en&hour=21&date=05-05" docs/camera.png "showPerson(data.people[2].id)"
 shot 12 "lang=en&hour=21&date=05-05" docs/achievements.png "openReport('ach')"
+shot 12 "lang=en&hour=21&date=05-05" docs/trophy-room.png "setTrophyView(true)"
 shot 10 "lang=en&hour=21&date=12-20" docs/christmas.png
 shot 10 "lang=en&hour=17&date=10-31" docs/halloween.png
 agent-browser close >/dev/null 2>&1 || true
