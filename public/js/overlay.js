@@ -50,7 +50,12 @@ function renderOverlay() {
     if (a && a.mode !== 'desk' && a.mode !== 'walk') parts.push(`<div class="desk-hit" data-id="${esc(p.id)}" title="${esc(p.name)} · ${esc(T.states[p.state] || '')}" style="left:${Math.round(a.x) * S}px;top:${Math.round(a.y - 2) * S}px;width:${18 * S}px;height:${24 * S}px"></div>`);
   }
   // room signs and names of whoever is away from their desk
-  for (const R of rooms) tags.push(`<span class="room-sign" style="left:${(R.x + 12) * S}px;top:${(R.y - 1) * S}px;max-width:${(R.w - 16) * S}px" title="${esc(R.name)}">${esc(R.name)} <em>${R.people.length}</em></span>`);
+  for (const R of rooms) {
+    const g = roomGit(R), G = T.git;
+    const gitTxt = g ? `${g.dirty ? `<b class="g-dirty">●${g.dirty}</b>` : ''}${g.ahead ? `<b class="g-up">↑${g.ahead}</b>` : ''}${g.behind ? `<b class="g-down">↓${g.behind}</b>` : ''}` : '';
+    const gitTitle = g ? ' · ' + [g.dirty ? G.dirty(g.dirty) : G.clean, g.ahead ? G.ahead(g.ahead) : '', g.behind ? G.behind(g.behind) : ''].filter(Boolean).join(' · ') : '';
+    tags.push(`<span class="room-sign" style="left:${(R.x + 12) * S}px;top:${(R.y - 1) * S}px;max-width:${(R.w - 16) * S}px" title="${esc(R.name + gitTitle)}"><span class="rs-name">${esc(R.name)}</span> <em>${R.people.length}</em>${gitTxt}</span>`);
+  }
   for (const cell of layout) {
     const a = cell.actor;
     if (!a || a.mode === 'desk' || a.mode === 'walk' || a.mode === 'meet') continue;
@@ -76,4 +81,13 @@ function renderOverlay() {
   const h = parts.join(''), g = tags.join('');
   if (h !== lastHits) { hitsLayer.innerHTML = h; lastHits = h; }
   if (g !== lastTags) { tagsLayer.innerHTML = g; lastTags = g; }
+}
+
+// git state of a room: summed over its distinct checkouts (a room can hold a repo and its worktrees)
+function roomGit(R) {
+  const seen = new Map();
+  for (const p of R.people) if (p.git) seen.set((p.repo && (p.repo.worktree || p.repo.name)) || p.id, p.git);
+  if (!seen.size) return null;
+  const all = [...seen.values()];
+  return { dirty: all.reduce((n, g) => n + g.dirty, 0), ahead: Math.max(...all.map(g => g.ahead)), behind: Math.max(...all.map(g => g.behind)) };
 }

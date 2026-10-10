@@ -1,4 +1,5 @@
 'use strict';
+const { gitState } = require('./git');
 // Merges the sources (one per AI) and builds the office state.
 // Read-only: nothing here writes to the AIs' directories or talks to the network.
 
@@ -93,6 +94,7 @@ function person(s, now) {
     status: s.status, state: stateOf(s.status, st, now, s.pid), since: s.since, startedAt: s.startedAt,
     title: st ? st.title : '', cwd, branch: st ? st.branch : '',
     repo: repo ? { name: repo.name, path: repo.repo, worktree: repo.worktree, isWorktree: repo.isWorktree } : null,
+    git: repo ? gitState(repo.worktree) : null,
     model: st ? st.model : '', ctx: st ? st.ctx : 0, ctxMax: st ? st.ctxMax : 0, turns: st ? st.turns : 0,
     doing: pend ? { tool: pend.name, what: pend.what, kind: pend.kind, for: now - pend.ts, ask: pend.ask || '', options: pend.options || null, multi: !!pend.multi, qcount: pend.qcount || 0 } : null,
     timeline: st ? segments(st.events, now - 3600 * 1000, now, true) : [],

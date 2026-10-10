@@ -103,6 +103,7 @@ function renderPanel() {
     <h3>${P.where}</h3><dl>
       ${p.repo ? `<dt>${P.repo}</dt><dd>${esc(p.repo.name)}${p.repo.isWorktree ? ` <span class="note">(${P.worktree})</span>` : ''}</dd>` : ''}
       ${branch ? `<dt>${P.branch}</dt><dd><code>${esc(branch)}</code></dd>` : ''}
+      ${p.git ? `<dt>${esc(T.git.label)}</dt><dd>${esc([p.git.dirty ? T.git.dirty(p.git.dirty) : T.git.clean, p.git.ahead ? T.git.ahead(p.git.ahead) : '', p.git.behind ? T.git.behind(p.git.behind) : ''].filter(Boolean).join(' · '))}</dd>` : ''}
       ${p.cwd ? `<dt>${P.folder}</dt><dd><code class="path" title="${esc(p.cwd)}">${esc(p.cwd)}</code></dd>` : ''}
       ${p.model ? `<dt>${P.model}</dt><dd><code>${esc(p.model)}</code></dd>` : ''}
       <dt>${P.started}</dt><dd>${esc(ago(data.now - p.startedAt))} · ${P.turns}: ${Number(p.turns) || 0}</dd>

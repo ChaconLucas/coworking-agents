@@ -271,6 +271,14 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
 }
 
 (async () => {
+  // git state on the door: parsed from porcelain, read in the background, then in the snapshot
+  const git = require('../src/git');
+  assert.deepStrictEqual(git.parse('## main...origin/main [ahead 2, behind 1]\n M a.txt\n?? b.txt\n'), { dirty: 2, ahead: 2, behind: 1, upstream: true });
+  assert.deepStrictEqual(git.parse('## main\n'), { dirty: 0, ahead: 0, behind: 0, upstream: false });
+  fs.writeFileSync(path.join(repo, 'dirty.txt'), 'x');
+  { const wt = snapshot().people.find(p => p.id === 'A').repo.worktree; await git.refresh(wt); await git.refresh(wt); } // the first may be a read already in flight
+  assert.ok((snapshot().people.find(p => p.id === 'A').git || {}).dirty >= 1, 'an uncommitted file shows on the door');
+
   const hq = await start({ port: 0 });
   const port = hq.server.address().port, ck = { Cookie: 'cw=' + hq.token };
   for (const pth of ['/api/state', '/api/report', '/events', '/js/main.js', '/']) assert.strictEqual((await req(port, pth)).code, 401, 'no token: ' + pth);

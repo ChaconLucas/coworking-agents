@@ -31,6 +31,7 @@ function demoSnapshot() {
       title: TITLES[i % TITLES.length], cwd: `/home/dev/${REPOS[i % REPOS.length]}`, branch: i % 3 ? 'main' : `feat/${REPOS[i % REPOS.length]}-${i}`,
       repo: { name: REPOS[i % REPOS.length], path: `/home/dev/${REPOS[i % REPOS.length]}`, worktree: `/home/dev/${REPOS[i % REPOS.length]}`, isWorktree: false },
       model: agent === 'codex' ? 'gpt-5.5' : 'claude-opus-5-5', ctx: [42e3, 180e3, 810e3, 95e3, 320e3, 150e3, 88e3, 240e3, 30e3, 12e3][i % 10], turns: [12, 64, 30, 8, 51, 22, 5, 70, 3, 1][i % 10],
+      git: [{ dirty: 3, ahead: 2, behind: 0, upstream: true }, null, { dirty: 0, ahead: 0, behind: 1, upstream: true }, { dirty: 12, ahead: 0, behind: 0, upstream: false }][i % 4],
       usage: { input: 4e4 * (i + 1), output: 9e4 * (i + 2), cacheRead: 6e6 * (i + 1), cacheWrite: 4e5 * (i + 1) },
       doing, recent: doing ? [{ tool: doing.tool, what: doing.what, kind: doing.kind, ts: now - 3000 }, { tool: 'Read', what: 'README.md', kind: 'read', ts: now - 60000 }] : [],
       skills: i === 0 ? { 'frontend-design': 3, simplify: 1 } : i === 4 ? { 'web-research': 2 } : i === 2 ? { 'code-review': 1 } : {},

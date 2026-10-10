@@ -83,6 +83,11 @@ main { padding: 16px; display: flex; justify-content: center; overflow-x: auto; 
 
 .room-sign { position: absolute; transform: translateY(-50%); font: 700 10px/1 var(--pix); color: #2a1d27; background: #f4ecd8; border: 2px solid #2a1d27; border-radius: 3px; padding: 2px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .room-sign em { font-style: normal; color: #8f553f; }
+.room-sign:has(.rs-name) { display: inline-flex; align-items: center; gap: 3px; }
+.room-sign .rs-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.room-sign em, .room-sign b { flex: none; }
+.room-sign b { font-weight: 700; margin-left: 2px; }
+.room-sign .g-dirty { color: #c8761f; } .room-sign .g-up { color: #2f8f46; } .room-sign .g-down { color: #3b5dc9; }
 .away { position: absolute; transform: translate(-50%, -100%); font: 600 9px/1 var(--pix); color: #fff8ec; background: rgba(42, 29, 39, .82); padding: 2px 4px; border-radius: 2px; white-space: nowrap; pointer-events: none; }
 .floors { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; justify-content: center; }
 .floor { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; display: inline-flex; gap: 6px; align-items: center; max-width: 340px; }
