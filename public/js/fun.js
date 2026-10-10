@@ -160,10 +160,12 @@ function drawAgentOfMonth(x, y, t, glows) {
   if (top) Art.blit(Art.portrait(top.id), x + 2, y + 3);
   else pixText(x + 8, y + 9, '?', '#5a4a3a');
   if (((t / 220) | 0) % 9 === 0) r(x + 17, y + 1, 1, 1, '#ffffff');
-  pixText(x + 25, y + 1, 'AGENT', '#d9a441'); pixText(x + 25, y + 7, 'OF THE', '#d9a441'); pixText(x + 25, y + 13, 'MONTH', '#ffd84d');
-  if (top) pixText(x + 25, y + 19, Math.round(top.activeMs / 36e5) + 'H', '#c0cbdc');
+  // a dark plaque so the words read on the light wall
+  r(x + 22, y - 2, 29, 29, PAL.ink); r(x + 23, y - 1, 27, 27, '#2b2336'); r(x + 23, y - 1, 27, 1, '#d9a441'); r(x + 23, y + 25, 27, 1, '#8a6420');
+  pixText(x + 25, y + 1, 'AGENT', '#ffd84d'); pixText(x + 25, y + 7, 'OF THE', '#ffd84d'); pixText(x + 25, y + 13, 'MONTH', '#ffd84d');
+  if (top) { const hh = Math.round(top.activeMs / 36e5) + 'H'; r(x + 25, y + 19, 23, 1, '#4a3d5a'); pixText(x + 49 - hh.length * 4, y + 20, hh, '#ffffff'); }
   glows.push({ x: x + 10, y: y + 12, r: 22, c: '#ffd84d' });
-  aotmBox = { x: x - 1, y: y - 1, w: 50, h: 26 };
+  aotmBox = { x: x - 1, y: y - 2, w: 53, h: 29 };
 }
 let aotmBox = null;
 
