@@ -12,45 +12,46 @@ function usageGauges() {
   return out.slice(0, 4);
 }
 // 3x5 pixel font for the wall display
-const PIXFONT = { '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111', '6': '111100111101111', '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', '%': '101001010100101', 'H': '101101111101101', 'W': '101101101111101', 'K': '101101110101101', 'C': '111100100100111', 'L': '100100100100111', 'A': '010101111101101', 'U': '101101101101111', 'D': '110101101101110', 'E': '111100110100111', 'O': '111101101101111', 'X': '101101010101101', '5h': '' };
+const PIXFONT = { '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111', '6': '111100111101111', '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', '%': '101001010100101', 'H': '101101111101101', 'W': '101101101111101', 'K': '101101110101101', 'S': '111100111001111', 'M': '101111111101101', 'N': '110101101101101', 'I': '111010010010111', 'C': '111100100100111', 'L': '100100100100111', 'A': '010101111101101', 'U': '101101101101111', 'D': '110101101101110', 'E': '111100110100111', 'O': '111101101101111', 'X': '101101010101101', '5h': '' };
 function pixText(x, y, str, c) {
   let cx = x;
   for (const ch of String(str)) { const g = PIXFONT[ch]; if (g) for (let i = 0; i < 15; i++) if (g[i] === '1') r(cx + (i % 3), y + ((i / 3) | 0), 1, 1, c); cx += 4; }
   return cx - x;
 }
+// 7-segment LED digits (5x9 cells): a top, b top-right, c bottom-right, d bottom, e bottom-left, f top-left, g middle
+const SEG = { '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc', '5': 'afgcd', '6': 'afgedc', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg', '-': 'g' };
+function ledDigit(x, y, ch, on, off) {
+  const segs = SEG[ch] || '', S = (k, rx, ry, w, h) => { if (segs.includes(k)) r(x + rx, y + ry, w, h, on); }; // unlit segments stay dark: they made 7 read as 8
+  S('a', 1, 0, 3, 1); S('b', 4, 1, 1, 3); S('c', 4, 5, 1, 3); S('d', 1, 8, 3, 1); S('e', 0, 5, 1, 3); S('f', 0, 1, 1, 3); S('g', 1, 4, 3, 1);
+}
+function ledNumber(x, y, n, col) {
+  // right-aligned; blank leading cells draw nothing (no ghost "8"), unlit segments only faintly
+  const txt = String(Math.max(0, Math.min(100, Math.round(n)))).padStart(3, ' '), off = shade(col, .13);
+  for (let i = 0; i < 3; i++) if (txt[i] !== ' ') ledDigit(x + i * 6, y, txt[i], col, off);
+  // percent sign
+  r(x + 19, y + 1, 1, 1, col); r(x + 22, y + 1, 1, 1, col); r(x + 21, y + 2, 1, 2, col); r(x + 20, y + 4, 1, 2, col); r(x + 19, y + 6, 1, 1, col); r(x + 22, y + 7, 1, 1, col);
+}
 function drawUsageBoard(x, y, t) {
-  // one wall clock per AI: white face, rim in the AI colour, logo in the middle;
-  // long hand + coloured arc = 5-hour window, short hand = week; numbers on a plate below
+  // digital LED wall panel: one row per AI — logo, name, 5H and WEEK in big glowing digits
   const L = (data && data.limits) || {}, all = Object.keys(AGENT).filter(id => L[id] && (L[id].primary || L[id].secondary));
-  const PER = 3, pages = Math.max(1, Math.ceil(all.length / PER)), page = Math.floor(t / 5000) % pages;
-  const ids = all.slice(page * PER, page * PER + PER), slot = 50;
-  const w = Math.max(1, ids.length) * slot, h = 46;
+  const PER = 2, pages = Math.max(1, Math.ceil(all.length / PER)), page = Math.floor(t / 5000) % pages;
+  const ids = all.slice(page * PER, page * PER + PER);
+  const w = 112, rowH = 13, h = 8 + Math.max(1, ids.length) * rowH;
   usageBox = { x, y, w, h };
-  const lvl = p => p > 85 ? '#e43b44' : p > 60 ? '#f0a020' : '#3fae4a';
+  const lvl = p => p > 85 ? '#ff4d57' : p > 60 ? '#ffc23a' : '#62ff7a';
+  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#2a2f45'); r(x, y, w, h, '#06070c');
+  const c1 = x + 54, c2 = x + 82;
+  pixText(c1 + 4, y + 2, '5H', '#6e7894'); pixText(c2 + 2, y + 2, 'SEM', '#6e7894');
   ids.forEach((id, i) => {
-    const a = AGENT[id], l = L[id], cx = x + i * slot + slot / 2, cy = y + 14, R = 13;
-    const p5 = l.primary ? Math.max(0, Math.min(100, l.primary.usedPercent)) : 0, pw = l.secondary ? Math.max(0, Math.min(100, l.secondary.usedPercent)) : 0;
-    for (let yy = -R - 2; yy <= R + 2; yy++) for (let xx = -R - 2; xx <= R + 2; xx++) {
-      const d = Math.hypot(xx, yy);
-      if (d > R + 2.2) continue;
-      let c = d > R + 1.2 ? PAL.ink : d > R - .8 ? a.color : '#f7f3ea';
-      if (d <= R - .8 && d > R - 3.2) { // usage arc (clockwise from 12)
-        const ang = (Math.atan2(xx, -yy) / (Math.PI * 2) + 1) % 1;
-        if (ang * 100 <= p5) c = lvl(p5);
-      }
-      r(cx + xx, cy + yy, 1, 1, c);
-    }
-    for (let k = 0; k < 12; k++) { const an = k / 12 * Math.PI * 2; r(Math.round(cx + Math.sin(an) * (R - 4.5)), Math.round(cy - Math.cos(an) * (R - 4.5)), 1, 1, k % 3 ? '#c9c2b4' : '#2a1d27'); }
-    const hand = (pct, len, col) => { const an = pct / 100 * Math.PI * 2; for (let k = 1; k <= len; k++) r(Math.round(cx + Math.sin(an) * k), Math.round(cy - Math.cos(an) * k), 1, 1, col); };
-    hand(pw, 5, '#2a1d27'); hand(p5, 9, lvl(p5)); r(cx - 1, cy - 1, 2, 2, PAL.ink);
-    // plate: AI logo on the left, 5H and WK values stacked on the right
-    const px0 = cx - 21, py0 = y + 30;
-    r(px0 - 1, py0 - 1, 44, 16, PAL.ink); r(px0, py0, 42, 14, '#1b1f30');
-    ctx.drawImage(Art.aiIcon(id, a.color), px0 + 1, py0 - 1 + 0);
-    pixText(px0 + 18, py0 + 2, '5H', '#8b9bb4'); pixText(px0 + 28, py0 + 2, Math.round(p5) + '%', lvl(p5));
-    pixText(px0 + 18, py0 + 8, 'WK', '#8b9bb4'); pixText(px0 + 28, py0 + 8, Math.round(pw) + '%', lvl(pw));
+    const a = AGENT[id], l = L[id], ry = y + 8 + i * rowH;
+    if (i) r(x + 3, ry - 2, w - 6, 1, '#151a28');
+    ctx.drawImage(Art.aiIcon(id, a.color), x + 2, ry - 2);
+    pixText(x + 19, ry + 2, a.label.split(' ')[0].toUpperCase().slice(0, 7), a.color);
+    if (l.primary) { const v = l.primary.usedPercent; ledNumber(c1, ry, v, lvl(v)); }
+    if (l.secondary) { const v = l.secondary.usedPercent; ledNumber(c2, ry, v, lvl(v)); }
   });
-  if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h + 1, 2, 1, k === page ? '#2a1d27' : '#c9c2b4');
+  if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h - 2, 2, 1, k === page ? '#ffffff' : '#2a2f45');
+  if (!ids.length) pixText(x + 40, y + 10, '--', '#2a2f45');
 }
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
