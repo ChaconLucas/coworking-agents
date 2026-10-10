@@ -288,10 +288,11 @@ body.talk-open .help { display: none; }
 @media (max-width: 900px) { .bar .counts .stat small { display: none; } }
 
 /* ---- camera focus on an agent + panel entrance ---- */
-#office { transition: transform .6s cubic-bezier(.2,.8,.2,1); }
-#office.cam { transform: scale(1.22); }
+#office { transition: transform .9s cubic-bezier(.2,.8,.15,1); will-change: transform; }
+#office.cam { z-index: 4; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+main:has(#office.cam) { overflow: visible; }
 .spot { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .5s ease; z-index: 3;
-  background: radial-gradient(circle at var(--sx, 50%) var(--sy, 50%), transparent 0 90px, rgba(6, 4, 12, .62) 190px); }
+  background: radial-gradient(circle at var(--sx, 50%) var(--sy, 50%), transparent 0 var(--r, 60px), rgba(6, 4, 12, .7) calc(var(--r, 60px) * 2.4)); }
 .spot.on { opacity: 1; }
 .panel:not([hidden]) { animation: panelIn .38s cubic-bezier(.2,.9,.3,1) both; }
 @keyframes panelIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }

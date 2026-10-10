@@ -255,7 +255,7 @@ function showPerson(id) {
   if (f >= 0 && f !== floor) goFloor(f); else if (building) setBuilding(false);
   selected = id; renderOverlay(); renderPanel();
   const tag = document.querySelector(`.tag[data-id="${CSS.escape(id)}"]`);
-  if (tag) tag.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (tag) tag.scrollIntoView({ block: 'center' }); // jump first, then the camera flies in
   camera(id);
 }
 
@@ -266,11 +266,23 @@ spot.className = 'spot';
 officeEl.appendChild(spot);
 function camera(id) {
   const cell = id && layout.find(c => c.p.id === id);
-  if (!cell) { officeEl.classList.remove('cam'); spot.classList.remove('on'); return; }
-  const a = cell.actor && cell.actor.mode !== 'desk' ? cell.actor : null;
-  const cx = (a ? a.x + 8 : cell.x + CELL_W / 2) * S, cy = (a ? a.y + 12 : cell.y + 46) * S;
+  if (!cell) { officeEl.classList.remove('cam'); officeEl.style.transform = ''; spot.classList.remove('on'); return; }
+  const act = cell.actor && cell.actor.mode !== 'desk' ? cell.actor : null;
+  // the point to fly to: the agent's face at the monitor (or wherever they are)
+  const cx = (act ? act.x + 8 : cell.x + CELL_W / 2) * S, cy = (act ? act.y + 10 : cell.y + 40) * S;
+  // land it in the middle of what's visible next to the side panel
+  officeEl.classList.remove('cam'); officeEl.style.transform = '';
+  const box = officeEl.getBoundingClientRect();
+  const panelW = window.innerWidth > 720 ? Math.min(420, window.innerWidth) : 0;
+  const tx = (window.innerWidth - panelW) / 2 - box.left, ty = window.innerHeight * .52 - box.top;
+  const k = Math.max(2, Math.min(3, 520 / (CELL_W * S) * 2.2));
+  // zoom and tilt around the agent itself, then slide that point to the visible centre
   officeEl.style.transformOrigin = `${cx}px ${cy}px`;
-  spot.style.setProperty('--sx', cx + 'px'); spot.style.setProperty('--sy', cy + 'px');
-  officeEl.classList.add('cam'); spot.classList.add('on');
+  void officeEl.offsetWidth; // restart the transition from the untransformed state
+  officeEl.classList.add('cam');
+  officeEl.style.transform = `translate(${tx - cx}px, ${ty - cy}px) perspective(1400px) rotateX(9deg) scale(${k})`;
+  spot.style.setProperty('--sx', cx + 'px'); spot.style.setProperty('--sy', cy + 'px'); spot.style.setProperty('--r', (70 / k * 1.6) + 'px');
+  spot.classList.add('on');
   panelBody.classList.add('enter'); setTimeout(() => panelBody.classList.remove('enter'), 900);
 }
+window.addEventListener('resize', () => { if (selected && officeEl.classList.contains('cam')) camera(selected); });
