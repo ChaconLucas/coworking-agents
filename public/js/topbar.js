@@ -48,6 +48,7 @@ function renderBar() {
   }
   document.getElementById('btn-lang').textContent = T.lang;
   { const rb = document.getElementById('btn-replay'); rb.title = T.replay.title; rb.querySelector('.sr').textContent = T.replay.title; rb.setAttribute('aria-pressed', !replayEl.hidden); }
+  renderFocus();
   { const sb = document.getElementById('btn-search'); sb.title = T.keys.searchTitle; sb.querySelector('.sr').textContent = T.keys.searchTitle; }
   renderUsagePill();
 
@@ -56,8 +57,13 @@ function renderBar() {
 
 // ---------------- notifications ----------------
 let prevStates = new Map(), audio = null;
+// focus mode: sounds and system notifications pause for a while (toasts and the office keep going)
+let focusUntil = Number(store.get('focusUntil', 0)) || 0;
+const focusing = () => focusUntil > Date.now();
+const FOCUS_STEPS = [25, 50]; // minutes; each click goes to the next, then off
+const lastSeen = new Map(); // id → last known person, to name who left
 function beep(urgent) {
-  if (!soundOn) return;
+  if (!soundOn || focusing()) return;
   try {
     audio = audio || new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
@@ -70,7 +76,7 @@ function beep(urgent) {
 // a little chiptune per event: request (two rising beeps), done (soft chime), arrival (three notes up), leaving (two notes down)
 const TUNES = { need: [[880, 0], [1175, .12]], done: [[784, 0], [1047, .1]], arrive: [[523, 0], [659, .09], [784, .18]], leave: [[659, 0], [440, .12]], limit: [[440, 0], [440, .18], [440, .36]] };
 function playTune(kind) {
-  if (!soundOn || !TUNES[kind]) return;
+  if (!soundOn || focusing() || !TUNES[kind]) return;
   try {
     audio = audio || new AudioContext();
     for (const [freq, at] of TUNES[kind]) {
@@ -82,8 +88,23 @@ function playTune(kind) {
   } catch {}
 }
 
+// activity feed: what happened, kept in this browser for 24h (a per-viewer convenience, not shared state)
+const FEED_MAX = 300, FEED_MS = 24 * 36e5;
+let feed = store.get('feed', []);
+if (!Array.isArray(feed)) feed = [];
+function logEvent(kind, p) {
+  feed.push({ at: Date.now(), kind, id: p.id, name: p.name, title: p.title || '', agent: p.agent });
+  feed = feed.filter(e => Date.now() - e.at < FEED_MS).slice(-FEED_MAX);
+  store.set('feed', feed);
+  if (!reportEl.hidden && reportTab === 'feed') renderReport();
+}
+
 function notifyChanges() {
   const ids = new Set(data.people.filter(p => !p.leaving).map(p => p.id));
+  if (prevStates.size && !replayAt) {
+    for (const p of data.people) if (!p.leaving && !prevStates.has(p.id)) logEvent('arrive', p);
+    for (const [id] of prevStates) if (!ids.has(id)) { const g = data.people.find(x => x.id === id) || lastSeen.get(id); if (g) logEvent('leave', g); lastSeen.delete(id); }
+  }
   if (prevStates.size) {
     if ([...ids].some(id => !prevStates.has(id))) playTune('arrive');
     else if ([...prevStates.keys()].some(id => !ids.has(id))) playTune('leave');
@@ -94,15 +115,17 @@ function notifyChanges() {
       const urgent = p.state === 'needs_you' || p.state === 'waiting';
       const done = p.state === 'idle' && !['idle', 'asleep'].includes(before);
       if (done) doneUntil.set(p.id, Date.now() + 9000);
+      if ((urgent || done) && !replayAt) logEvent(done ? 'done' : p.state, p);
       if (urgent || done) {
         playTune(urgent ? 'need' : 'done');
-        if (notifyOn && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
+        if (notifyOn && !focusing() && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
           try { new Notification(`${p.name} ${T.states[p.state]}`, { body: p.title || '', tag: p.id }); } catch {}
         }
       }
     }
   }
   prevStates = new Map(data.people.filter(p => !p.leaving).map(p => [p.id, p.state]));
+  for (const p of data.people) if (!p.leaving) lastSeen.set(p.id, p);
 }
 
 // ask for notification permission right away; browsers that need a gesture get asked on the first click
@@ -128,3 +151,20 @@ document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store
 document.getElementById('btn-search').onclick = () => openSearch();
 document.getElementById('btn-replay').onclick = () => toggleReplay(replayEl.hidden);
 document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };
+
+function renderFocus() {
+  const b = document.getElementById('btn-focus'), left = b.querySelector('.focus-left'), on = focusing();
+  const mins = on ? Math.ceil((focusUntil - Date.now()) / 60000) : 0;
+  b.setAttribute('aria-pressed', on);
+  b.title = on ? T.focus.on(mins) : T.focus.off; b.querySelector('.sr').textContent = b.title;
+  left.hidden = !on; left.textContent = on ? mins + 'm' : '';
+}
+document.getElementById('btn-focus').onclick = () => {
+  const cur = focusing() ? Math.round((focusUntil - Date.now()) / 60000) : 0;
+  const next = FOCUS_STEPS.find(m => m > cur + 1); // 25 → 50 → off
+  focusUntil = next ? Date.now() + next * 60000 : 0;
+  store.set('focusUntil', focusUntil);
+  if (!focusUntil) toast(`<b>${esc(T.focus.ended)}</b>`, 'ok');
+  renderFocus();
+};
+setInterval(() => { if (focusUntil && !focusing()) { focusUntil = 0; store.set('focusUntil', 0); toast(`<b>${esc(T.focus.ended)}</b>`, 'ok'); } renderFocus(); }, 20000);

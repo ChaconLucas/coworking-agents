@@ -131,7 +131,8 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 | `1`–`9` | open the n-th agent |
 | `N` | next agent that needs you (opens its talk modal) |
 | `/` | quick search by name, title, repository or state |
-| `R` / `D` | usage report / daily report |
+| `R` / `D` / `A` | usage report / daily report / history |
+| `F` | focus mode: mute sounds and notifications for 25 min (again: 50, again: off) |
 | `H` | replay the last hour (scrub or play) |
 | `L` | ceiling lights on/off |
 | `B` | building view (when there are floors) |
@@ -141,6 +142,11 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Real weather (opt-in):** click a window; the browser asks for your location and, if you allow it, fetches the current weather from Open-Meteo directly (coordinates rounded to ~1 km). Off by default; nothing goes through the server.
 - **Same file:** a red banner when two sessions edit the same file, not just the same repository.
 - **New certificates** are hung on the partition with a little animation.
+- **Git on the door:** each room sign shows uncommitted files (●), commits to push (↑) and to pull (↓), read with `git status` in the background (no fetch).
+- **Waiting too long:** one reminder when an agent has waited 5 minutes for your answer or approval.
+- **History:** arrivals, departures, requests and finished work from the last 24 hours (kept in your browser).
+- **Daily report as Markdown:** one click copies it, ready for a standup.
+- **Focus mode:** sounds and system notifications pause for 25 or 50 minutes; the office keeps updating.
 - **Estimated cost:** each session's panel and the usage report show what the tokens would cost at the official API list prices (table in `src/prices.js`, dated; add or override models in `~/.config/coworking-agents/prices.json`). Priced per reply, with Claude's 1-hour/5-minute cache-write split. Models without a published price are listed as such, never guessed. On a subscription this is not what you pay.
 
 ## Platforms

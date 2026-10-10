@@ -44,6 +44,8 @@ document.addEventListener('keydown', e => {
   else if (k === '/') { e.preventDefault(); openSearch(); }
   else if (k === 'r' || k === 'R') openReport();
   else if (k === 'd' || k === 'D') openReport('today');
+  else if (k === 'a' || k === 'A') openReport('feed');
+  else if (k === 'f' || k === 'F') document.getElementById('btn-focus').click();
   else if (k === 'l' || k === 'L') { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); }
   else if (k === 'b' || k === 'B') { if (floors.length > 1) setBuilding(!building); }
   else if (k === 'h' || k === 'H') toggleReplay(replayEl.hidden);

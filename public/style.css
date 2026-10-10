@@ -611,3 +611,6 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 .rhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .rhead .sub { margin: 0; }
 .btn.small { font: 700 10px/1 var(--pix); padding: 8px 10px; border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 6px; }
+.list.feed .feed-h { display: block; font: 700 10px/1 var(--pix); color: var(--muted); padding: 10px 0 4px; border: 0; }
+.list.feed li[data-feed-id] { cursor: pointer; }
+.icon-btn .focus-left { position: absolute; right: -6px; bottom: -7px; font: 700 8px/1 var(--pix); font-style: normal; background: #1b1622; color: #ffd84d; border: 1px solid var(--edge); border-radius: 3px; padding: 2px 3px; }

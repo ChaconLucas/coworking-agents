@@ -41,7 +41,28 @@ let reportTab = 'usage', todayData = null;
 function openReport(tab) { reportTab = tab || 'usage'; reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
 async function loadToday() { try { todayData = await fetch('api/report').then(r => r.json()); } catch {} if (!reportEl.hidden) renderReport(); }
 reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; if (reportTab === 'today') loadToday(); renderReport(); } });
-function tabsHtml() { return `<div class="rtabs"><button data-tab="usage" class="${reportTab === 'usage' ? 'on' : ''}">${esc(T.usage.title)}</button><button data-tab="today" class="${reportTab === 'today' ? 'on' : ''}">${esc(T.today.title)}</button></div>`; }
+function tabsHtml() { return `<div class="rtabs">${[['usage', T.usage.title], ['today', T.today.title], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
+// activity feed: newest first, grouped by hour
+function renderFeed() {
+  const F = T.feed, body = reportEl.querySelector('.report-body');
+  const ICON = { arrive: ['→', '#63c74d'], leave: ['←', '#8b9bb4'], done: ['✓', '#2ce8f5'], needs_you: ['?', '#e43b44'], waiting: ['!', '#feae34'] };
+  const list = [...feed].reverse();
+  const clock = ts => new Date(ts).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' });
+  let lastHour = '';
+  const rows = list.map(e => {
+    const h = new Date(e.at).getHours() + 'h', [ic, c] = ICON[e.kind] || ['•', '#888'];
+    const sep = h !== lastHour ? `<li class="feed-h">${esc(h === new Date().getHours() + 'h' ? F.thisHour : h)}</li>` : '';
+    lastHour = h;
+    return `${sep}<li data-feed-id="${esc(e.id)}"><span class="k" style="color:${c}">${ic}</span><span><b>${esc(e.name)}</b> ${esc(F.kinds[e.kind] || e.kind)}${e.title ? `<br><span class="note">${esc(e.title)}</span>` : ''}</span><span class="t">${esc(clock(e.at))}</span></li>`;
+  }).join('');
+  body.innerHTML = tabsHtml() + `<div class="rhead"><p class="sub">${esc(F.sub)}</p>${list.length ? `<button class="btn small" data-feed-clear>${esc(F.clear)}</button>` : ''}</div>
+    ${list.length ? `<ul class="list feed">${rows}</ul>` : `<p class="note">${esc(F.empty)}</p>`}`;
+}
+reportEl.addEventListener('click', e => {
+  if (e.target.closest('[data-feed-clear]')) { feed = []; store.set('feed', feed); renderFeed(); return; }
+  const li = e.target.closest('[data-feed-id]');
+  if (li && data.people.some(p => p.id === li.dataset.feedId && !p.leaving)) { closeReport(); showPerson(li.dataset.feedId); }
+});
 function renderToday() {
   const D = T.today, r = todayData, body = reportEl.querySelector('.report-body');
   const hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
@@ -75,6 +96,7 @@ function closeReport() { reportEl.hidden = true; }
 
 function renderReport() {
   if (reportTab === 'today') return renderToday();
+  if (reportTab === 'feed') return renderFeed();
   const U = T.usage, u = usageData, body = reportEl.querySelector('.report-body'), L = (data && data.limits) || {};
   const tok = n => fmtK(Math.round(Number(n) || 0));
   const card = id => {

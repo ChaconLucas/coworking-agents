@@ -23,7 +23,7 @@ function toast(html, kind) {
 }
 function notifyOS(title, body) {
   playTune('limit');
-  if (notifyOn && 'Notification' in window && Notification.permission === 'granted' && document.hidden) { try { new Notification(title, { body }); } catch {} }
+  if (notifyOn && !focusing() && 'Notification' in window && Notification.permission === 'granted' && document.hidden) { try { new Notification(title, { body }); } catch {} }
 }
 
 function checkAlerts() {
