@@ -38,8 +38,8 @@ function renderBar() {
   document.title = (c.need ? `(${c.need}) ` : '') + 'coworking-agents';
   const box = document.getElementById('clashes');
   const names = id => (data.people.find(p => p.id === id) || {}).name || id.slice(0, 6);
-  box.innerHTML = data.clashes.map(cl => `<div>${T.clash(cl.who.map(names).map(esc).join(T.and), esc(cl.repo))}</div>`).join('');
-  box.hidden = !data.clashes.length;
+  box.innerHTML = (data.fileClashes || []).map(cl => `<div>${T.fileClash(cl.who.map(names).map(esc).join(T.and), esc(cl.file), esc(cl.repo))}</div>`).join('') + data.clashes.map(cl => `<div>${T.clash(cl.who.map(names).map(esc).join(T.and), esc(cl.repo))}</div>`).join('');
+  box.hidden = !data.clashes.length && !(data.fileClashes || []).length;
   const empty = document.getElementById('empty');
   empty.innerHTML = T.empty; empty.hidden = data.people.length > 0;
   for (const [id, on, label] of [['btn-notify', !!notifyOn, T.notify], ['btn-sound', soundOn, T.sound]]) {
@@ -47,6 +47,7 @@ function renderBar() {
     b.setAttribute('aria-pressed', on); b.title = `${label.replace(/^\S+\s/, '')}: ${on ? T.on : T.off}`; b.querySelector('.sr').textContent = b.title;
   }
   document.getElementById('btn-lang').textContent = T.lang;
+  { const sb = document.getElementById('btn-search'); sb.title = T.keys.searchTitle; sb.querySelector('.sr').textContent = T.keys.searchTitle; }
   renderUsagePill();
 
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
@@ -103,4 +104,5 @@ document.getElementById('btn-notify').onclick = async () => {
   notifyOn = !notifyOn; store.set('notify', notifyOn); renderBar();
 };
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
+document.getElementById('btn-search').onclick = () => openSearch();
 document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };

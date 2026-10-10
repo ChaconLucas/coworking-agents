@@ -37,10 +37,27 @@ reportEl.innerHTML = '<div class="report-box" role="dialog" aria-modal="true"><b
 document.body.appendChild(reportEl);
 reportEl.addEventListener('click', e => { if (e.target === reportEl || e.target.closest('.report-x')) closeReport(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !reportEl.hidden) { e.stopPropagation(); closeReport(); } }, true);
-function openReport() { reportEl.hidden = false; renderReport(); loadUsage(true); }
+let reportTab = 'usage', todayData = null;
+function openReport(tab) { reportTab = tab || 'usage'; reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
+async function loadToday() { try { todayData = await fetch('api/report').then(r => r.json()); } catch {} if (!reportEl.hidden) renderReport(); }
+reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; if (reportTab === 'today') loadToday(); renderReport(); } });
+function tabsHtml() { return `<div class="rtabs"><button data-tab="usage" class="${reportTab === 'usage' ? 'on' : ''}">${esc(T.usage.title)}</button><button data-tab="today" class="${reportTab === 'today' ? 'on' : ''}">${esc(T.today.title)}</button></div>`; }
+function renderToday() {
+  const D = T.today, r = todayData, body = reportEl.querySelector('.report-body');
+  const hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
+  if (!r) { body.innerHTML = tabsHtml() + `<p class="note">${esc(D.loading)}</p>`; return; }
+  const t = r.totals, max = Math.max(1, ...r.rows.map(x => x.activeMs));
+  body.innerHTML = tabsHtml() + `<p class="sub">${esc(D.sub)}</p>
+    <div class="ltiles">${[[hrs(t.activeMs), D.active], [t.sessions, D.sessions], [t.tools, D.tools], [t.files, D.files], [fmtK(t.outTokens), D.tokens]].map(([v, l]) => `<div class="ltile" style="--c:#2ce8f5"><div class="ltop"><span>${esc(l)}</span></div><b>${esc(String(v))}</b></div>`).join('')}</div>
+    <h3>${esc(D.who)}</h3>
+    <ul class="bars today-list">${r.rows.map(x => `<li><code title="${esc(x.title)}"><i class="ailogo" data-ai="${esc(x.agent)}"></i>${esc(x.name || x.title || x.id.slice(0, 8))}</code><span class="tbar"><i style="width:${(x.activeMs / max * 100).toFixed(1)}%;background:${(AGENT[x.agent] || {}).color || '#888'}"></i></span><span class="t">${esc(hrs(x.activeMs))} · ${Number(x.tools) || 0} ${esc(D.toolsShort)} · ${fmtK(x.outTokens)}</span></li>`).join('')}</ul>
+    ${r.topFiles.length ? `<h3>${esc(D.filesTop)}</h3><ul class="list">${r.topFiles.map(f => `<li><span class="k">✎</span><code>${esc(f.rel)}</code><span class="t">${esc(f.repo)}${f.n > 1 ? ' · ' + f.n + '×' : ''}</span></li>`).join('')}</ul>` : ''}`;
+  body.querySelectorAll('.ailogo[data-ai]').forEach(el => { const id = el.dataset.ai; el.appendChild(Art.aiIconEl(id, (AGENT[id] || {}).color || '#888')); });
+}
 function closeReport() { reportEl.hidden = true; }
 
 function renderReport() {
+  if (reportTab === 'today') return renderToday();
   const U = T.usage, u = usageData, body = reportEl.querySelector('.report-body'), L = (data && data.limits) || {};
   const tok = n => fmtK(Math.round(Number(n) || 0));
   const card = id => {
@@ -67,7 +84,7 @@ function renderReport() {
   };
   const tiles = Object.keys(AGENT).flatMap(id => { const l = L[id]; return l ? [limTile(id, U.fiveHour, l.primary), limTile(id, U.week, l.secondary)] : []; }).join('');
   const total = id => u && u.byAgent && u.byAgent[id] ? u.byAgent[id].total : null;
-  body.innerHTML = `<h2>${esc(U.title)}</h2><p class="sub">${esc(U.reportSub)}${u && u.scannedAt ? ' · ' + esc(U.updated) + ' ' + esc(ago(Date.now() - u.scannedAt)) : ''}</p>
+  body.innerHTML = tabsHtml() + `<h2 hidden>${esc(U.title)}</h2><p class="sub">${esc(U.reportSub)}${u && u.scannedAt ? ' · ' + esc(U.updated) + ' ' + esc(ago(Date.now() - u.scannedAt)) : ''}</p>
     <h3>${esc(U.limits)}</h3><div class="ltiles">${tiles || `<p class="note">${esc(U.none)}</p>`}</div>
     <h3>${esc(U.last14)}</h3><div class="chart-wrap"><span class="ymax">${tok(max)}</span>${chart}</div>
     <h3>${esc(U.allTime)}</h3><div class="rgrid">${Object.keys(AGENT).map(card).join('')}</div>

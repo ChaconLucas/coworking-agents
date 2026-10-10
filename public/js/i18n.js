@@ -10,6 +10,8 @@ const I18N = {
       tokens: 'Tokens das sessões abertas', outToday: 'gerados hoje', out: 'gerados', in: 'enviados', cache: 'cache lido', outShort: 'ger.', inShort: 'env.', session: 'Tokens desta sessão',
       weekShort: 'sem', todayShort: 'hoje', open: 'Abrir relatório de uso', allTime: 'Desde sempre', limits: 'Limites', conversations: 'conversas no disco', last14: 'Tokens gerados nos últimos 14 dias', reportSub: 'Somado de todas as conversas guardadas no disco', updated: 'atualizado há', scanning: 'Somando o histórico… (alguns segundos na primeira vez)', noCost: 'Custo em dinheiro não aparece: depende do seu plano.',
       note: '“Gerados” = escritos pela IA; “enviados” = entrada nova; “cache lido” = contexto reaproveitado (mais barato).' },
+    today: { title: 'Relatório do dia', sub: 'Desde a meia-noite, somando sessões abertas e já fechadas', loading: 'Somando o dia…', active: 'tempo ativo', sessions: 'sessões', tools: 'ferramentas', files: 'arquivos', tokens: 'tokens gerados', who: 'Quem trabalhou mais', toolsShort: 'ferr.', filesTop: 'Arquivos mais mexidos' },
+    keys: { search: 'Buscar agente, repositório ou estado…', searchTitle: 'Buscar (/)', none: 'Nada encontrado', noneNeed: 'Ninguém precisa de você agora', helpTitle: 'Atalhos', help: '1–9 abre um agente · N próximo que precisa de você · / busca · R uso · D relatório do dia · L luzes · B prédio · Esc fecha' },
     alerts: { limit: n => `Limite em ${n}%`, context: n => `Contexto em ${n}%`, compact: 'Compactar', compactTitle: n => `Contexto em ${n}%: envia /compact para resumir a conversa e liberar espaço`, compacting: 'Compactando…', compactFail: 'Não deu para compactar' },
     talk: { yourTurnWhy: 'Ele terminou o que você pediu e está esperando a sua próxima mensagem. Não é um pedido de aprovação.',
       pickHint: 'Clique numa opção: a escolha vai direto para a aba dele, como apertar o número no terminal.',
@@ -22,6 +24,7 @@ const I18N = {
     notify: '🔔 Avisos', sound: '🔊 Som', lights: 'Luzes do escritório', restRoom: 'Descanso', on: 'ligado', off: 'desligado', lang: 'EN',
     empty: 'Nenhuma sessão de IA aberta agora. Abra o <code>claude</code> ou o <code>codex</code> num terminal e ela aparece aqui.',
     offline: 'Sem conexão com o coworking-agents. Tentando de novo…',
+    fileClash: (who, file, repo) => `<b>Mesmo arquivo:</b> ${who} estão editando <b>${file}</b> em ${repo}. Risco de um sobrescrever o outro.`,
     clash: (who, repo) => `<b>Atenção:</b> ${who} estão editando o mesmo clone <b>${repo}</b>. Commitem cedo ou usem worktrees.`,
     and: ' e ',
     states: {
@@ -69,6 +72,8 @@ const I18N = {
       tokens: 'Tokens of open sessions', outToday: 'out today', out: 'output', in: 'input', cache: 'cache read', outShort: 'out', inShort: 'in', session: 'Tokens of this session',
       weekShort: 'wk', todayShort: 'today', open: 'Open usage report', allTime: 'All time', limits: 'Limits', conversations: 'conversations on disk', last14: 'Output tokens, last 14 days', reportSub: 'Summed from every conversation stored on disk', updated: 'updated', scanning: 'Adding up history… (a few seconds the first time)', noCost: "No money cost shown: it depends on your plan.",
       note: '“Output” = written by the AI; “input” = new input; “cache read” = reused context (cheaper).' },
+    today: { title: 'Daily report', sub: 'Since midnight, open and closed sessions', loading: 'Adding up the day…', active: 'active time', sessions: 'sessions', tools: 'tools', files: 'files', tokens: 'output tokens', who: 'Who worked most', toolsShort: 'tools', filesTop: 'Most touched files' },
+    keys: { search: 'Search agent, repository or state…', searchTitle: 'Search (/)', none: 'Nothing found', noneNeed: 'Nobody needs you right now', helpTitle: 'Shortcuts', help: '1–9 open an agent · N next that needs you · / search · R usage · D daily report · L lights · B building · Esc closes' },
     alerts: { limit: n => `Limit at ${n}%`, context: n => `Context at ${n}%`, compact: 'Compact', compactTitle: n => `Context at ${n}%: sends /compact to summarise the conversation and free space`, compacting: 'Compacting…', compactFail: "Couldn't compact" },
     talk: { yourTurnWhy: "It finished what you asked and is waiting for your next message. This isn't an approval request.",
       pickHint: 'Click an option: it goes straight to its tab, like pressing the number in the terminal.',
@@ -81,6 +86,7 @@ const I18N = {
     notify: '🔔 Alerts', sound: '🔊 Sound', lights: 'Office lights', restRoom: 'Rest room', on: 'on', off: 'off', lang: 'PT',
     empty: 'No AI sessions open right now. Run <code>claude</code> or <code>codex</code> in a terminal and it shows up here.',
     offline: 'Lost connection to coworking-agents. Retrying…',
+    fileClash: (who, file, repo) => `<b>Same file:</b> ${who} are editing <b>${file}</b> in ${repo}. One may overwrite the other.`,
     clash: (who, repo) => `<b>Heads up:</b> ${who} are editing the same checkout <b>${repo}</b>. Commit early or use worktrees.`,
     and: ' and ',
     states: {
