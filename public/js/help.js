@@ -151,7 +151,7 @@ function drawDock(t) {
     dock.style.left = Math.min((x0 + span) * DOCK_S + 2, toolsLeft - 70) + 'px'; dock.style.top = ((desk - 17) * DOCK_S) + 'px';
   } finally { ctx = prev; Art.setCtx(prev); }
 }
-setInterval(() => { if (data) drawDock(performance.now()); }, 90);
+setInterval(() => { if (data && !document.hidden) drawDock(performance.now()); }, 90);
 
 function slotAt(e) {
   const r0 = dockCv.getBoundingClientRect(), B = sceneBox();

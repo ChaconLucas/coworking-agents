@@ -19,7 +19,8 @@ function renderAll() {
 
 let lastFrame = -1, lastT = 0;
 function loop(t) {
-  requestAnimationFrame(loop); // schedule first: an error in one frame must not stop the animation
+  requestAnimationFrame(loop);
+  if (document.hidden) return; // tab not visible: draw nothing (browsers also slow rAF, this makes it zero) // schedule first: an error in one frame must not stop the animation
   if (data && spots) {
     const f = (t / 70) | 0; // ~14 frames per second, a pixel-art pace
     if (f !== lastFrame) {
