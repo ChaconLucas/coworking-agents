@@ -45,7 +45,7 @@ function planWalk(to) {
 }
 
 function updatePlayer(dt) {
-  if (!playerOn || !data || trophyView) return;
+  if (!playerOn || !data || trophyView) { placePlayerTag(); return; }
   if (!me.ready || me.y > H) { Object.assign(me, { x: CX - 8, y: H - 24, ready: true }); }
   let dx = 0, dy = 0;
   const k = c => keysDown.has(c);
@@ -53,7 +53,7 @@ function updatePlayer(dt) {
   me.moving = false;
   if (dx || dy) {
     me.path = [];
-    const len = Math.hypot(dx, dy), step = PLAYER_SPEED * dt, nx = me.x + dx / len * step, ny = me.y + dy / len * step;
+    const len = Math.hypot(dx, dy), step = PLAYER_SPEED * (keysDown.has('Shift') ? 2 : 1) * dt, nx = me.x + dx / len * step, ny = me.y + dy / len * step;
     // slide along walls: try both axes, then each one
     if (!blocked(me, { x: nx, y: ny })) { me.x = nx; me.y = ny; me.moving = true; }
     else if (!blocked(me, { x: nx, y: me.y })) { me.x = nx; me.moving = true; }
@@ -123,6 +123,7 @@ document.addEventListener('keydown', e => {
   if (document.querySelector('.talk:not([hidden])')) return;
   const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (key === 'Shift') keysDown.add('Shift');
   if (key.startsWith('Arrow') || (!e.metaKey && !e.ctrlKey && !e.altKey && 'wasd'.includes(key) && key.length === 1)) {
     keysDown.add(key); e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) achBump('steps');
   }

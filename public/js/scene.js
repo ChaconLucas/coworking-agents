@@ -68,7 +68,7 @@ function drawWall(t, sky) {
     const wx = 16 + i * 74;
     if (i === 1) drawUsageBoard(wx - 6, 7, t);
     else if (i === 2) continue; // covered by the usage screen
-    else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, t, wallGlows); neonBox = { x: wx + 7, y: 8, w: 34, h: 18 }; Art.drawPoster(wx - 4, 28 - 8, 0); Art.drawPoster(wx + 34, 28 - 8, 2); }
+    else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, Date.now() - neonFlash < 400 ? (((Date.now() / 60) | 0) % 2 ? t : 120 * 47) : t, wallGlows); neonBox = { x: wx + 7, y: 8, w: 34, h: 18 }; Art.drawPoster(wx - 16, 14, 0); Art.drawPoster(wx + 46, 14, 2); }
     else if (i === 4 && nWin >= 7) drawTrophyShelf(wx - 8, 9, 64, t);
     else if (i === 5) { if (nWin >= 7) drawAgentOfMonth(wx, 10, t, wallGlows); else Art.drawPoster(wx + 14, 12, 1); }
     else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawSkyExtras(wx, 9, 48, 30, sky, t, i, skyHour()); drawSeasonWindow(wx, 9, 48, 30, t); drawWeather(wx, 9, 48, 30, t); drawGlassDrops(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }

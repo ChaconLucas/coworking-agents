@@ -121,8 +121,11 @@ function drawShopWall(t, glows) {
 
 // ---- party mode (hidden): three quick clicks on the </> neon sign ----
 let partyUntil = 0, neonClicks = [];
+let neonFlash = 0;
 function neonClick() {
   const now = Date.now(); neonClicks = neonClicks.filter(t => now - t < 1500).concat(now);
+  neonFlash = now; beep(neonClicks.length >= 2);
+  if (neonClicks.length < 3) toast(`<b>&lt;/&gt;</b>${esc(T.neonHint(3 - neonClicks.length))}`, '');
   if (neonClicks.length >= 3) { neonClicks = []; partyUntil = now + 10000; achBump('parties'); confettiAt = now; playTune('trophy'); checkAchievements(); }
 }
 const partying = () => partyUntil > Date.now();

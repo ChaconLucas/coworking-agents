@@ -186,17 +186,27 @@ function refreshBoardFiles() {
   fetch('api/report').then(r => r.json()).then(j => { boardFiles = (j.topFiles || []).slice(0, 4); boardRows = j.rows || []; }).catch(() => {});
 }
 function drawNoticeBoard(x, y) {
+  // a cork board: a calendar page with today's date, a note with how many files were edited today, and a
+  // few pinned papers (the file names are in the tooltip; a click opens the daily report)
   refreshBoardFiles();
-  r(x - 1, y - 1, 46, 30, PAL.ink); r(x, y, 44, 28, '#b97c48'); r(x + 1, y + 1, 42, 26, '#c98f5a');
-  const cols = ['#ffd84d', '#ff9ccf', '#9fe3a0', '#9fd3ff'];
-  boardFiles.forEach((f, i) => {
-    const px = x + 2 + (i % 2) * 21, py = y + 2 + Math.floor(i / 2) * 13;
-    r(px, py, 19, 11, cols[i]); r(px + 8, py, 3, 1, '#e43b44');
-    const name = String(f.rel || '').split('/').pop().replace(/\.[^.]+$/, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-    pixText(px + 2, py + 4, name || '?', '#2a1d27');
+  r(x - 2, y - 2, 48, 32, '#6b4a33'); r(x - 1, y - 1, 46, 30, '#8f6a4a'); r(x, y, 44, 28, '#c98f5a');
+  for (let k = 0; k < 40; k++) { const h = hash('cork' + k); r(x + h % 44, y + (h >>> 8) % 28, 1, 1, '#b97c48'); }
+  // calendar page
+  const d = new Date();
+  r(x + 2, y + 3, 15, 18, PAL.ink); r(x + 3, y + 4, 13, 16, '#ffffff'); r(x + 3, y + 4, 13, 5, '#e43b44');
+  const day = String(d.getDate()); pixText(x + 10 - day.length * 2, y + 12, day, '#2a1d27');
+  r(x + 9, y + 2, 1, 2, '#c0cbdc');
+  // the note: files edited today
+  const n = boardRows.reduce((m, r2) => m + (r2.files || 0), 0);
+  r(x + 20, y + 4, 13, 12, '#ffd84d'); r(x + 25, y + 3, 2, 2, '#e43b44'); const ns = String(Math.min(999, n)); pixText(x + 27 - ns.length * 2, y + 8, ns, '#2a1d27');
+  // pinned papers with scribbles, one per top file
+  boardFiles.slice(0, 3).forEach((f, i) => {
+    const px = x + 34 + (i % 2) * 4, py = y + 3 + i * 8, c = ['#ffffff', '#9fd3ff', '#9fe3a0'][i];
+    r(px, py, 8, 7, c); r(px + 3, py - 1, 2, 2, ['#3b5dc9', '#63c74d', '#ff6ec7'][i]);
+    r(px + 1, py + 2, 5, 1, '#8a7a6a'); r(px + 1, py + 4, 4, 1, '#8a7a6a');
   });
-  if (!boardFiles.length) pixText(x + 14, y + 11, '...', '#6b4a33');
-  noticeBox = { x: x - 1, y: y - 1, w: 46, h: 30 };
+  r(x + 20, y + 18, 12, 7, '#ff9ccf'); r(x + 25, y + 17, 2, 2, '#ffd84d'); r(x + 21, y + 20, 8, 1, '#a0507a'); r(x + 21, y + 22, 6, 1, '#a0507a');
+  noticeBox = { x: x - 2, y: y - 2, w: 48, h: 32 };
 }
 let noticeBox = null;
 
