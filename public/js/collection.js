@@ -106,7 +106,6 @@ reportEl.addEventListener('click', e => { const b = e.target.closest('[data-buy]
 
 // bought items, drawn in fixed places (floor items before the people, so people walk in front)
 function drawShopFloor(t, glows) {
-  if (owns('rug')) { r(CX - 60, TOP + 60, 44, 22, PAL.ink); r(CX - 59, TOP + 61, 42, 20, '#7a3b8f'); r(CX - 56, TOP + 64, 36, 14, '#b55088'); for (let k = 0; k < 4; k++) r(CX - 52 + k * 9, TOP + 70, 4, 2, '#ffd84d'); }
   if (owns('plants')) for (let y = TOP + 140; y < H - 40; y += 150) Art.drawPlant(CX - 20, y, true);
   if (owns('lamps')) for (const lx of [RX + 4, RX + RW - 12]) { r(lx + 3, wing.ping - 4, 2, 14, PAL.ink); r(lx, wing.ping - 8, 8, 5, '#ffd84d'); glows.push({ x: lx + 4, y: wing.ping - 6, r: 22, c: '#ffd84d' }); }
   if (owns('statue')) { const m = usageData && usageData.month && usageData.month.top && usageData.month.top[0], x = RX + RW - 26, y = wing.ping + 34;
@@ -147,4 +146,17 @@ function groupPhoto() {
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast(`<b>${esc(T.photo.saved)}</b>${esc(a.download)}`, 'ok');
   }, 'image/png');
+}
+
+// the Persian rug: under the pool table in the game room (drawn with the room, before the furniture)
+function drawPersianRug(x, y, w, h) {
+  for (let k = 0; k < w; k += 2) { r(x + k, y - 3, 1, 3, '#f4ecd8'); r(x + k, y + h, 1, 3, '#f4ecd8'); }     // fringe
+  r(x - 1, y - 1, w + 2, h + 2, PAL.ink); r(x, y, w, h, '#7a1f33');
+  r(x + 2, y + 2, w - 4, h - 4, '#d9a441'); r(x + 3, y + 3, w - 6, h - 6, '#7a1f33');                       // gold border
+  for (let k = 6; k < w - 6; k += 6) { r(x + k, y + 4, 2, 2, '#3b5dc9'); r(x + k, y + h - 6, 2, 2, '#3b5dc9'); } // border motif
+  r(x + 6, y + 7, w - 12, h - 14, '#a3283a');                                                                  // field
+  const cx = x + w / 2, cy = y + h / 2;
+  for (let q = 0; q < 8; q++) { r(cx - 8 + q, cy - q / 2, 16 - q * 2, 1, '#d9a441'); r(cx - 8 + q, cy + q / 2, 16 - q * 2, 1, '#d9a441'); } // medallion
+  r(cx - 3, cy - 1, 6, 2, '#3b5dc9'); r(cx - 1, cy - 2, 2, 4, '#f4ecd8');
+  for (const [dx, dy] of [[10, 10], [w - 14, 10], [10, h - 14], [w - 14, h - 14]]) { r(x + dx, y + dy, 4, 4, '#d9a441'); r(x + dx + 1, y + dy + 1, 2, 2, '#3b5dc9'); } // corners
 }
