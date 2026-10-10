@@ -28,9 +28,9 @@ function openTalk(id) {
   const goto = esc(p.agent === 'codex' && !p.pid ? T.panel.gotoCodex : T.panel.goto);
   talkEl.querySelector('.talk-reply').innerHTML = urgent
     ? `<p class="note">${esc(T.talk.approveThere)}</p><div class="talk-btns"><button class="btn" data-talk="goto">›_ ${goto}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>`
-    : `<textarea rows="3" maxlength="4000" placeholder="${esc(T.talk.placeholder)}"></textarea>
-       <div class="talk-btns"><button class="btn" data-talk="copygo">›_ ${esc(T.talk.copyGo)}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>
-       <p class="note talk-msg">${esc(T.talk.pasteHint)}</p>`;
+    : `<p class="note talk-why">${esc(T.talk.yourTurnWhy)}</p><textarea rows="3" maxlength="4000" placeholder="${esc(T.talk.placeholder)}"></textarea>
+       <div class="talk-btns">${p.agent === 'claude' && p.pid ? `<button class="btn" data-talk="send">➤ ${esc(T.talk.send)}</button>` : ''}<button class="hb" data-talk="copygo">${esc(T.talk.copyGo)}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>
+       <p class="note talk-msg">${esc(p.agent === 'claude' && p.pid ? T.talk.sendHint : T.talk.pasteHint)}</p>`;
   talkEl.hidden = false; document.body.classList.add('talk-open');
   const ta = talkEl.querySelector('textarea');
   if (ta) setTimeout(() => ta.focus(), 30);
@@ -52,19 +52,18 @@ function drawTalk() {
     r(0, 0, W, H, '#2a2333');
     for (let x = 0; x < W; x += 20) r(x, 0, 1, H - 22, '#30283a');
     Art.drawWindow(14, 10, 48, 30, sky, t, 7);
-    Art.drawBookshelf(150, 8, 40, 46);
-    Art.drawPoster(118, 14, 0);
+    Art.drawPoster(100, 12, 0); // the speech balloon covers the left half; the agent sits on the right
     // desk
     r(0, H - 22, W, 3, '#dc9a6c'); r(0, H - 19, W, 19, '#8f4f3a'); r(0, H - 1, W, 1, PAL.ink);
     // the agent, 3x, mouth moving while it "talks"
     const face = Art.portrait(p.id, f % 4 < 2 ? 'open' : null);
-    talkCtx.drawImage(face, 76, H - 22 - 54 + (f % 8 < 4 ? 0 : 1), 48, 54);
+    talkCtx.drawImage(face, 128, H - 22 - 54 + (f % 8 < 4 ? 0 : 1), 48, 54);
     // laptop from behind, mug, plant
-    r(84, H - 30, 34, 10, PAL.ink); r(86, H - 29, 30, 8, '#c0cbdc'); r(99, H - 26, 4, 3, '#fff');
-    r(136, H - 30, 8, 8, PAL.ink); r(137, H - 29, 6, 6, '#f4ecd8'); r(143, H - 27, 2, 3, PAL.ink);
-    if (f % 8 < 5) { r(139, H - 34 - (f % 3), 1, 3, '#ffffffaa'); r(141, H - 35 - ((f + 1) % 3), 1, 3, '#ffffff88'); }
-    Art.drawPlant(40, H - 36, false);
-    Art.drawCat(160, H - 28, 'sleep', t, true);
+    r(136, H - 30, 34, 10, PAL.ink); r(138, H - 29, 30, 8, '#c0cbdc'); r(151, H - 26, 4, 3, '#fff');
+    r(182, H - 30, 8, 8, PAL.ink); r(183, H - 29, 6, 6, '#f4ecd8'); r(189, H - 27, 2, 3, PAL.ink);
+    if (f % 8 < 5) { r(185, H - 34 - (f % 3), 1, 3, '#ffffffaa'); r(187, H - 35 - ((f + 1) % 3), 1, 3, '#ffffff88'); }
+    Art.drawPlant(108, H - 36, false);
+    Art.drawCat(14, H - 28, 'sleep', t, false);
   } finally { ctx = prev; Art.setCtx(prev); }
 }
 
@@ -74,6 +73,19 @@ talkEl.addEventListener('click', async e => {
   if (!b || !talkFor) return;
   const id = talkFor;
   if (b.dataset.talk === 'see') { closeTalk(); return showPerson(id); }
+  if (b.dataset.talk === 'send') {
+    const ta = talkEl.querySelector('textarea'), msg = talkEl.querySelector('.talk-msg');
+    const text = ta ? ta.value.trim() : '';
+    if (!text) { if (ta) ta.focus(); return; }
+    b.disabled = true; if (msg) msg.textContent = T.talk.sending;
+    let out = { ok: false, reason: 'unknown' };
+    try { out = await fetch('api/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id, text }) }).then(r => r.json()); } catch {}
+    b.disabled = false;
+    const R = T.talk.reasons;
+    if (out.ok) { if (msg) msg.textContent = T.talk.sent(out.app); ta.value = ''; setTimeout(closeTalk, 1200); }
+    else if (msg) msg.textContent = typeof R[out.reason] === 'function' ? R[out.reason](out.app || 'Terminal') : (R[out.reason] || R.unknown);
+    return;
+  }
   if (b.dataset.talk === 'copygo') {
     const ta = talkEl.querySelector('textarea'), msg = talkEl.querySelector('.talk-msg');
     const text = ta ? ta.value.trim() : '';

@@ -217,6 +217,9 @@ function bubble(x, y, kind, t) {
     r(x + 5, y + 2, 3, 1, flip ? '#fff' : sand); r(x + 6, y + 3, 1, 1, sand); r(x + 6, y + 4, 1, 1, sand); r(x + 5, y + 6, 3, 1, flip ? sand : '#fff');
     r(x + 5, y + 5, 3, 1, f % 2 ? sand : '#fff');
   }
+  else if (kind === 'done') { // finished, your turn: a green check
+    r(x + 3, y + 4, 2, 2, '#3e8948'); r(x + 5, y + 6, 2, 2, '#3e8948'); r(x + 7, y + 4, 2, 2, '#3e8948'); r(x + 9, y + 2, 2, 2, '#3e8948');
+  }
   else if (kind === 'think') { for (let k = 0; k < 3; k++) r(x + 2 + k * 4, y + 4 - (k === f % 3 ? 1 : 0), 2, 2, '#68386c'); }
   else if (kind === 'zz') {
     const p = f % 6 > 2 ? 0 : 1, c = '#3a4466';

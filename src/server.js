@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { snapshot: real, report } = require('./collect');
 const { demoSnapshot, demoReport } = require('./demo');
-const { focus } = require('./focus');
+const { focus, sendText } = require('./focus');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2' };
@@ -93,6 +93,23 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
           try { id = String(JSON.parse(body).id || ''); } catch {}
           const person = demo ? null : real().people.find(p => p.id === id);
           const out = person ? await focus(person) : { ok: false, reason: demo ? 'demo' : 'gone' };
+          send(res, 200, 'application/json', JSON.stringify(out));
+        } catch { if (!res.headersSent) send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
+      });
+      return;
+    }
+    if (url.pathname === '/api/reply' && req.method === 'POST') {
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 2e4) req.destroy(); });
+      req.on('end', async () => {
+        try {
+          let msg = {};
+          try { msg = JSON.parse(body); } catch {}
+          const person = demo ? null : real().people.find(p => p.id === String(msg.id || ''));
+          // only sessions waiting for your next message (turn finished) take free text
+          const out = !person ? { ok: false, reason: demo ? 'demo' : 'gone' } : person.state !== 'idle' && person.state !== 'asleep' ? { ok: false, reason: 'busy' } : await sendText(person, msg.text);
           send(res, 200, 'application/json', JSON.stringify(out));
         } catch { if (!res.headersSent) send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
       });

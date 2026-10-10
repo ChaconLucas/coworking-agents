@@ -83,7 +83,7 @@ function drawOffice(ox, B, t, page) {
     if (urgent) { // red badge
       r(x + 18, desk - 22, 7, 7, PAL.ink); r(x + 19, desk - 21, 5, 5, '#e43b44'); r(x + 21, desk - 20, 1, 2, '#fff'); r(x + 21, desk - 17, 1, 1, '#fff');
       if (f % 4 < 2) { r(x + 5, desk - 22, 1, 2, '#feae34'); r(x + 9, desk - 24, 1, 3, '#feae34'); }
-    } else Art.bubble(x + 20, desk - 30, 'think', t);
+    } else Art.bubble(x + 20, desk - 30, 'done', t); // finished, your turn (not a request)
     // something on the counter between people
     if (k % 2) { r(x + 31, desk - 5, 5, 5, PAL.ink); r(x + 32, desk - 4, 3, 3, Art.SHIRT[Art.hash(d.p.id) % Art.SHIRT.length]); if (f % 8 < 5) r(x + 33, desk - 8 - (f % 3), 1, 2, '#ffffff88'); }
     else if (k < 3) { r(x + 31, desk - 5, 6, 5, PAL.pot); r(x + 32, desk - 10, 1, 5, PAL.leafLight); r(x + 34, desk - 11, 1, 6, PAL.leaf); r(x + 35, desk - 9, 1, 4, PAL.leafLight); }

@@ -230,7 +230,7 @@ code.path { word-break: break-all; }
 .talk-x { position: absolute; top: 8px; right: 10px; z-index: 2; border: 0; background: none; color: #b9a88a; font-size: 22px; cursor: pointer; }
 .talk-stage { position: relative; border: 3px solid #0b0a0e; border-radius: 4px; overflow: hidden; }
 .talk-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; }
-.talk-say { position: absolute; left: 4%; right: 46%; top: 6%; }
+.talk-say { position: absolute; left: 3%; right: 40%; top: 5%; }
 .talk-say p { margin: 0; background: #fff; color: #2a1d27; border: 3px solid #0b0a0e; border-radius: 4px; padding: 10px 12px; font-size: 14px; line-height: 1.4; box-shadow: 3px 3px 0 rgba(0,0,0,.35); max-height: 9.2em; overflow: auto; position: relative; }
 .talk-say p::after { content: ''; position: absolute; right: -14px; bottom: 14px; border: 8px solid transparent; border-left-color: #0b0a0e; border-right: 0; }
 .talk-info { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin: 12px 2px 8px; }
@@ -337,3 +337,4 @@ body.talk-open .help { display: none; }
 .building .faces canvas.need { box-shadow: 0 0 0 2px #e43b44; }
 .building .frame { margin: 0 12px; border: 2px solid var(--edge); border-radius: 6px; overflow: hidden; }
 .building footer { color: #b9a88a; }
+.talk .talk-why { margin: 0 0 8px; color: #63c74d; }

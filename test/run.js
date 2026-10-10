@@ -241,11 +241,24 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await req(port, '/api/state', { headers: { ...ck, Host: 'evil.example:' + port } })).code, 421, 'DNS rebinding');
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus without the custom header');
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');
+  assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: ck, body: '{"id":"B","text":"hi"}' })).code, 403, 'reply without the custom header');
+  assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"B","text":"hi"}' })).code, 403, 'reply from another origin');
+  assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: { Host: '127.0.0.1:' + port, 'X-Coworking': '1' }, body: '{"id":"B","text":"hi"}' })).code, 401, 'reply without the token');
+  const busy = JSON.parse((await req(port, '/api/reply', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A","text":"hi"}' })).body);
+  assert.deepStrictEqual(busy, { ok: false, reason: 'busy' }, 'a working session never receives typed text');
   assert.ok([403, 404].includes((await req(port, '/../src/server.js', { headers: ck })).code), 'path traversal');
   assert.ok([403, 404].includes((await req(port, '/%2e%2e/package.json', { headers: ck })).code), 'encoded path traversal');
   const csp = (await req(port, '/', { headers: ck })).headers['content-security-policy'] || '';
   assert.ok(/default-src 'self'/.test(csp) && !/googleapis/.test(csp), 'CSP local only');
   hq.close();
+
+  // reply safeguards: only Claude sessions, and only when Claude owns a real terminal tab
+  const { sendText } = require('../src/focus');
+  assert.strictEqual((await sendText({ agent: 'codex', pid: 1 }, 'hi')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform');
+  if (process.platform === 'darwin') {
+    assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, 'hi')).reason, 'notty', 'a process without a terminal never receives text');
+    assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, '')).reason, 'text', 'empty text is refused');
+  }
 
   sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill();
   fs.rmSync(root, { recursive: true, force: true });
