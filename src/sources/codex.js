@@ -87,7 +87,7 @@ function absorb(st, d) {
       if (txt && !txt.startsWith('<') && !txt.startsWith('#')) { if (!st.firstPrompt) st.firstPrompt = short(txt, 60); st.lastPrompt = short(txt, 220); st.lastPromptAt = ts; }
     } else if (p.type === 'message' && p.role === 'assistant') {
       const txt = (p.content || []).map(c => c.text || '').join(' ').trim();
-      if (txt) { st.lastReply = short(txt.replace(/[*_`#>]+/g, ''), 260); st.lastReplyAt = ts; }
+      if (txt) { st.lastReply = short(txt.replace(/[*_`#>]+/g, ''), 260); st.lastReplyLong = txt.replace(/[*_`#>]+/g, '').trim().slice(0, 6000); st.lastReplyAt = ts; }
     }
   }
 }

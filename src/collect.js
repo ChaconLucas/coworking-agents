@@ -112,7 +112,7 @@ function person(s, now) {
     files: st ? [...st.files.entries()].filter(([, at]) => now - at < EDIT_WINDOW_MS).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([f, at]) => ({ ...relFile(f), at })) : [],
     permissionMode: st ? st.permissionMode || '' : '',
     lastPrompt: st ? st.lastPrompt || '' : '', lastPromptAt: st ? st.lastPromptAt || 0 : 0,
-    lastReply: st ? st.lastReply || '' : '', lastReplyAt: st ? st.lastReplyAt || 0 : 0,
+    lastReply: st ? st.lastReply || '' : '', lastReplyLong: st ? st.lastReplyLong || '' : '', lastReplyAt: st ? st.lastReplyAt || 0 : 0,
     today: st ? todayStats(st, now) : null,
     recent: st ? st.recent.slice(-8).reverse().map(r => ({ tool: r.name, what: r.what, kind: r.kind, ts: r.ts })) : [],
     skills: st ? st.skills : {}, mcps: st ? st.mcps : {}, tools: st ? st.tools : {},
@@ -173,7 +173,7 @@ function snapshot({ privacy = false } = {}) {
     p.recent = p.recent.map(r => ({ ...r, what: '' }));
     p.subagents = p.subagents.map(a => ({ ...a, description: '', doing: '' }));
     p.files = p.files.map(f => ({ ...f, rel: '' }));
-    p.lastPrompt = ''; p.lastReply = '';
+    p.lastPrompt = ''; p.lastReply = ''; p.lastReplyLong = '';
     if (p.doing) p.doing.ask = '';
   }
   const hn = os.hostname().replace(/\.local$/, '');

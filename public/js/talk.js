@@ -24,7 +24,8 @@ function openTalk(id) {
   const say = urgent ? helpText(p) : p.lastReply ? `“${p.lastReply}”` : T.help.done(p.title || '');
   talkEl.querySelector('.talk-say p').textContent = say;
   talkEl.querySelector('.talk-info').innerHTML = `<b>${esc(p.name)}</b><span>${esc(p.repo ? p.repo.name : '')}${p.branch && p.branch !== 'HEAD' ? ' · ' + esc(p.branch) : ''}</span>
-    <small>⌛ ${esc(urgent ? T.help.waitingYou : T.states.idle)} · ${esc(ago(data.now - (p.since || p.lastActivity)))}</small>${p.lastPrompt ? `<em>${esc(T.panel.lastPrompt)}: “${esc(p.lastPrompt)}”</em>` : ''}`;
+    <small>⌛ ${esc(urgent ? T.help.waitingYou : T.states.idle)} · ${esc(ago(data.now - (p.since || p.lastActivity)))}</small>${p.lastPrompt ? `<em>${esc(T.panel.lastPrompt)}: “${esc(p.lastPrompt)}”</em>` : ''}
+    ${!urgent && p.lastReplyLong && p.lastReplyLong.length > (p.lastReply || '').length ? `<div class="talk-full"><small>${esc(T.panel.lastReply)}</small><div>${esc(p.lastReplyLong)}</div></div>` : ''}`;
   const goto = esc(p.agent === 'codex' && !p.pid ? T.panel.gotoCodex : T.panel.goto);
   talkEl.querySelector('.talk-reply').innerHTML = urgent
     ? `<p class="note">${esc(T.talk.approveThere)}</p><div class="talk-btns"><button class="btn" data-talk="goto">›_ ${goto}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>`

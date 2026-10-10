@@ -376,3 +376,7 @@ main:has(#office.cam) { overflow: visible; }
 .list li code { color: #f4ecd8; }
 .bars .bar { background: #2a2333; }
 .cert { background: #f4ecd8; border-width: 3px; }
+.talk-full { flex-basis: 100%; margin-top: 8px; background: #14101a; border: 2px solid #3a3045; border-radius: 6px; padding: 10px 12px; }
+.talk-full small { display: block; font: 700 8px/1 var(--pix); color: #8b9bb4; margin-bottom: 6px; text-transform: uppercase; }
+.talk-full div { max-height: 220px; overflow-y: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.5; color: #ece7df; }
+.brand .logo { width: 32px; height: 32px; image-rendering: pixelated; }
