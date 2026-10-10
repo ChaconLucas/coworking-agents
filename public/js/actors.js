@@ -22,8 +22,9 @@ function plan(now) {
   const lounge = byZone.lounge, free = [];
   if (lounge.length >= 2) { assign.set(lounge[0].p.id, spots.ping[0]); assign.set(lounge[1].p.id, spots.ping[1]); free.push(...lounge.slice(2)); }
   else free.push(...lounge);
-  const seats = [...spots.sofa, ...spots.stools, ...spots.coffee];
-  free.forEach((c, i) => assign.set(c.p.id, seats[i] || null));
+  const rest = lifeAssign(free, assign); // coffee after a long task, foosball, the water cooler
+  const taken = new Set(assign.values()), seats = [...spots.sofa, ...spots.stools, ...spots.coffee].filter(s => !taken.has(s));
+  rest.forEach((c, i) => assign.set(c.p.id, seats[i] || null));
   byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 3] || spots.meetStand[i - 6] || null));
   byZone.nap.forEach((c, i) => assign.set(c.p.id, spots.nap[i] || null));
   byZone.leave.forEach(c => assign.set(c.p.id, { x: CX - 8, y: H + 30, zone: 'gone', pose: 'stand' }));
@@ -72,7 +73,8 @@ function updateActors(dt, now) {
       if (born && now - born < 4000 && cell.room) {
         // comes up the corridor, waits for the desk to be built, then walks in through the door
         const R = cell.room, door = { x: R.doorX + 1, y: R.y + R.h + 8 };
-        Object.assign(a, { x: CX - 8, y: door.y + 30, mode: 'walk', carry: true, next: t, waitUntil: born + 3500, // waits for the work site to clear
+        elevatorAt = born; // out of the elevator at the bottom of the corridor
+        Object.assign(a, { x: CX - 8, y: H - 14, mode: 'walk', carry: true, next: t, waitUntil: born + 3500, // waits for the work site to clear
           path: [{ x: CX - 8, y: door.y }, { x: door.x, y: door.y }, { x: door.x, y: cell.aisle }, { x: t.x, y: cell.aisle }, { x: t.x, y: t.y }] });
       }
       actors.set(cell.p.id, a);
@@ -81,7 +83,7 @@ function updateActors(dt, now) {
       a.path = route({ x: a.x, y: a.y }, t, cell); a.key = t.key; a.next = t; a.mode = 'walk';
       if (t.mode === 'gone') { // pack up, leave the room by its door and walk down the corridor until off screen
         const out = exitPath({ x: a.x, y: a.y }, a.x < CX ? cell : null), last = out[out.length - 1];
-        a.carry = true; a.path = [...out, { x: CX - 8, y: last.y }, { x: CX - 8, y: H + 30 }];
+        a.carry = true; a.path = [...out, { x: CX - 8, y: last.y }, { x: CX - 8, y: H - 14 }, { x: CX - 8, y: H + 30 }]; elevatorAt = Date.now() + 2500;
       }
     }
     if (a.mode === 'walk') {

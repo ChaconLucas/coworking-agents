@@ -679,3 +679,5 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 .ach.super { grid-template-columns: 44px 1fr; border-color: #c0cbdc; background: linear-gradient(135deg, rgba(255,216,77,.08), rgba(44,232,245,.06)); margin-bottom: 8px; --c: #ffd84d; }
 .ach.super.on { opacity: 1; border-color: #ffd84d; box-shadow: 0 0 18px rgba(255,216,77,.35); }
 .ach.super .ach-ico { width: 44px; height: 44px; font-size: 24px; }
+.thought { position: absolute; transform: translate(-50%, -100%); font: 600 11px/1.2 system-ui, sans-serif; color: #2a1d27; background: #fffdf8; border: 2px solid #2a1d27; border-radius: 10px; padding: 3px 8px; white-space: nowrap; pointer-events: none; animation: rise .3s ease both; }
+.thought::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 5px; height: 5px; background: #fffdf8; border: 2px solid #2a1d27; border-radius: 50%; }

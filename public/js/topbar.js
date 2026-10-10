@@ -118,6 +118,7 @@ function notifyChanges() {
   }
   for (const p of data.people) {
     const before = prevStates.get(p.id);
+    if (!replayAt) noteLife(p, before);
     if (before && before !== p.state) {
       const urgent = p.state === 'needs_you' || p.state === 'waiting';
       const done = p.state === 'idle' && !['idle', 'asleep'].includes(before);

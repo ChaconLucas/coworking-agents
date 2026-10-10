@@ -169,6 +169,7 @@ function drawRoomShell(R, t) {
   r(R.doorX, R.y + R.h, 18, 3, '#8f553f'); r(R.doorX, R.y + R.h, 1, 3, PAL.ink2); r(R.doorX + 17, R.y + R.h, 1, 3, PAL.ink2);
   // sign (the text comes from HTML, crisp)
   r(R.x + 4, R.y + 1, 6, 5, agentRoomColor(R)); 
+  drawRoomLife(R, t);
 }
 function agentRoomColor(R) {
   if (R.people.some(p => p.state === 'needs_you' || p.state === 'waiting')) return PAL.red;
@@ -271,7 +272,7 @@ function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
   if (seed % 3 !== 2) Art.drawStickies(px + pw - 22, py + 18, seed);
   const item = seed % 3;
   if (item === 0) { const on = !!p && sky.phase !== 'day'; Art.drawLamp(dx + 2, dy - 10, on); if (on) lights.push({ x: dx + 6, y: dy + 2, r: 40 }); }
-  else if (item === 1) Art.drawPlant(dx + 1, dy - 12, false);
+  else if (item === 1) drawGrowingPlant(dx + 1, dy - 12, p);
   else { r(dx + 3, dy + 1, 12, 6, PAL.ink); r(dx + 4, dy + 1, 10, 5, PAL.paper); r(dx + 5, dy + 2, 8, 1, PAL.paperLine); r(dx + 6, dy, 10, 5, PAL.ink); r(dx + 7, dy, 8, 4, '#ffffff'); }
   if (!p) { Art.drawEmptyChair(d.chair.x, d.chair.y); return; }
   const mugX = dx + dw - 12;
@@ -279,6 +280,7 @@ function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
   if (atDesk && st !== 'asleep' && f % 8 < 5) r(mugX + 2, dy - 3 - (f % 3), 1, 2, '#ffffff99');
   const ag = agentOf(p).color;
   r(dx + dw - 30, dy + 11, 16, 5, PAL.ink); r(dx + dw - 29, dy + 12, 14, 3, ag); r(dx + dw - 27, dy + 13, 10, 1, '#ffffffaa');
+  drawDeskLife(p, { dx, dy, dw, px, py }, t, atDesk);
   const cx = d.chair.x, cy = d.chair.y;
   if (!atDesk) { Art.drawEmptyChair(cx, cy); return; }
   Art.drawChairBase(cx, cy + 24);
@@ -287,14 +289,14 @@ function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
     Art.drawChairBack(cx, cy + 8);
     Art.drawFront(cx, cy - 2, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', wave: st === 'needs_you', mouth: st === 'needs_you' ? 'open' : 'flat' });
   } else if (st === 'asleep') { Art.drawSleeping(cx, cy, lk, t); Art.drawChairBack(cx, cy + 14); }
-  else { Art.drawSeatedBack(cx, cy, lk, t, { typing: st === 'edit' || st === 'terminal', reading: st === 'read' }); Art.drawChairBack(cx, cy + 14); }
+  else { const j = celebrateJump(p.id, t); Art.drawSeatedBack(cx, cy + j, lk, t, { typing: st === 'edit' || st === 'terminal', reading: st === 'read' }); Art.drawChairBack(cx, cy + 14); }
   cell.interns = [];
 }
 
 // fills the floor left empty under the rooms: arcade, bookshelves, an architecture board, plants
 function drawDevCorner(t, glows) {
   const top = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 18;
-  if (H - top < 50) return;
+  if (H - top < 50) { devSpots = null; return; }
   const y = top + Math.min(20, (H - top - 46) / 2);
   let x = 16;
   const items = [
@@ -306,8 +308,14 @@ function drawDevCorner(t, glows) {
     w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
     w => { Art.drawBeanBag(x, y + 16, '#3b5dc9'); return 30; },
     w => { Art.drawPlant(x, y + 12, true); return 26; },
+    w => { const playing = !!devSpots && !!devSpots.foos && layout.filter(c => c.actor && c.actor.mode === 'lounge' && c.actor.spot && devSpots.foos.some(s => s.x === c.actor.spot.x && s.y === c.actor.spot.y)).length >= 2; drawFoosball(x + 12, y + 6, t, playing); spotsAt.foos = [{ x: x - 2, y: y + 4, zone: 'lounge', pose: 'stand' }, { x: x + 54, y: y + 4, zone: 'lounge', pose: 'stand', flip: true }]; return 82; },
+    w => { drawCooler(x + 14, y + 2, t); spotsAt.cooler = [{ x: x - 2, y: y + 8, zone: 'lounge', pose: 'stand' }, { x: x + 26, y: y + 8, zone: 'lounge', pose: 'stand', flip: true }]; return 52; },
+    w => { drawAquarium(x, y + 4, t, glows); return 42; },
+    w => { drawPool(x, y + 2); return 68; },
   ];
-  for (const draw of items) { if (x > CX - 40) break; x += draw(); }
+  const spotsAt = {};
+  for (const draw of items) { if (x > CX - 40 - 40) break; x += draw(); }
+  devSpots = spotsAt;
 }
 
 let napBox = null;
@@ -433,6 +441,7 @@ function drawScene(t, dt) {
   sites = [];
   for (const d of desks) drawDesk(d, t, !!d.p && cs.has(d.p.id), lights, glows, sky);
   for (const s of sites) drawSite(s, t);
+  drawElevator(t);
   const movers = [];
   for (const c of layout) {
     const a = c.actor;
@@ -441,16 +450,18 @@ function drawScene(t, dt) {
     if (a.mode === 'walk') movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, true); if (a.carry) drawCarriedBox(a.x, a.y); } });
     else if (a.mode === 'nap') movers.push({ y: a.y, draw: () => Art.drawLying(a.x, a.y, lk, t) });
     else if (a.spot && a.spot.pose === 'sit') movers.push({ y: a.y, draw: () => Art.drawFront(a.x, a.y, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', mug: true }) });
-    else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') drawMugInHand(a, t); } });
+    else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') (isLunch() ? drawFoodInHand : drawMugInHand)(a, t); } });
   }
   movers.push({ y: cat.y, draw: () => Art.drawCat(cat.x, cat.y, cat.mode, t, cat.flip) });
+  movers.push(...extraWalkers(t));
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
   drawCatExtras(t);
   drawConfetti(t);
   // ceiling lights: every room and shared area is lit, except the nap corner (it's a rest room)
   if (lightsOn) {
-    for (const R of rooms) lights.push({ x: R.x + R.w / 2, y: R.y + R.h / 2, r: Math.max(R.w, R.h) * .8 });
+    const late = nowHour() >= 18 || nowHour() < 7;
+    for (const R of rooms) if (!late || R.people.some(p => !p.leaving && p.state !== 'idle' && p.state !== 'asleep')) lights.push({ x: R.x + R.w / 2, y: R.y + R.h / 2, r: Math.max(R.w, R.h) * .8 });
     for (const zy of [wing.copa + 50, wing.ping + 35, wing.meet + 48, wing.servers + 24]) lights.push({ x: RX + RW / 2, y: zy, r: 90 });
     for (let y = TOP + 40; y < H; y += 120) lights.push({ x: CX, y, r: 70 });
     const devTop = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 30;
