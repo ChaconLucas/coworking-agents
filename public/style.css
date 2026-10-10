@@ -389,3 +389,14 @@ main:has(#office.cam) { overflow: visible; }
 .lim small { color: #8b9bb4; font-size: 11px; }
 .stats.tok { grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); }
 .usage-list li .t { text-align: right; }
+
+/* ---- busy bar under the top bar ---- */
+.busy { position: sticky; top: 0; z-index: 4; display: flex; height: 6px; background: #14101a; border-bottom: 2px solid var(--edge); }
+.busy i { display: block; min-width: 6px; transition: flex-grow .6s ease; }
+.busy .b-work { background: repeating-linear-gradient(-45deg, #63c74d 0 6px, #4fae3c 6px 12px); background-size: 17px 100%; animation: busyrun .8s linear infinite; }
+.busy .b-need { background: #e43b44; animation: busyblink 1s steps(2) infinite; }
+.busy .b-turn { background: #3b5dc9; }
+.busy .b-sleep { background: #4a4458; }
+@keyframes busyrun { to { background-position: 17px 0; } }
+@keyframes busyblink { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .busy .b-work, .busy .b-need { animation: none; } }

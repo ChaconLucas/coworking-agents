@@ -36,7 +36,7 @@ setInterval(() => { if (data) renderOverlay(); }, 500);
 // ---------------- data ----------------
 // someone who closed their session stays a few seconds as a "leaving" ghost: they pack up and walk
 // out, then their desk is demolished, and only then the room shrinks
-const LEAVE_MS = 7000;
+const LEAVE_MS = 6000; // walk out (~2.4s) + demolition (3.4s)
 let lastPeople = new Map();
 const leavers = new Map();
 function keepLeavers(d) {

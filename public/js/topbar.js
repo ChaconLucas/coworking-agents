@@ -18,6 +18,11 @@ function renderBar() {
     tile(c.turn, T.yourTurn, KIND_COLOR.idle, c.turn ? '' : 'zero'),
     tile(c.sleep, T.asleep, KIND_COLOR.asleep, c.sleep ? '' : 'zero'),
   ].join('');
+  // busy bar: how the office is split right now (working stripes move)
+  const tot = Math.max(1, c.work + c.need + c.turn + c.sleep), seg = (n, cls, label) => n ? `<i class="${cls}" style="flex:${n}" title="${n} ${esc(label)}"></i>` : '';
+  const busy = document.getElementById('busy');
+  busy.innerHTML = seg(c.work, 'b-work', T.working) + seg(c.need, 'b-need', T.needYou) + seg(c.turn, 'b-turn', T.yourTurn) + seg(c.sleep, 'b-sleep', T.asleep);
+  busy.setAttribute('aria-label', `${Math.round(c.work / tot * 100)}% ${T.working}`);
   document.title = (c.need ? `(${c.need}) ` : '') + 'coworking-agents';
   const box = document.getElementById('clashes');
   const names = id => (data.people.find(p => p.id === id) || {}).name || id.slice(0, 6);

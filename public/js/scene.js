@@ -39,7 +39,44 @@ function drawShafts(sky, nWin) {
 }
 
 // a repository's room seen from above: carpet in the repo color, walls, door and sign
-const ROOM_BUILD_MS = 1100;
+const ROOM_BUILD_MS = 1100, SITE_MS = 3400;
+// work sites queued while drawing desks, painted on top of everything at the end of the frame
+let sites = [];
+// a boarded-up, dusty work site over a rectangle; k goes 0→1 (closed → work → clean reveal)
+function drawSite(S0, t) {
+  const { x, y, w, h, k } = S0;
+  const cover = k < .12 ? k / .12 : k > .82 ? Math.max(0, 1 - (k - .82) / .18) : 1;
+  if (cover <= 0) return;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.globalAlpha = cover;
+  r(x, y, w, h, 'rgba(58, 36, 26, .82)');
+  // plywood planks sliding across in both directions
+  for (let i = 0, yy = y + 3; yy < y + h - 4; i++, yy += 9) {
+    const dir = i % 2 ? -1 : 1, speed = 26 + (i * 7) % 14, len = 26 + (hash('pl' + i) % 18);
+    const off = ((t / 1000 * speed + i * 41) % (w + len + 20));
+    const px = dir > 0 ? x - len + off : x + w - off;
+    r(px, yy, len, 6, '#2a1d27'); r(px + 1, yy + 1, len - 2, 4, i % 3 ? '#c99a5b' : '#b6844a');
+    r(px + 1, yy + 1, len - 2, 1, '#e0b878'); r(px + 3, yy + 3, 1, 1, '#5d3a28'); r(px + len - 4, yy + 3, 1, 1, '#5d3a28');
+  }
+  // big drifting dust clouds
+  for (let i = 0; i < 26; i++) {
+    const hh = hash('du' + i), life = ((t / 1000 * (0.4 + (hh % 5) / 10)) + (hh % 100) / 100) % 1;
+    const cx = x + (hh % w) + Math.sin(t / 700 + i) * 4, cy = y + h - life * (h + 10), rad = 3 + (hh >>> 4) % 5;
+    ctx.globalAlpha = cover * (1 - life) * .7;
+    r(cx - rad, cy - rad + 1, rad * 2, rad * 2 - 2, '#d9c4a3'); r(cx - rad + 1, cy - rad, rad * 2 - 2, rad * 2, '#e8d8bc');
+  }
+  ctx.globalAlpha = cover;
+  // caution tape: around the edge and an X across, plus a warning sign
+  const tape = (sx, sy, len, vertical) => { for (let o = 0; o < len; o += 6) { const c = (o / 6) % 2 ? '#2a1d27' : '#feae34'; vertical ? r(sx, sy + o, 3, 6, c) : r(sx + o, sy, 6, 3, c); } };
+  tape(x, y, w, false); tape(x, y + h - 3, w, false); tape(x, y, h, true); tape(x + w - 3, y, h, true);
+  for (let s = 0; s < Math.min(w, h); s += 3) { r(x + s * (w / Math.min(w, h)), y + s * (h / Math.min(w, h)), 3, 3, (s / 3) % 4 < 2 ? '#feae34' : '#2a1d27'); r(x + w - 3 - s * (w / Math.min(w, h)), y + s * (h / Math.min(w, h)), 3, 3, (s / 3) % 4 < 2 ? '#feae34' : '#2a1d27'); }
+  const sx = x + w / 2 - 9, sy = y + h / 2 - 8;
+  r(sx, sy, 18, 16, '#2a1d27'); r(sx + 1, sy + 1, 16, 14, '#feae34'); r(sx + 8, sy + 3, 2, 7, '#2a1d27'); r(sx + 8, sy + 11, 2, 2, '#2a1d27');
+  ctx.restore();
+  // the reveal: sparkles as the boards come down
+  if (k > .82) for (let i = 0; i < 8; i++) { const hh = hash('sk' + i + x); if (((t / 120) | 0) % 3 === i % 3) { const px = x + hh % w, py = y + (hh >>> 6) % h; r(px, py - 2, 1, 5, '#fff'); r(px - 2, py, 5, 1, '#fff'); } }
+}
 function drawRoom(R0, t) {
   // being built or extended: the walls slide from the old rectangle (or the door) to the new one
   let R = R0;
@@ -99,25 +136,18 @@ function drawConstruction(x, y, k, t) {
 function drawDesk(d, t, clashing, lights, glows, sky) {
   const { x, y } = d, p = d.cell ? d.cell.p : d.p, f = (t / 140) | 0, seed = hash(p ? p.id : 'empty' + x + y) % 997;
   // a newcomer's desk is built first: it rises from the floor over the first second
-  const born = p && arrivals.get(p.id), build = born ? Math.min(1, Math.max(0, (Date.now() - born - 900) / 1100)) : 1; // the room goes up first
+  const born = p && arrivals.get(p.id), build = born ? Math.min(1, (Date.now() - born) / SITE_MS) : 1;
   // leaving: once they've walked off, the desk sinks into dust (demolition) and is gone
   if (p && p.leaving) {
     const away = d.cell && d.cell.actor && d.cell.actor.mode !== 'desk';
-    const k = away ? Math.min(1, Math.max(0, (Date.now() - p.leaving - 2600) / 1400)) : 0;
-    if (k >= 1) return;
-    if (k > 0) {
-      ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(0, Math.round(k * 12));
-      drawDeskBody(d, t, false, lights, glows, sky, p, f, seed);
-      ctx.restore();
-      drawConstruction(x, y, 1 - k, t);
-      return;
-    }
+    const k = away ? Math.min(1, Math.max(0, (Date.now() - p.leaving - 2400) / SITE_MS)) : 0;
+    if (k >= .5) { sites.push({ x: x + 2, y: y + 2, w: CELL_W - 4, h: CELL_H - 8, k }); return; } // gone under the boards
+    if (k > 0) { drawDeskBody(d, t, false, lights, glows, sky, p, f, seed); sites.push({ x: x + 2, y: y + 2, w: CELL_W - 4, h: CELL_H - 8, k }); return; }
   }
   if (build < 1) {
-    ctx.save(); ctx.globalAlpha = .25 + build * .75; ctx.translate(0, Math.round((1 - build) * 10));
-    drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed);
-    ctx.restore();
-    drawConstruction(x, y, build, t);
+    // under construction: boarded up and dusty; the finished desk is revealed when the boards come down
+    if (build > .5) drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed);
+    sites.push({ x: x + 2, y: y + 2, w: CELL_W - 4, h: CELL_H - 8, k: build });
     return;
   }
   drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed);
@@ -324,7 +354,9 @@ function drawScene(t, dt) {
   for (const R of rooms) drawRoom(R, t);
   drawDevCorner(t, glows);
   const cs = clashSet();
+  sites = [];
   for (const d of desks) drawDesk(d, t, !!d.p && cs.has(d.p.id), lights, glows, sky);
+  for (const s of sites) drawSite(s, t);
   const movers = [];
   for (const c of layout) {
     const a = c.actor;
