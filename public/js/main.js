@@ -3,6 +3,7 @@
 let lastLayoutKey = '';
 function renderAll() {
   if (!data) return;
+  applyAvatars();
   const key = data.people.map(p => p.id + ':' + roomKey(p)).join(',') + '|' + floor + '|' + document.getElementById('stage').clientWidth;
   noteArrivals();
   if (key !== lastLayoutKey) { lastLayoutKey = key; relayout(); }

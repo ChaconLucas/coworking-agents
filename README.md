@@ -147,6 +147,7 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **History:** arrivals, departures, requests and finished work from the last 24 hours (kept in your browser).
 - **Daily report as Markdown:** one click copies it, ready for a standup.
 - **Focus mode:** sounds and system notifications pause for 25 or 50 minutes; the office keeps updating.
+- **Pick an avatar:** the die next to an agent's face in the panel rolls a new look, remembered for that session name; ↺ goes back.
 - **Estimated cost:** each session's panel and the usage report show what the tokens would cost at the official API list prices (table in `src/prices.js`, dated; add or override models in `~/.config/coworking-agents/prices.json`). Priced per reply, with Claude's 1-hour/5-minute cache-write split. Models without a published price are listed as such, never guessed. On a subscription this is not what you pay.
 
 ## Platforms

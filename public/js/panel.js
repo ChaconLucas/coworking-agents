@@ -5,6 +5,18 @@ function fmtK(n) { return n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : n >= 1e6 ? (n 
 const KIND_ICON = { edit: '✎', read: '◉', terminal: '›_', web: '◍', delegate: '⚑', skill: '✦', mcp: '⚡', other: '•', ask: '?', thinking: '…' };
 
 const fmtTok = n => fmtK(Math.round(Number(n) || 0));
+// chosen avatars, remembered per session name across runs (n = how many times "new look" was clicked)
+let avatars = store.get('avatars', {});
+if (!avatars || typeof avatars !== 'object') avatars = {};
+function applyAvatars() {
+  const m = new Map();
+  if (data) for (const p of data.people) { const n = avatars[p.name]; if (n) m.set(p.id, p.name + '#' + n); }
+  Art.setLookSeeds(m);
+}
+function nextAvatar(p, reset) {
+  if (reset) delete avatars[p.name]; else avatars[p.name] = (avatars[p.name] || 0) + 1;
+  store.set('avatars', avatars); applyAvatars(); renderPanel(); lastHits = ''; renderOverlay();
+}
 // estimated money at API list prices; never shown without a price (see src/prices.js)
 const fmtUSD = n => { const d = n >= 100 ? 0 : n >= 1 ? 2 : 3; return 'US$ ' + n.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en', { minimumFractionDigits: d, maximumFractionDigits: d }); };
 const untilText = ms => { if (!ms) return ''; const d = ms - Date.now(); if (d <= 0) return T.usage.now; const h = Math.floor(d / 36e5), m = Math.round((d % 36e5) / 6e4); return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : h ? `${h}h${String(m).padStart(2, '0')}` : `${m}min`; };
@@ -114,7 +126,9 @@ function renderPanel() {
     <h3 id="certs-h">${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${Number(c.n) || 0}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
     <p class="note" style="margin-top:18px">${P.session}: <code>${esc(p.id)}</code></p>`;
   const face = Art.portrait(p.id, p.state === 'needs_you' ? 'open' : null);
-  panelBody.querySelector('.ph-face').appendChild(face);
+  const fb = panelBody.querySelector('.ph-face');
+  fb.appendChild(face);
+  fb.insertAdjacentHTML('beforeend', `<button class="ph-dice" data-avatar="${esc(p.id)}" title="${esc(P.newLook)}" aria-label="${esc(P.newLook)}">⚄</button>${avatars[p.name] ? `<button class="ph-reset" data-avatar-reset="${esc(p.id)}" title="${esc(P.resetLook)}" aria-label="${esc(P.resetLook)}">↺</button>` : ''}`);
 }
 
 
@@ -134,6 +148,8 @@ overlay.addEventListener('click', e => {
   renderOverlay(); renderPanel();
 });
 panelBody.addEventListener('click', async e => {
+  const av = e.target.closest('[data-avatar],[data-avatar-reset]');
+  if (av) { const p = data.people.find(x => x.id === (av.dataset.avatar || av.dataset.avatarReset)); if (p) nextAvatar(p, !!av.dataset.avatarReset); return; }
   const cp = e.target.closest('[data-compact-panel]');
   if (cp) return compactAgent(cp.dataset.compactPanel, cp);
   const b = e.target.closest('#btn-goto');

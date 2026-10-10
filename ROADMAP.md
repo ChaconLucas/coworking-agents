@@ -17,13 +17,10 @@ These are written or designed, but can't be verified without hardware or data we
 - **Status-line copy of the context window** set up automatically (opt-in), so the context percentage is exact from the first reply instead of only after a reply passes 200k.
 - **1.0.0** once the above settles.
 
+## Done recently
+
+Estimated cost · wait reminder · git state on the door · daily report as Markdown · history · focus mode · avatar picker.
+
 ## Ideas
 
-- **Cost estimate** per session and per day, from measured tokens and a published price table (labelled as an estimate).
-- **Waiting too long:** a gentle nudge when an agent has been waiting on you for more than N minutes.
-- **Git state on the room door:** uncommitted changes, branch ahead/behind, read from the checkout.
-- **Copy today's report** as Markdown, ready to paste into a standup.
-- **Activity feed:** a scrollable history of done / needs-you / arrivals, beyond the toasts.
 - **Seasonal decor** by date (subtle, off with a toggle).
-- **Pick an avatar** per session name, remembered across runs.
-- **Focus mode:** mute sounds and notifications for a while, with a visible timer.

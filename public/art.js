@@ -29,8 +29,11 @@ function shade(hex, f) {
   const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * f))));
   return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
 }
+// a chosen look replaces the one derived from the id (see setLookSeeds)
+let lookSeeds = new Map();
+function setLookSeeds(m) { lookSeeds = m; }
 function look(id) {
-  const h = hash(id);
+  const h = hash(lookSeeds.get(id) || id);
   const skin = SKIN[h % SKIN.length], hair = HAIR[(h >>> 3) % HAIR.length], shirt = SHIRT[(h >>> 7) % SHIRT.length];
   return {
     s: skin[0], S: skin[1], h: hair[0], H: hair[1], c: shirt, C: shade(shirt, .72), p: PANTS[(h >>> 11) % PANTS.length],
@@ -733,7 +736,7 @@ function aiIconEl(id, color) {
 
 window.Art = {
   aiIcon, aiIconEl, portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
-  PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setCtx, r, sprite, blit,
+  PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setLookSeeds, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,
   drawCooler, drawRug, drawFloor, applyLight, LEGS_SIT,
