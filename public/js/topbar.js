@@ -66,7 +66,27 @@ function beep(urgent) {
     if (urgent) { const o2 = audio.createOscillator(); o2.type = 'square'; o2.frequency.value = 1175; o2.connect(g); o2.start(audio.currentTime + .12); o2.stop(audio.currentTime + .25); }
   } catch {}
 }
+// a little chiptune per event: request (two rising beeps), done (soft chime), arrival (three notes up), leaving (two notes down)
+const TUNES = { need: [[880, 0], [1175, .12]], done: [[784, 0], [1047, .1]], arrive: [[523, 0], [659, .09], [784, .18]], leave: [[659, 0], [440, .12]], limit: [[440, 0], [440, .18], [440, .36]] };
+function playTune(kind) {
+  if (!soundOn || !TUNES[kind]) return;
+  try {
+    audio = audio || new AudioContext();
+    for (const [freq, at] of TUNES[kind]) {
+      const o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + at;
+      o.type = kind === 'done' ? 'triangle' : 'square'; o.frequency.value = freq;
+      g.gain.setValueAtTime(.05, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + .16);
+      o.connect(g).connect(audio.destination); o.start(t0); o.stop(t0 + .17);
+    }
+  } catch {}
+}
+
 function notifyChanges() {
+  const ids = new Set(data.people.filter(p => !p.leaving).map(p => p.id));
+  if (prevStates.size) {
+    if ([...ids].some(id => !prevStates.has(id))) playTune('arrive');
+    else if ([...prevStates.keys()].some(id => !ids.has(id))) playTune('leave');
+  }
   for (const p of data.people) {
     const before = prevStates.get(p.id);
     if (before && before !== p.state) {
@@ -74,14 +94,14 @@ function notifyChanges() {
       const done = p.state === 'idle' && !['idle', 'asleep'].includes(before);
       if (done) doneUntil.set(p.id, Date.now() + 9000);
       if (urgent || done) {
-        beep(urgent);
+        playTune(urgent ? 'need' : 'done');
         if (notifyOn && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
           try { new Notification(`${p.name} ${T.states[p.state]}`, { body: p.title || '', tag: p.id }); } catch {}
         }
       }
     }
   }
-  prevStates = new Map(data.people.map(p => [p.id, p.state]));
+  prevStates = new Map(data.people.filter(p => !p.leaving).map(p => [p.id, p.state]));
 }
 
 // ask for notification permission right away; browsers that need a gesture get asked on the first click

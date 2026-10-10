@@ -19,7 +19,7 @@ function toast(html, kind) {
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 7000);
 }
 function notifyOS(title, body) {
-  beep(true);
+  playTune('limit');
   if (notifyOn && 'Notification' in window && Notification.permission === 'granted' && document.hidden) { try { new Notification(title, { body }); } catch {} }
 }
 
