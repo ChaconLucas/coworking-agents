@@ -7,6 +7,11 @@ const { execFile } = require('child_process');
 function run(cmd, args) {
   return new Promise(resolve => execFile(cmd, args, { timeout: 5000 }, (err, out) => resolve(err ? null : String(out).trim())));
 }
+// osascript with the reason when it fails: -1743 = the user denied Automation for this app
+function osa(args) {
+  return new Promise(resolve => execFile('osascript', args, { timeout: 8000 }, (err, out, stderr) =>
+    resolve(err ? { fail: /-1743/.test(String(stderr)) ? 'automation' : 'script', detail: String(stderr).trim().slice(0, 200) } : { out: String(out).trim() })));
+}
 
 async function ancestry(pid) {
   const out = [];
@@ -37,19 +42,22 @@ const APPS = [
 const SCRIPTS = {
   Terminal: tty => `tell application "Terminal"
   repeat with w in windows
-    repeat with t in tabs of w
-      if tty of t is "${tty}" then
-        set selected of t to true
-        set index of w to 1
-        activate
-        return "ok"
-      end if
-    end repeat
+    try
+      repeat with t in tabs of w
+        if tty of t is "${tty}" then
+          set selected of t to true
+          set index of w to 1
+          activate
+          return "ok"
+        end if
+      end repeat
+    end try
   end repeat
 end tell
 return "notfound"`,
   iTerm2: tty => `tell application "iTerm2"
   repeat with w in windows
+    try
     repeat with t in tabs of w
       repeat with s in sessions of t
         if tty of s is "${tty}" then
@@ -61,6 +69,7 @@ return "notfound"`,
         end if
       end repeat
     end repeat
+    end try
   end repeat
 end tell
 return "notfound"`,
@@ -79,9 +88,9 @@ async function focus(person) {
   const app = APPS.find(a => chain.some(c => a.re.test(c)));
   if (!app) return { ok: false, reason: 'unknown', chain: chain.slice(-1) };
   if (app.tab) {
-    const res = await run('osascript', ['-e', SCRIPTS[app.name]('/dev/' + tty)]);
-    if (res === 'ok') return { ok: true, app: app.name, exact: true };
-    if (res === null) return { ok: false, reason: 'automation', app: app.name };
+    const res = await osa(['-e', SCRIPTS[app.name]('/dev/' + tty)]);
+    if (res.out === 'ok') return { ok: true, app: app.name, exact: true };
+    if (res.fail === 'automation') return { ok: false, reason: 'automation', app: app.name };
   }
   await run('open', ['-a', app.name]);
   return { ok: true, app: app.name, exact: false };
@@ -97,12 +106,14 @@ const SEND = {
   set theText to item 2 of argv
   tell application "Terminal"
     repeat with w in windows
-      repeat with t in tabs of w
-        if tty of t is theTty then
-          do script theText in t
-          return "ok"
-        end if
-      end repeat
+      try
+        repeat with t in tabs of w
+          if tty of t is theTty then
+            do script theText in t
+            return "ok"
+          end if
+        end repeat
+      end try
     end repeat
   end tell
   return "notfound"
@@ -112,14 +123,16 @@ end run`,
   set theText to item 2 of argv
   tell application "iTerm2"
     repeat with w in windows
-      repeat with t in tabs of w
-        repeat with s in sessions of t
-          if tty of s is theTty then
-            tell s to write text theText
-            return "ok"
-          end if
+      try
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if tty of s is theTty then
+              tell s to write text theText
+              return "ok"
+            end if
+          end repeat
         end repeat
-      end repeat
+      end try
     end repeat
   end tell
   return "notfound"
@@ -138,9 +151,9 @@ async function sendText(person, text) {
   const chain = await ancestry(person.pid);
   const app = APPS.find(a => chain.some(c => a.re.test(c)));
   if (!app || !SEND[app.name]) return { ok: false, reason: 'unsupported', app: app && app.name };
-  const res = await run('osascript', ['-e', SEND[app.name], '/dev/' + m[1], text]);
-  if (res === 'ok') return { ok: true, app: app.name };
-  return { ok: false, reason: res === null ? 'automation' : 'notfound', app: app.name };
+  const res = await osa(['-e', SEND[app.name], '/dev/' + m[1], text]);
+  if (res.out === 'ok') return { ok: true, app: app.name };
+  return { ok: false, reason: res.fail || 'notfound', app: app.name, detail: res.detail };
 }
 
 module.exports = { focus, sendText };
