@@ -157,6 +157,17 @@ assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
   assert.strictEqual(depth, 0, 'style.css has an unclosed block');
 }
 
+// every UI string key exists in both languages (a stray comment once hid half a line of pt keys)
+{
+  const vm = require('vm'), box = { localStorage: { getItem: () => null, setItem() {} }, location: { search: '' }, navigator: { language: 'pt' }, URLSearchParams };
+  vm.createContext(box);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8') + ';this.I18N = I18N;', box);
+  const keys = o => Object.entries(o).flatMap(([k, v]) => v && typeof v === 'object' ? keys(v).map(x => k + '.' + x) : [k]).sort();
+  const pt = keys(box.I18N.pt), en = keys(box.I18N.en);
+  assert.deepStrictEqual(pt.filter(k => !en.includes(k)), [], 'keys only in pt');
+  assert.deepStrictEqual(en.filter(k => !pt.includes(k)), [], 'keys only in en');
+}
+
 // the browser art module must load and export only real functions (node --check can't see a missing name)
 {
   global.window = {}; global.document = { createElement: () => ({ getContext: () => ({}) }) };

@@ -4,7 +4,7 @@
 // ---------------- strings ----------------
 const I18N = {
   pt: {
-    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `Andar ${n}`, // the pixel font has no "º" building: 'Ver prédio', agents: 'agentes', moreCerts: n => `+${n} certificado${n > 1 ? 's' : ''} — clique para ver todos`, subagents: n => `${n} subagente${n > 1 ? 's' : ''}`,
+    working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `Andar ${n}`, building: 'Ver prédio', agents: 'agentes', moreCerts: n => `+${n} certificado${n > 1 ? 's' : ''} — clique para ver todos`, subagents: n => `${n} subagente${n > 1 ? 's' : ''}`,
     talk: { placeholder: 'Escreva a próxima instrução…', copyGo: 'Copiar e ir para o terminal', pasteHint: 'Na aba do terminal: cole com ⌘V e aperte Enter.', copied: 'Copiado! Cole com ⌘V na aba que abriu e aperte Enter.', approveThere: 'Responda ou aprove na aba do terminal — o botão abaixo leva direto até ela.' },
     help: { question: 'Tenho uma pergunta para você.', plan: 'Meu plano está pronto. Pode revisar?', run: c => `Posso rodar “${c}”?`, edit: f => `Posso editar ${f}?`, tool: t => `Posso usar ${t}? Está esperando a sua aprovação.`, done: t => `Pronto! ${t}`, see: 'Ver', waitingYou: 'Aguardando sua resposta', nextOffice: 'Ver os próximos pedidos', more: n => `+${n} precisam de você`, less: 'Mostrar menos' },
     notify: '🔔 Avisos', sound: '🔊 Som', lights: 'Luzes do escritório', restRoom: 'Descanso', on: 'ligado', off: 'desligado', lang: 'EN',
