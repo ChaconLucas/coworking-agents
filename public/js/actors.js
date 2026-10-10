@@ -103,7 +103,7 @@ function updateCat(dt, t) {
   if (!cat.ready) { cat.x = RX + 60; cat.y = TOP + 90; cat.tx = cat.x; cat.ty = cat.y; cat.ready = true; }
   if (cat.mode === 'walk') {
     const dx = cat.tx - cat.x, dy = cat.ty - cat.y, d = Math.hypot(dx, dy), step = 22 * dt;
-    if (d <= step) { cat.x = cat.tx; cat.y = cat.ty; cat.mode = cat.visit ? 'sit' : Math.random() < .5 ? 'sit' : 'sleep'; cat.until = t + (cat.mode === 'sleep' ? 15000 : 4000) + Math.random() * 6000; }
+    if (d <= step) { if (cat.visit) achBump('catVisits'); cat.x = cat.tx; cat.y = cat.ty; cat.mode = cat.visit ? 'sit' : Math.random() < .5 ? 'sit' : 'sleep'; cat.until = t + (cat.mode === 'sleep' ? 15000 : 4000) + Math.random() * 6000; }
     else { cat.x += dx / d * step; cat.y += dy / d * step; cat.flip = dx < 0; }
   } else if (cat.visit && !(catErrand() || {}).id) { cat.visit = null; cat.until = 0; // the wait is over: back to cat things
   } else if (t > cat.until || (!cat.visit && catErrand())) {

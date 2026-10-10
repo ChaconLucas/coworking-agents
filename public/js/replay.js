@@ -28,6 +28,7 @@ function setReplay(offsetSec) {
   if (liveData) { data = applyReplay(liveData); lastLayoutKey = ''; renderAll(); }
 }
 function toggleReplay(on) {
+  if (on) achBump('replay');
   replayEl.hidden = !on;
   replayEl.querySelector('[data-r="live"]').textContent = T.replay.live;
   if (!on) { clearInterval(replayPlay); replayPlay = 0; setReplay(0); } else setReplay(-1800);

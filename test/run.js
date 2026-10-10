@@ -250,6 +250,15 @@ assert.strictEqual(prices.costOf('claude-opus-5-5', { input: 1e6, output: 1e6, c
 assert.strictEqual(prices.costOf('gpt-5.5', { input: 1e6, output: 1e6, cacheRead: 1e6, cacheWrite: 0 }), 5 + 30 + 0.5);
 assert.strictEqual(prices.costOf('some-new-model', { input: 1e6, output: 1e6 }), null, 'no price for an unknown model');
 
+// every achievement has a name and a description in both languages
+{
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'achievements.js'), 'utf8');
+  const ids = [...src.matchAll(/\{ id: '([a-z]+)', g: '/g)].map(m => m[1]);
+  const i18n = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
+  assert.ok(ids.length >= 40, 'achievements listed');
+  for (const id of ids) assert.strictEqual((i18n.match(new RegExp('\\n\\s+' + id + ': \\{ name: ', 'g')) || []).length, 2, 'achievement text pt+en: ' + id);
+}
+
 // update notice: only a strictly higher x.y.z counts; nothing is known until the CLI asks npm
 const upd = require('../src/update');
 assert.ok(upd.newer('0.2.0', '0.1.9') && upd.newer('1.0.0', '0.9.9') && upd.newer('0.1.10', '0.1.9'), 'newer versions');

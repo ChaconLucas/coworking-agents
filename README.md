@@ -24,6 +24,8 @@
 | ![Panel](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
 | ![Usage](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
+| ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** Agent of the month, then every achievement with its tiers and progress. |
+| ![Christmas](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
 | ![Building](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
 | ![House wall](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
 | ![Night](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/office-night.png) | **Day and night.** Lighting follows your clock; a wall switch turns the ceiling lights on or off; the rest room stays dark. |
@@ -131,7 +133,8 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 | `1`–`9` | open the n-th agent |
 | `N` | next agent that needs you (opens its talk modal) |
 | `/` | quick search by name, title, repository or state |
-| `R` / `D` / `A` | usage report / daily report / history |
+| `R` / `D` / `A` / `C` | usage report / daily report / history / achievements |
+| `E` | holiday decor on/off |
 | `F` | focus mode: mute sounds and notifications for 25 min (again: 50, again: off) |
 | `H` | replay the last hour (scrub or play) |
 | `L` | ceiling lights on/off |
@@ -148,6 +151,11 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Daily report as Markdown:** one click copies it, ready for a standup.
 - **Focus mode:** sounds and system notifications pause for 25 or 50 minutes; the office keeps updating.
 - **Pick an avatar:** the die next to an agent's face in the panel rolls a new look, remembered for that session name; ↺ goes back.
+- **Achievements:** 43 of them, with tiers from bronze to legend, measured from your history (busiest day, streaks, nights, Friday evenings, tokens, models), the live office (parallel sessions, subagents, giant contexts, quick answers) and what you do in it. A few are secret. Trophies stand on a shelf on the wall (`C` opens the list).
+- **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month, with the top 5 in the achievements tab.
+- **Holidays:** Christmas, New Year, Halloween, Festa Junina, Carnaval and the office's birthday decorate the room and put hats on everyone (`E` turns decor off).
+- **Office mood:** an ON AIR sign lights up when most of the office is working; with nobody working the room gets calmer.
+- **The cat** visits whoever has been waiting on you the longest. You can pet it.
 - **Estimated cost:** each session's panel and the usage report show what the tokens would cost at the official API list prices (table in `src/prices.js`, dated; add or override models in `~/.config/coworking-agents/prices.json`). Priced per reply, with Claude's 1-hour/5-minute cache-write split. Models without a published price are listed as such, never guessed. On a subscription this is not what you pay.
 
 ## Platforms

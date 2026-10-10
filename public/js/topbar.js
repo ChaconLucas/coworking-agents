@@ -157,7 +157,7 @@ document.getElementById('btn-notify').onclick = async () => {
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
 document.getElementById('btn-search').onclick = () => openSearch();
 document.getElementById('btn-replay').onclick = () => toggleReplay(replayEl.hidden);
-document.getElementById('btn-lang').onclick = () => { lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };
+document.getElementById('btn-lang').onclick = () => { achBump('lang'); lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };
 
 function renderFocus() {
   const b = document.getElementById('btn-focus'), left = b.querySelector('.focus-left'), on = focusing();
@@ -174,7 +174,7 @@ document.getElementById('btn-focus').onclick = () => {
   if (!focusUntil) toast(`<b>${esc(T.focus.ended)}</b>`, 'ok');
   renderFocus();
 };
-setInterval(() => { if (focusUntil && !focusing()) { focusUntil = 0; store.set('focusUntil', 0); toast(`<b>${esc(T.focus.ended)}</b>`, 'ok'); } renderFocus(); }, 20000);
+setInterval(() => { if (focusUntil && !focusing()) { focusUntil = 0; store.set('focusUntil', 0); achBump('focusDone'); toast(`<b>${esc(T.focus.ended)}</b>`, 'ok'); } renderFocus(); }, 20000);
 
 // the tools live in a menu behind ☰ (the bar keeps room for the office); toggles keep it open
 const menuEl = document.getElementById('tools-menu'), menuBtn = document.getElementById('btn-menu');

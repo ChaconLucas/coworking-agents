@@ -14,7 +14,7 @@ function applyAvatars() {
   Art.setLookSeeds(m);
 }
 function nextAvatar(p, reset) {
-  if (reset) delete avatars[p.name]; else avatars[p.name] = (avatars[p.name] || 0) + 1;
+  if (reset) delete avatars[p.name]; else { avatars[p.name] = (avatars[p.name] || 0) + 1; achBump('avatars'); }
   store.set('avatars', avatars); applyAvatars(); renderPanel(); lastHits = ''; renderOverlay();
 }
 // estimated money at API list prices; never shown without a price (see src/prices.js)
@@ -136,7 +136,7 @@ overlay.addEventListener('click', e => {
   if (e.target.closest('[data-usage]')) return openReport();
   if (e.target.closest('[data-weather]')) return enableWeather(true);
   if (e.target.closest('[data-ach]')) return openReport('ach');
-  if (e.target.closest('[data-switch]')) { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); return; } // wall light switch
+  if (e.target.closest('[data-switch]')) { achBump('lights'); lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); return; } // wall light switch
   const cb = e.target.closest('[data-compact]');
   if (cb) return compactAgent(cb.dataset.compact, cb);
   const mc = e.target.closest('[data-certs]');

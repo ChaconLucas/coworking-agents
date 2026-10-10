@@ -445,6 +445,7 @@ function drawScene(t, dt) {
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
   drawCatExtras(t);
+  drawConfetti(t);
   // ceiling lights: every room and shared area is lit, except the nap corner (it's a rest room)
   if (lightsOn) {
     for (const R of rooms) lights.push({ x: R.x + R.w / 2, y: R.y + R.h / 2, r: Math.max(R.w, R.h) * .8 });

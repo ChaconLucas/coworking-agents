@@ -81,6 +81,7 @@ async function compactAgent(id, btn) {
   try { out = await fetch('api/compact', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id }) }).then(r => r.json()); } catch {}
   if (btn) btn.disabled = false;
   const R = T.talk.reasons;
+  if (out.ok) achBump('compacts');
   if (out.ok) toast(`<b>${esc(T.alerts.compacting)}</b>${esc((data.people.find(p => p.id === id) || {}).name || '')}`, 'ok');
   else toast(`<b>${esc(T.alerts.compactFail)}</b>${esc(typeof R[out.reason] === 'function' ? R[out.reason](out.app || 'Terminal') : (R[out.reason] || R.unknown))}`, 'bad');
 }

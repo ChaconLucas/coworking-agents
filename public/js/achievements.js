@@ -7,7 +7,13 @@ const TIER_COLOR = ['#8b9bb4', '#cd7f32', '#c0cbdc', '#ffd84d', '#2ce8f5', '#ff6
 const TIER_NAME = ['locked', 'bronze', 'silver', 'gold', 'diamond', 'legend'];
 let achRecord = store.get('achRecord', {});
 if (!achRecord || typeof achRecord !== 'object') achRecord = {};
-const recordMax = (k, v) => { if (v > (achRecord[k] || 0)) { achRecord[k] = v; store.set('achRecord', achRecord); } };
+const achSave = () => store.set('achRecord', achRecord);
+const recordMax = (k, v) => { if (v > (achRecord[k] || 0)) { achRecord[k] = v; achSave(); } };
+function achBump(k, n = 1) { achRecord[k] = (achRecord[k] || 0) + n; achSave(); }
+function achAdd(k, v) { const a = Array.isArray(achRecord[k]) ? achRecord[k] : (achRecord[k] = []); if (!a.includes(v)) { a.push(v); achSave(); } }
+const achCount = k => Array.isArray(achRecord[k]) ? achRecord[k].length : (achRecord[k] || 0);
+// opening the office counts a visit per day; 3am visits are noted (a secret)
+{ const d = new Date(); achAdd('openDays', d.toISOString().slice(0, 10)); if (d.getHours() === 3) achBump('nightShift'); }
 
 // facts from history: the busiest day, streaks, nights, weekends, totals
 function achFacts() {
@@ -20,45 +26,82 @@ function achFacts() {
     streak = prev && (d - prev) / 864e5 < 1.5 ? streak + 1 : 1;
     best = Math.max(best, streak); prev = d;
   }
-  const hourOf = ts => new Date(ts).getHours();
+  const hourOf = ts => new Date(ts).getHours(), dow = k => new Date(k + 'T12:00:00').getDay();
   const vals = keys.filter(work).map(k => days[k]);
-  const byAgent = (u && u.byAgent) || {};
-  const out = Object.values(byAgent).reduce((n, g) => n + ((g.total && g.total.output) || 0), 0);
-  const usd = Object.values(byAgent).reduce((n, g) => n + ((g.cost && g.cost.usd) || 0), 0);
-  const convs = Object.values(byAgent).reduce((n, g) => n + (g.sessions || 0), 0);
+  const byAgent = (u && u.byAgent) || {}, sum = f => Object.values(byAgent).reduce((n, g) => n + (f(g) || 0), 0);
+  const models = new Set(Object.values(byAgent).flatMap(g => Object.keys(g.byModel || {})));
+  const cred = Object.values((data && data.credentials) || {});
   return {
     dayHours: Math.max(0, ...vals.map(d => d.activeMs / 36e5)),
     dayTools: Math.max(0, ...vals.map(d => d.tools)),
+    dayOut: Math.max(0, ...vals.map(d => d.output || 0)),
     streak: best,
     days: vals.length,
     nights: keys.filter(k => days[k] && days[k].tools && hourOf(days[k].first) < 5).length,
     early: keys.filter(k => days[k] && days[k].tools && hourOf(days[k].first) >= 5 && hourOf(days[k].first) < 7).length,
-    weekends: keys.filter(k => work(k) && [0, 6].includes(new Date(k + 'T12:00:00').getDay())).length,
+    weekends: keys.filter(k => work(k) && [0, 6].includes(dow(k))).length,
+    fridays: keys.filter(k => work(k) && dow(k) === 5 && hourOf(days[k].last) >= 18).length,
+    mondays: keys.filter(k => work(k) && dow(k) === 1 && hourOf(days[k].first) < 9).length,
+    longDays: keys.filter(k => work(k) && days[k].last - days[k].first >= 14 * 36e5).length,
     dualAI: keys.filter(k => days[k] && days[k].agents && days[k].agents.length >= 2).length,
-    output: out, usd, convs,
-    parallel: achRecord.parallel || 0,
-    aiKinds: achRecord.aiKinds || 0,
-    pets: achRecord.pets || 0,
-    zeroQueue: achRecord.zeroQueue || 0,
+    output: sum(g => g.total && g.total.output), cache: sum(g => g.total && g.total.cacheRead),
+    usd: sum(g => g.cost && g.cost.usd), convs: sum(g => g.sessions),
+    models: models.size,
+    skills: Math.max(0, ...cred.map(c => (c.skills || []).length)), mcps: Math.max(0, ...cred.map(c => (c.mcps || []).length)),
+    parallel: achCount('parallel'), aiKinds: achCount('aiKinds'), pets: achCount('pets'), zeroQueue: achCount('zeroQueue'),
+    clashes: achCount('clashes'), team: achCount('team'), bigCtx: achCount('bigCtx'), files: achCount('files'), sessionTools: achCount('sessionTools'),
+    fast: achCount('fast'), patience: achCount('patience'), compacts: achCount('compacts'), focusDone: achCount('focusDone'),
+    replay: achCount('replay'), avatars: achCount('avatars'), lights: achCount('lights'), weather: achCount('weather'),
+    holidays: achCount('holidays'), lang: achCount('lang'), openDays: achCount('openDays'), catVisits: achCount('catVisits'),
+    nightShift: achCount('nightShift'), konami: achCount('konami'), first: 1,
   };
 }
 
+// group: where it comes from (history, live, you); secret: hidden as ??? until the first tier
 const ACH = [
-  { id: 'marathon', icon: '⏱', fact: 'dayHours', steps: [2, 4, 8, 12, 20] },
-  { id: 'hands', icon: '✎', fact: 'dayTools', steps: [100, 500, 1000, 3000, 6000] },
-  { id: 'streak', icon: '🔥', fact: 'streak', steps: [3, 7, 14, 30, 60] },
-  { id: 'veteran', icon: '★', fact: 'days', steps: [7, 30, 90, 180, 365] },
-  { id: 'orchestra', icon: '♫', fact: 'parallel', steps: [3, 5, 8, 12, 20] },
-  { id: 'polyglot', icon: '◆', fact: 'aiKinds', steps: [2, 3, 4] },
-  { id: 'duo', icon: '⚭', fact: 'dualAI', steps: [1, 5, 20] },
-  { id: 'tokens', icon: '◉', fact: 'output', steps: [1e6, 1e7, 5e7, 1e8, 5e8] },
-  { id: 'whale', icon: '$', fact: 'usd', steps: [100, 1000, 10000, 50000] },
-  { id: 'talker', icon: '❝', fact: 'convs', steps: [10, 50, 200, 500] },
-  { id: 'owl', icon: '☾', fact: 'nights', steps: [1, 5, 15, 40] },
-  { id: 'early', icon: '☀', fact: 'early', steps: [1, 5, 15, 40] },
-  { id: 'weekend', icon: '⛱', fact: 'weekends', steps: [1, 4, 12, 30] },
-  { id: 'inbox', icon: '✓', fact: 'zeroQueue', steps: [1, 10, 50] },
-  { id: 'cat', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200] },
+  { id: 'first', g: 'you', icon: '👋', fact: 'first', steps: [1] },
+  { id: 'marathon', g: 'history', icon: '⏱', fact: 'dayHours', steps: [2, 4, 8, 12, 20] },
+  { id: 'hands', g: 'history', icon: '✎', fact: 'dayTools', steps: [100, 500, 1000, 3000, 6000] },
+  { id: 'sprint', g: 'history', icon: '⚡', fact: 'dayOut', steps: [2e5, 1e6, 3e6, 6e6] },
+  { id: 'streak', g: 'history', icon: '🔥', fact: 'streak', steps: [3, 7, 14, 30, 60] },
+  { id: 'veteran', g: 'history', icon: '★', fact: 'days', steps: [7, 30, 90, 180, 365] },
+  { id: 'longday', g: 'history', icon: '🌗', fact: 'longDays', steps: [1, 5, 15, 40] },
+  { id: 'owl', g: 'history', icon: '☾', fact: 'nights', steps: [1, 5, 15, 40] },
+  { id: 'early', g: 'history', icon: '☀', fact: 'early', steps: [1, 5, 15, 40] },
+  { id: 'monday', g: 'history', icon: '☕', fact: 'mondays', steps: [1, 4, 12] },
+  { id: 'friday', g: 'history', icon: '🍕', fact: 'fridays', steps: [1, 4, 12] },
+  { id: 'weekend', g: 'history', icon: '⛱', fact: 'weekends', steps: [1, 4, 12, 30] },
+  { id: 'duo', g: 'history', icon: '⚭', fact: 'dualAI', steps: [1, 5, 20] },
+  { id: 'tokens', g: 'history', icon: '◉', fact: 'output', steps: [1e6, 1e7, 5e7, 1e8, 5e8] },
+  { id: 'elephant', g: 'history', icon: '🐘', fact: 'cache', steps: [1e9, 1e10, 5e10, 1e11] },
+  { id: 'whale', g: 'history', icon: '$', fact: 'usd', steps: [100, 1000, 10000, 50000] },
+  { id: 'talker', g: 'history', icon: '❝', fact: 'convs', steps: [10, 50, 200, 500] },
+  { id: 'collector', g: 'history', icon: '🧩', fact: 'models', steps: [2, 4, 6, 10] },
+  { id: 'swiss', g: 'history', icon: '🔧', fact: 'skills', steps: [5, 20, 50] },
+  { id: 'wired', g: 'history', icon: '🔌', fact: 'mcps', steps: [1, 3, 8] },
+  { id: 'orchestra', g: 'live', icon: '♫', fact: 'parallel', steps: [3, 5, 8, 12, 20] },
+  { id: 'polyglot', g: 'live', icon: '◆', fact: 'aiKinds', steps: [2, 3, 4] },
+  { id: 'boss', g: 'live', icon: '⚑', fact: 'team', steps: [2, 4, 8] },
+  { id: 'giant', g: 'live', icon: '🧠', fact: 'bigCtx', steps: [2e5, 5e5, 9e5] },
+  { id: 'writer', g: 'live', icon: '📄', fact: 'files', steps: [5, 15, 30] },
+  { id: 'workaholic', g: 'live', icon: '⚙', fact: 'sessionTools', steps: [200, 500, 1000] },
+  { id: 'bump', g: 'live', icon: '💥', fact: 'clashes', steps: [1, 5, 20] },
+  { id: 'fast', g: 'live', icon: '🏃', fact: 'fast', steps: [1, 10, 50, 200] },
+  { id: 'patience', g: 'live', icon: '🗿', fact: 'patience', steps: [1, 5] },
+  { id: 'inbox', g: 'live', icon: '✓', fact: 'zeroQueue', steps: [1, 10, 50] },
+  { id: 'regular', g: 'you', icon: '🏢', fact: 'openDays', steps: [3, 7, 30, 100] },
+  { id: 'janitor', g: 'you', icon: '🧹', fact: 'compacts', steps: [1, 5, 20] },
+  { id: 'monk', g: 'you', icon: '🧘', fact: 'focusDone', steps: [1, 5, 25] },
+  { id: 'timetravel', g: 'you', icon: '⏪', fact: 'replay', steps: [1, 10, 30] },
+  { id: 'stylist', g: 'you', icon: '🎲', fact: 'avatars', steps: [1, 10, 50] },
+  { id: 'electrician', g: 'you', icon: '💡', fact: 'lights', steps: [1, 20, 100] },
+  { id: 'weatherman', g: 'you', icon: '🌦', fact: 'weather', steps: [1] },
+  { id: 'bilingual', g: 'you', icon: '🗣', fact: 'lang', steps: [1, 10] },
+  { id: 'party', g: 'you', icon: '🎉', fact: 'holidays', steps: [1, 3, 6] },
+  { id: 'cat', g: 'you', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200] },
+  { id: 'catwatch', g: 'live', icon: '🐈', fact: 'catVisits', steps: [1, 10, 50] },
+  { id: 'nightshift', g: 'you', icon: '🌙', fact: 'nightShift', steps: [1], secret: true },
+  { id: 'konami', g: 'you', icon: '🕹', fact: 'konami', steps: [1], secret: true },
 ];
 
 function achState() {
@@ -72,22 +115,37 @@ function achState() {
 
 // live facts: how many sessions at once, how many different AIs at once, and emptying a long queue
 let achLevels = store.get('achLevels', null), achQueueWas = 0;
+const achWait = new Map(); // id → when it started asking
 function checkAchievements() {
   if (!data || replayAt) return;
   const live = data.people.filter(p => !p.leaving);
   recordMax('parallel', live.length);
   recordMax('aiKinds', new Set(live.map(p => p.agent)).size);
+  for (const p of live) {
+    recordMax('team', (p.subagents || []).length);
+    recordMax('bigCtx', p.ctx || 0);
+    recordMax('files', (p.files || []).length);
+    recordMax('sessionTools', (p.today && p.today.tools) || 0);
+    // how fast you answer: a request that ends within 30s; a wait over 30 min is patience (theirs)
+    const w = achWait.get(p.id), asking = p.state === 'needs_you' || p.state === 'waiting';
+    if (asking && !w) achWait.set(p.id, data.now - ((p.doing && p.doing.for) || 0));
+    if (!asking && w) { const took = data.now - w; if (took < 30000) achBump('fast'); else if (took > 30 * 60000) achBump('patience'); achWait.delete(p.id); }
+  }
+  for (const c of data.fileClashes || []) achAdd('clashes', c.file + '|' + c.who.slice().sort().join(','));
   const need = live.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
-  if (achQueueWas >= 2 && need === 0) { achRecord.zeroQueue = (achRecord.zeroQueue || 0) + 1; store.set('achRecord', achRecord); }
+  if (achQueueWas >= 2 && need === 0) achBump('zeroQueue');
   achQueueWas = need;
   if (!usageData || !usageData.days) return; // history not scanned yet: don't announce half the picture
   const st = achState(), now = Object.fromEntries(st.map(a => [a.id, a.tier]));
   if (achLevels) {
-    for (const a of st) if (a.tier > (achLevels[a.id] || 0)) {
+    // only achievements that existed last time get announced (new ones in an update join quietly), 3 at most
+    const ups = st.filter(a => a.id in achLevels && a.tier > achLevels[a.id]);
+    if (ups.length > 3) toast(`<b>${esc(T.ach.many(ups.length - 3))}</b>`, 'ok');
+    for (const a of ups.slice(0, 3)) {
       const A = T.ach, info = A.list[a.id];
       toast(`<b>${esc(A.unlocked)} · ${esc(A.tiers[a.tier])}</b>${esc(info.name)} — ${esc(info.desc(a.steps[a.tier - 1]))}`, 'ok');
       playTune('trophy');
-      trophyFlash = Date.now();
+      trophyFlash = Date.now(); if (a.tier >= 5 || a.secret) confettiAt = Date.now();
     }
   }
   achLevels = now; store.set('achLevels', now);
@@ -95,7 +153,7 @@ function checkAchievements() {
 let trophyFlash = 0;
 
 function fmtStep(a, n) {
-  if (a.fact === 'output') return fmtK(n);
+  if (['output', 'dayOut', 'cache', 'bigCtx'].includes(a.fact)) return fmtK(n);
   if (a.fact === 'usd') return 'US$ ' + Math.round(n).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
   if (a.fact === 'dayHours') return n.toFixed(n < 10 ? 1 : 0).replace(/\.0$/, '') + 'h';
   return String(Math.round(n));
@@ -111,14 +169,15 @@ function renderAchievements() {
   const monthName = m ? new Date(m.key + '-15').toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en', { month: 'long', year: 'numeric' }) : '';
   const podium = top.length ? `<ol class="aotm">${top.map((x, i) => `<li class="${i ? '' : 'first'}" data-aotm="${esc(x.id)}"><span class="aotm-face" data-face="${esc(x.id)}"></span><span><b>${esc((live.get(x.id) || {}).name || x.title || x.id.slice(0, 8))}</b>${x.title && live.get(x.id) ? `<br><span class="note">${esc(x.title)}</span>` : ''}</span><span class="t">${esc(hrs(x.activeMs))} · ${Number(x.tools) || 0} ${esc(A.actions)}</span></li>`).join('')}</ol>` : `<p class="note">${esc(usageData && usageData.scanning ? T.usage.scanning : A.noMonth)}</p>`;
   const card = a => {
-    const info = A.list[a.id], c = TIER_COLOR[a.tier];
+    const hidden = a.secret && !a.tier, info = hidden ? { name: '???', desc: () => A.secret } : A.list[a.id], c = TIER_COLOR[a.tier];
+    if (hidden) return `<div class="ach secret"><span class="ach-ico">?</span><div><b>???</b><small>${esc(A.locked)}</small><p>${esc(A.secret)}</p></div></div>`;
     const pips = a.steps.map((s, i) => `<i style="background:${i < a.tier ? TIER_COLOR[i + 1] : 'transparent'}" title="${esc(A.tiers[i + 1])}: ${esc(fmtStep(a, s))}"></i>`).join('');
     return `<div class="ach ${a.tier ? 'on' : ''}" style="--c:${c}"><span class="ach-ico">${a.icon}</span><div><b>${esc(info.name)}</b><small>${esc(a.tier ? A.tiers[a.tier] : A.locked)}</small><p>${esc(info.desc(a.next || a.steps[a.max - 1]))}</p>
       <div class="ach-bar"><i style="width:${(a.progress * 100).toFixed(1)}%"></i></div><div class="ach-foot"><span class="pips">${pips}</span><span>${a.next ? `${esc(fmtStep(a, a.value))} / ${esc(fmtStep(a, a.next))}` : esc(A.maxed)}</span></div></div></div>`;
   };
   body.innerHTML = tabsHtml() + `<h3>${esc(A.aotm)} · ${esc(monthName)}</h3><p class="sub">${esc(A.aotmSub)}</p>${podium}
     <h3>${esc(A.title)} · ${got}/${all}</h3><p class="sub">${esc(A.sub)}</p>
-    <div class="achs">${st.sort((x, y) => y.tier / y.max - x.tier / x.max || y.progress - x.progress).map(card).join('')}</div>`;
+    ${['history', 'live', 'you'].map(g => `<h4 class="ach-g">${esc(A.groups[g])}</h4><div class="achs">${st.filter(a => a.g === g).sort((x, y) => (x.secret && !x.tier) - (y.secret && !y.tier) || y.tier / y.max - x.tier / x.max || y.progress - x.progress).map(card).join('')}</div>`).join('')}`;
   body.querySelectorAll('[data-face]').forEach(el => el.appendChild(Art.portrait(el.dataset.face)));
 }
 reportEl.addEventListener('click', e => {
@@ -144,3 +203,22 @@ function drawTrophyShelf(x, y, w, t) {
 }
 let trophyBox = null;
 const shadeHex = (hex, f) => Art.shade(hex, f);
+
+// the classic code unlocks a secret (and a little party)
+{ const seq = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']; let at = 0;
+  document.addEventListener('keydown', e => {
+    at = e.key === seq[at] || e.key.toLowerCase() === seq[at] ? at + 1 : e.key === seq[0] ? 1 : 0;
+    if (at === seq.length) { at = 0; achBump('konami'); confettiAt = Date.now(); checkAchievements(); }
+  });
+}
+// confetti over the office (konami, or any legend-tier unlock)
+let confettiAt = 0;
+function drawConfetti(t) {
+  const age = Date.now() - confettiAt;
+  if (age > 4000) return;
+  for (let i = 0; i < 90; i++) {
+    const h = Art.hash('cf' + i), x = (h % W) + Math.sin(age / 300 + i) * 6, y = ((h >>> 8) % 60) - 60 + age / 1000 * (60 + (h >>> 16) % 80);
+    if (y > H) continue;
+    r(x, y, 2, (h >>> 4) % 2 + 1, TIER_COLOR[1 + (h % 5)]);
+  }
+}

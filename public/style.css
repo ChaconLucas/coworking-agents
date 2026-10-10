@@ -669,3 +669,6 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 .bar .counts .stat b { font-size: 12px; }
 .bar .counts .stat small { font-size: 10px; }
 .bar .counts .stat i { width: 7px; height: 7px; }
+.ach-g { margin: 14px 0 6px; font: 700 10px/1 var(--pix); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.ach.secret { border-style: dashed; }
+.ach.secret .ach-ico { color: #8b9bb4; }

@@ -23,6 +23,7 @@ function enableWeather(ask) {
   if (!('geolocation' in navigator)) return;
   navigator.geolocation.getCurrentPosition(pos => {
     store.set(WEATHER_KEY, true);
+    achBump('weather');
     const { latitude, longitude } = pos.coords; // rounded to ~1 km before leaving the browser
     fetchWeather(latitude, longitude);
     clearInterval(enableWeather.t);
