@@ -256,4 +256,21 @@ function showPerson(id) {
   selected = id; renderOverlay(); renderPanel();
   const tag = document.querySelector(`.tag[data-id="${CSS.escape(id)}"]`);
   if (tag) tag.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  camera(id);
+}
+
+// camera: glide and zoom to the agent's desk with a spotlight; null brings it back
+const officeEl = document.getElementById('office');
+const spot = document.createElement('div');
+spot.className = 'spot';
+officeEl.appendChild(spot);
+function camera(id) {
+  const cell = id && layout.find(c => c.p.id === id);
+  if (!cell) { officeEl.classList.remove('cam'); spot.classList.remove('on'); return; }
+  const a = cell.actor && cell.actor.mode !== 'desk' ? cell.actor : null;
+  const cx = (a ? a.x + 8 : cell.x + CELL_W / 2) * S, cy = (a ? a.y + 12 : cell.y + 46) * S;
+  officeEl.style.transformOrigin = `${cx}px ${cy}px`;
+  spot.style.setProperty('--sx', cx + 'px'); spot.style.setProperty('--sy', cy + 'px');
+  officeEl.classList.add('cam'); spot.classList.add('on');
+  panelBody.classList.add('enter'); setTimeout(() => panelBody.classList.remove('enter'), 900);
 }

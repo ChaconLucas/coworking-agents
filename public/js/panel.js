@@ -80,6 +80,7 @@ overlay.addEventListener('click', e => {
   if (!el) return;
   const id = el.dataset.hall ? '__hall' : el.dataset.id;
   selected = selected === id ? null : id;
+  camera(selected);
   renderOverlay(); renderPanel();
 });
 panelBody.addEventListener('click', async e => {
@@ -92,5 +93,5 @@ panelBody.addEventListener('click', async e => {
   b.disabled = false;
   if (msg) msg.textContent = out.ok ? (out.exact ? F.ok(out.app) : F.app(out.app)) : typeof F[out.reason] === 'function' ? F[out.reason](out.app || '') : (F[out.reason] || F.unknown);
 });
-document.getElementById('panel-close').onclick = () => { selected = null; renderOverlay(); renderPanel(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && building && !selected) return setBuilding(false); if (e.key === 'Escape' && selected) { selected = null; renderOverlay(); renderPanel(); } });
+document.getElementById('panel-close').onclick = () => { selected = null; camera(null); renderOverlay(); renderPanel(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && building && !selected) return setBuilding(false); if (e.key === 'Escape' && selected) { selected = null; camera(null); renderOverlay(); renderPanel(); } });

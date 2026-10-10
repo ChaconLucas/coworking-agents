@@ -3,7 +3,7 @@
 // Each repository is a room with its agents' desks; rooms sit in rows on the left.
 // On the right, a shared wing: kitchen, ping-pong, meeting room and nap corner.
 // With many rooms, the office gains floors (each floor has its own shared wing).
-const TOP = 58, CELL_W = 100, CELL_H = 96, RW = 148, ROOM_PAD = 6, ROOM_HEAD = 14, SHELF_GAP = 14, MAX_SHELVES = 2, ROOM_MAX = 9;
+const TOP = 58, CELL_W = 100, CELL_H = 96, RW = 148, ROOM_PAD = 6, ROOM_HEAD = 14, SHELF_GAP = 14, MAX_SHELVES = 4, ROOM_MAX = 9, MAX_PER_FLOOR = 24;
 const cv = document.getElementById('cv');
 const mainCtx = cv.getContext('2d');
 let ctx = mainCtx; // switched to the thumbnail canvas while drawing another floor
@@ -31,13 +31,16 @@ function planFloors(people, leftW) {
   }
   const list = chunks.map(([name, ps]) => {
     // at least 3 desks per room, like a real office: the spare ones stay empty (chair pushed in, screen off)
-    const cols = Math.min(maxCols, 3), seats = Math.max(ps.length, Math.min(3, maxCols));
+    const cols = Math.min(maxCols, Math.max(2, Math.min(3, ps.length))), seats = Math.max(ps.length, cols);
     return { name, people: ps, cols, seats, rows: Math.ceil(seats / cols), w: cols * CELL_W + ROOM_PAD * 2 };
   });
   // pack rooms into rows (shelves) and rows into floors
   const out = [];
   let cur = { shelves: [] }, shelf = null;
   for (const room of list) {
+    // a new floor when the current one has no room left: too many shelves or too many people
+    const onFloor = cur.shelves.reduce((n, sh) => n + sh.rooms.reduce((m, r) => m + r.people.length, 0), 0);
+    if (cur.shelves.length && onFloor + room.people.length > MAX_PER_FLOOR) { out.push(cur); cur = { shelves: [] }; shelf = null; }
     if (!shelf || shelf.used + room.w > leftW) {
       if (cur.shelves.length >= MAX_SHELVES) { out.push(cur); cur = { shelves: [] }; }
       shelf = { rooms: [], used: 0 };
@@ -126,11 +129,12 @@ function renderFloors() {
   if (!bar) { bar = document.createElement('nav'); bar.id = 'floors'; bar.className = 'floors'; document.getElementById('stage').before(bar); bar.addEventListener('click', e => { if (e.target.closest('[data-building]')) return setBuilding(!building); const b = e.target.closest('[data-floor]'); if (b) goFloor(+b.dataset.floor); }); }
   if (floors.length < 2) { bar.hidden = true; if (building) setBuilding(false); return; }
   bar.hidden = false;
-  bar.innerHTML = `<button class="floor bld ${building ? 'on' : ''}" data-building="1">🏢 ${esc(T.building)}</button>` + floors.map((f, i) => {
+  // elevator panel: round lit buttons with the floor number, room names underneath
+  bar.innerHTML = `<button class="lift-bld ${building ? 'on' : ''}" data-building="1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 1h10v14H3zM5 3v2h2V3zm4 0v2h2V3zM5 7v2h2V7zm4 0v2h2V7zm-2 4v4h2v-4z"/></svg><span>${esc(T.building)}</span></button><span class="lift-sep"></span>` + floors.map((f, i) => {
     const ps = f.shelves.flatMap(s => s.rooms.flatMap(r => r.people));
     const need = ps.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
     const names = f.shelves.flatMap(s => s.rooms.map(r => r.name));
-    return `<button class="floor ${i === floor && !building ? 'on' : ''}" data-floor="${i}" title="${esc(names.join(', '))}"><b>${esc(T.floor(i + 1))}</b> <span>${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' +' + (names.length - 3) : ''}</span>${need ? ` <i class="dot">${need}</i>` : ''}</button>`;
+    return `<button class="lift ${i === floor && !building ? 'on' : ''}" data-floor="${i}" title="${esc(T.floor(i + 1) + ': ' + names.join(', '))}"><b>${i + 1}</b><span>${esc(names.slice(0, 2).join(' · '))}${names.length > 2 ? ' +' + (names.length - 2) : ''}</span>${need ? `<i class="dot">${need}</i>` : ''}</button>`;
   }).join('');
 }
 

@@ -20,11 +20,16 @@ function renderBuilding() {
     const need = ps.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
     const work = ps.filter(p => !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length;
     const names = f.shelves.flatMap(sh => sh.rooms.map(r => r.name));
-    return `<button class="card ${i === floor ? 'cur' : ''}" data-floor="${i}">
-      <header><b>${esc(T.floor(i + 1))}</b><span>${esc(names.join(' · '))}</span>${need ? `<i class="dot">${need}</i>` : ''}</header>
-      <canvas data-thumb="${i}"></canvas>
+    return `<button class="card ${i === floor ? 'cur' : ''} ${need ? 'needs' : ''}" data-floor="${i}">
+      <header><span class="plate">${i + 1}</span><div><b>${esc(T.floor(i + 1))}</b><small>${esc(names.join(' · '))}</small></div><span class="faces" data-faces="${i}"></span></header>
+      <div class="frame"><canvas data-thumb="${i}"></canvas></div>
       <footer>${ps.length} ${esc(T.agents)} · ${work} ${esc(T.working)}${need ? ` · <b class="need">${need} ${esc(T.needYou)}</b>` : ''}</footer></button>`;
   }).join('');
+  // little faces of who works on each floor (red ring = needs you)
+  buildingEl.querySelectorAll('[data-faces]').forEach(el => {
+    const ps = floors[+el.dataset.faces].shelves.flatMap(sh => sh.rooms.flatMap(r => r.people)).slice(0, 6);
+    for (const p of ps) { const c = Art.portrait(p.id); if (p.state === 'needs_you' || p.state === 'waiting') c.className = 'need'; el.appendChild(c); }
+  });
   thumbs.length = 0;
   buildingEl.querySelectorAll('canvas[data-thumb]').forEach(c => { const g = c.getContext('2d'); g.imageSmoothingEnabled = false; thumbs[+c.dataset.thumb] = { c, g }; });
 }
