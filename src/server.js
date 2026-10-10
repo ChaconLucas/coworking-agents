@@ -119,6 +119,26 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return;
     }
     if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : usage()));
+    if (url.pathname === '/api/compact' && req.method === 'POST') {
+      // types "/compact" into a Claude session that finished its turn and whose context is filling up
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 2e3) req.destroy(); });
+      req.on('end', async () => {
+        try {
+          let msg = {};
+          try { msg = JSON.parse(body); } catch {}
+          const person = demo ? null : real().people.find(p => p.id === String(msg.id || ''));
+          const out = !person ? { ok: false, reason: demo ? 'demo' : 'gone' }
+            : person.agent !== 'claude' ? { ok: false, reason: 'unsupported' }
+            : person.state !== 'idle' && person.state !== 'asleep' ? { ok: false, reason: 'busy' }
+            : await sendText(person, '/compact');
+          send(res, 200, 'application/json', JSON.stringify(out));
+        } catch { if (!res.headersSent) send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
+      });
+      return;
+    }
     if (url.pathname === '/api/answer' && req.method === 'POST') {
       // pick an option of the agent's question: only a single-question, single-choice ask, and only a valid number
       const origin = req.headers.origin || '';

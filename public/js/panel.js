@@ -81,6 +81,7 @@ function renderPanel() {
   panelBody.innerHTML = `
     <header class="ph"><div class="ph-face"></div><div><h2>${esc(p.name)}</h2><p class="sub">${esc(p.title || '—')}</p>
       <div class="pills"><span class="pill" style="background:${agentOf(p).color}">${esc(agentOf(p).label)}</span><span class="pill" style="background:${col}">${esc(T.states[p.state] || p.state)}</span>${p.permissionMode ? `<span class="pill ghost" title="${esc(P.mode)}">${esc(P.modes[p.permissionMode] || p.permissionMode)}</span>` : ''}</div></div></header>
+    ${canCompact(p) ? `<div class="actions"><button class="btn compact" data-compact-panel="${esc(p.id)}">⤓ ${esc(T.alerts.compact)} · ${Math.round(ctxPct(p) * 100)}%</button></div>` : ''}
     <div class="actions"><button class="btn" id="btn-goto" data-id="${esc(p.id)}">›_ ${esc(p.agent === 'codex' && !p.pid ? P.gotoCodex : P.goto)}</button><span class="note" id="goto-msg"></span></div>
     ${p.coarse ? `<p class="note">${esc(T.panel.coarse)}</p>` : ''}
     <section class="card now" style="--c:${col}"><small>${esc(P.doing)}</small><p><span class="ico">${KIND_ICON[p.doing ? p.doing.kind : ''] || '•'}</span>${p.doing ? `<code>${esc(p.doing.tool)}</code> ` : ''}${esc(now)}</p>${p.doing ? `<span class="note">${esc(T.for(ago(p.doing.for)))}</span>` : ''}${p.state === 'waiting' ? `<p class="note">${esc(P.waitNote)}</p>` : ''}</section>
@@ -117,6 +118,8 @@ function renderPanel() {
 overlay.addEventListener('click', e => {
   if (e.target.closest('[data-usage]')) return openReport();
   if (e.target.closest('[data-switch]')) { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); return; } // wall light switch
+  const cb = e.target.closest('[data-compact]');
+  if (cb) return compactAgent(cb.dataset.compact, cb);
   const mc = e.target.closest('[data-certs]');
   if (mc) { showPerson(mc.dataset.certs); setTimeout(() => { const h = document.getElementById('certs-h'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); return; }
   const el = e.target.closest('[data-id],[data-hall]');
@@ -127,6 +130,8 @@ overlay.addEventListener('click', e => {
   renderOverlay(); renderPanel();
 });
 panelBody.addEventListener('click', async e => {
+  const cp = e.target.closest('[data-compact-panel]');
+  if (cp) return compactAgent(cp.dataset.compactPanel, cp);
   const b = e.target.closest('#btn-goto');
   if (!b) return;
   b.disabled = true;

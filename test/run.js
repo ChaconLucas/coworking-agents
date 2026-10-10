@@ -259,6 +259,11 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');
   assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: ck, body: '{"id":"B","text":"hi"}' })).code, 403, 'reply without the custom header');
   assert.strictEqual((await req(port, '/api/answer', { method: 'POST', headers: ck, body: '{"id":"I","choice":1}' })).code, 403, 'answer without the custom header');
+  assert.strictEqual((await req(port, '/api/compact', { method: 'POST', headers: ck, body: '{"id":"B"}' })).code, 403, 'compact without the custom header');
+  const compactBusy = JSON.parse((await req(port, '/api/compact', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A"}' })).body);
+  assert.strictEqual(compactBusy.reason, 'busy', 'a working session is never compacted');
+  const compactCodex = JSON.parse((await req(port, '/api/compact', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"X2"}' })).body);
+  assert.strictEqual(compactCodex.reason, 'unsupported', 'only Claude sessions take /compact');
   const badChoice = JSON.parse((await req(port, '/api/answer', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"I","choice":7}' })).body);
   assert.strictEqual(badChoice.reason, 'text', 'an option number out of range is refused');
   const notAsking = JSON.parse((await req(port, '/api/answer', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A","choice":1}' })).body);

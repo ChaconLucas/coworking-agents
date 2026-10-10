@@ -39,6 +39,7 @@ function renderOverlay() {
       const label = c.c.kind === 'badge' ? `${T.kinds.badge}: ${c.c.name} — ${c.c.desc}` : `${T.kinds[c.c.kind]}: ${c.c.name} (${c.c.n}×)`;
       parts.push(`<div class="hit" title="${esc(label)}" style="left:${c.x * S}px;top:${c.y * S}px;width:${c.w * S}px;height:${c.h * S}px"></div>`);
     }
+    if (canCompact(p)) tags.push(`<button class="compact-btn" data-compact="${esc(p.id)}" title="${esc(T.alerts.compactTitle(Math.round(ctxPct(p) * 100)))}" style="left:${(x + CELL_W / 2) * S}px;top:${(y + 6) * S}px">⤓ ${esc(T.alerts.compact)} ${Math.round(ctxPct(p) * 100)}%</button>`);
     if (cell.extraCerts) parts.push(`<button class="more-certs" data-certs="${esc(p.id)}" title="${esc(T.moreCerts(cell.extraCerts))}" style="left:${(x + CELL_W - 26) * S}px;top:${(y + 4) * S}px">+${cell.extraCerts}</button>`);
     (cell.interns || []).slice(0, 2).forEach((a, i) => {
       const ix = i ? x + 1 : x + CELL_W - 17;

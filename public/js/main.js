@@ -56,6 +56,7 @@ function connect() {
     for (const p of d.people) if (p.agentLabel && !AGENT[p.agent]) AGENT[p.agent] = { label: p.agentLabel, color: p.agentColor || '#8a8f98' }; // AIs found by process
     data = d;
     notifyChanges();
+    checkAlerts();
     renderAll();
   };
   es.onerror = () => { offline.textContent = T.offline; offline.hidden = false; };

@@ -565,3 +565,14 @@ main:has(#office.cam) { overflow: visible; }
 .podium { margin: 4px 0 12px; } .pod i { max-height: 36px; } .pod.p1 i { height: 36px; } .pod.p2 i { height: 26px; } .pod.p3 i { height: 18px; }
 .pod b { font-size: 11px; }
 .grp .bars li { grid-template-columns: 120px 1fr 28px; padding: 2px 0; }
+
+.compact-btn { position: absolute; transform: translateX(-50%); z-index: 3; border: 2px solid var(--edge); border-radius: 4px; background: #feae34; color: #2a1d27; font: 700 9px/1 var(--pix); padding: 4px 7px; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,.45); animation: compactPulse 1.6s ease-in-out infinite; white-space: nowrap; }
+.compact-btn:hover { background: #ffd27a; }
+@keyframes compactPulse { 50% { transform: translateX(-50%) translateY(-2px); } }
+.panel .btn.compact { background: #feae34; color: #2a1d27; }
+.toasts { position: fixed; left: 16px; bottom: 16px; z-index: 30; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
+.toast { background: #1d1823; color: #ece7df; border: 2px solid var(--edge); border-left: 5px solid #8b9bb4; border-radius: 6px; padding: 10px 12px; font-size: 13px; box-shadow: 3px 3px 0 rgba(0,0,0,.4); animation: rise .3s ease both; }
+.toast b { display: block; font: 700 10px/1.3 var(--pix); margin-bottom: 3px; }
+.toast.warn { border-left-color: #feae34; } .toast.bad { border-left-color: #e43b44; } .toast.ok { border-left-color: #63c74d; }
+.toast.out { animation: sink .3s ease-in both; }
+@media (prefers-reduced-motion: reduce) { .compact-btn { animation: none; } }
