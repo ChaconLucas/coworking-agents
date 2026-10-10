@@ -38,6 +38,7 @@ function drawUsageBoard(x, y, t) {
   const ids = all.slice(page * PER, page * PER + PER);
   const w = 112, rowH = 13, h = 8 + Math.max(1, ids.length) * rowH;
   usageBox = { x, y, w, h };
+  if (wallGlows) wallGlows.push({ x: x + w / 2, y: y + h / 2, r: 46, c: '#62ff7a' }); // it lights the wall around it at night
   const lvl = p => p > 85 ? '#ff4d57' : p > 60 ? '#ffc23a' : '#62ff7a';
   r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#2a2f45'); r(x, y, w, h, '#06070c');
   const c1 = x + 54, c2 = x + 82;
@@ -447,6 +448,8 @@ function drawScene(t, dt) {
     if (devTop < H) lights.push({ x: CX / 2, y: devTop + 20, r: CX / 2 });
   }
   Art.applyLight(W, H, sky, lights, glows, lightsOn);
+  // the LED panel is self-lit: drawn again over the dark, so it shines when the lights are off
+  if (sky.phase !== 'day' && usageBox) drawUsageBoard(usageBox.x, usageBox.y, t);
   // the rest room keeps its lights off, day or night
   if (napBox) { ctx.fillStyle = 'rgba(8, 8, 26, .55)'; ctx.fillRect(napBox.x, napBox.y, napBox.w, napBox.h); }
   for (const c of layout) {
