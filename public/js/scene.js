@@ -57,8 +57,40 @@ function agentRoomColor(R) {
   return '#8b9bb4';
 }
 
+// the box a newcomer carries in: their computer, a mug and a plant sticking out
+function drawCarriedBox(x, y) {
+  r(x - 2, y + 10, 20, 12, PAL.ink); r(x - 1, y + 11, 18, 10, '#b97c48'); r(x - 1, y + 15, 18, 1, '#8f553f');
+  r(x + 2, y + 6, 10, 6, PAL.ink); r(x + 3, y + 7, 8, 4, '#1e2233'); r(x + 4, y + 8, 4, 1, '#3ddc84');
+  r(x + 13, y + 6, 2, 5, PAL.leaf); r(x + 15, y + 7, 1, 4, PAL.leafLight);
+}
+
+// build-in animation for a new desk: scaffold dust and sparks while the furniture rises from the floor
+function drawConstruction(x, y, k, t) {
+  const f = (t / 90) | 0;
+  for (let i = 0; i < 14; i++) {
+    const h = hash('dust' + i + x), px = x + 8 + (h % (CELL_W - 16)), py = y + 20 + ((h >>> 6) % 50) - Math.round(k * 10);
+    r(px, py, 2, 2, i % 3 ? 'rgba(220,200,170,.55)' : 'rgba(255,255,255,.4)');
+  }
+  for (let i = 0; i < 4; i++) if ((f + i) % 3 === 0) { const h = hash('sp' + i + f); r(x + 10 + h % (CELL_W - 20), y + 30 + (h >>> 5) % 30, 1, 3, '#feae34'); }
+  r(x + 6, y + 70, CELL_W - 12, 2, '#feae34'); for (let i = 0; i < CELL_W - 12; i += 8) r(x + 6 + i, y + 70, 4, 2, PAL.ink); // caution tape
+}
+
 function drawDesk(d, t, clashing, lights, glows, sky) {
   const { x, y } = d, p = d.cell ? d.cell.p : d.p, f = (t / 140) | 0, seed = hash(p ? p.id : 'empty' + x + y) % 997;
+  // a newcomer's desk is built first: it rises from the floor over the first second
+  const born = p && arrivals.get(p.id), build = born ? Math.min(1, (Date.now() - born) / 1100) : 1;
+  if (build < 1) {
+    ctx.save(); ctx.globalAlpha = .25 + build * .75; ctx.translate(0, Math.round((1 - build) * 10));
+    drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed);
+    ctx.restore();
+    drawConstruction(x, y, build, t);
+    return;
+  }
+  drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed);
+}
+
+function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
+  const { x, y } = d;
   const cell = d.cell;
   const a = cell && cell.actor;
   const atDesk = !!(a && a.mode === 'desk');
@@ -264,7 +296,7 @@ function drawScene(t, dt) {
     const a = c.actor;
     if (!a || a.mode === 'desk' || a.mode === 'meet') continue;
     const lk = look(c.p.id);
-    if (a.mode === 'walk') movers.push({ y: a.y, draw: () => Art.drawStanding(a.x, a.y, lk, t, true) });
+    if (a.mode === 'walk') movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, true); if (a.carry) drawCarriedBox(a.x, a.y); } });
     else if (a.mode === 'nap') movers.push({ y: a.y, draw: () => Art.drawLying(a.x, a.y, lk, t) });
     else if (a.spot && a.spot.pose === 'sit') movers.push({ y: a.y, draw: () => Art.drawFront(a.x, a.y, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', mug: true }) });
     else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') drawMugInHand(a, t); } });

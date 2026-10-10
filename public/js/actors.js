@@ -30,6 +30,15 @@ function plan(now) {
 
 // ---------------- actors ----------------
 const actors = new Map();
+// who showed up after the first load, and when (drives the build + walk-in animation)
+const arrivals = new Map(), seenPeople = new Set();
+let firstLoad = true;
+function noteArrivals() {
+  if (!data) return;
+  const now = Date.now();
+  for (const p of data.people) { if (!seenPeople.has(p.id)) { seenPeople.add(p.id); if (!firstLoad) arrivals.set(p.id, now); } }
+  firstLoad = false;
+}
 const cat = { x: 0, y: 0, tx: 0, ty: 0, mode: 'sit', until: 0, flip: false, ready: false };
 const SPEED = 52;
 
@@ -54,16 +63,28 @@ function updateActors(dt, now) {
     const spot = assign.get(cell.p.id);
     const t = spot ? { x: spot.x, y: spot.y, mode: spot.zone, spot, key: spot.zone + spot.x + ',' + spot.y } : { x: cell.chair.x, y: cell.chair.y, mode: 'desk', key: 'desk' };
     let a = actors.get(cell.p.id);
-    if (!a) { a = { x: t.x, y: t.y, mode: t.mode, spot: t.spot, key: t.key, path: [] }; actors.set(cell.p.id, a); }
+    if (!a) {
+      a = { x: t.x, y: t.y, mode: t.mode, spot: t.spot, key: t.key, path: [] };
+      // a newcomer (not there on first load) walks in through the room door carrying their computer
+      const born = arrivals.get(cell.p.id);
+      if (born && now - born < 4000 && cell.room) {
+        // comes up the corridor, waits for the desk to be built, then walks in through the door
+        const R = cell.room, door = { x: R.doorX + 1, y: R.y + R.h + 8 };
+        Object.assign(a, { x: CX - 8, y: door.y + 30, mode: 'walk', carry: true, next: t, waitUntil: born + 1200,
+          path: [{ x: CX - 8, y: door.y }, { x: door.x, y: door.y }, { x: door.x, y: cell.aisle }, { x: t.x, y: cell.aisle }, { x: t.x, y: t.y }] });
+      }
+      actors.set(cell.p.id, a);
+    }
     if (a.key !== t.key) { a.path = route({ x: a.x, y: a.y }, t, cell); a.key = t.key; a.next = t; a.mode = 'walk'; }
     if (a.mode === 'walk') {
-      let step = (a.next.mode === 'desk' ? SPEED * 2 : SPEED) * dt;
+      let step = (a.carry ? SPEED * .7 : a.next.mode === 'desk' ? SPEED * 2 : SPEED) * dt;
+      if (a.waitUntil && Date.now() < a.waitUntil) step = Math.min(step, 4 * dt);
       while (step > 0 && a.path.length) {
         const w = a.path[0], dx = w.x - a.x, dy = w.y - a.y, d = Math.hypot(dx, dy);
         if (d <= step) { a.x = w.x; a.y = w.y; step -= d; a.path.shift(); }
         else { a.x += dx / d * step; a.y += dy / d * step; if (Math.abs(dx) > .5) a.flip = dx < 0; step = 0; }
       }
-      if (!a.path.length) { a.mode = a.next.mode; a.spot = a.next.spot; }
+      if (!a.path.length) { a.mode = a.next.mode; a.spot = a.next.spot; a.carry = false; }
     }
     cell.actor = a;
   }

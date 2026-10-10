@@ -30,8 +30,8 @@ function planFloors(people, leftW) {
     for (let k = 0; k < ps.length; k += ROOM_MAX) chunks.push([`${name} ${k / ROOM_MAX + 1}`, ps.slice(k, k + ROOM_MAX)]);
   }
   const list = chunks.map(([name, ps]) => {
-    // at least 3 desks per room, like a real office: the spare ones stay empty (chair pushed in, screen off)
-    const cols = Math.min(maxCols, Math.max(2, Math.min(3, ps.length))), seats = Math.max(ps.length, cols);
+    // rooms fit their team exactly: one desk per agent (new desks get built when someone arrives)
+    const cols = Math.min(maxCols, Math.max(1, Math.min(3, ps.length))), seats = ps.length;
     return { name, people: ps, cols, seats, rows: Math.ceil(seats / cols), w: cols * CELL_W + ROOM_PAD * 2 };
   });
   // pack rooms into rows (shelves) and rows into floors

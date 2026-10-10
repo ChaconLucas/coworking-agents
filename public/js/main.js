@@ -4,6 +4,7 @@ let lastLayoutKey = '';
 function renderAll() {
   if (!data) return;
   const key = data.people.map(p => p.id + ':' + roomKey(p)).join(',') + '|' + floor + '|' + document.getElementById('stage').clientWidth;
+  noteArrivals();
   if (key !== lastLayoutKey) { lastLayoutKey = key; relayout(); }
   else {
     // same people: only swap each desk's data, otherwise the drawing stays stuck on the old state

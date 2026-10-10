@@ -43,6 +43,17 @@ function demoSnapshot() {
       lastActivity: now - 2000,
     };
   });
+  // every 30s someone new joins (fresh id, so the office builds a desk and they walk in with their computer)
+  if (live) {
+    const cycle = Math.floor(now / 30000);
+    if (cycle % 2) {
+      const base = people[0];
+      people.push({ ...base, id: `demo-new-${cycle}`, name: 'newbie-' + (cycle % 100), title: 'Just joined: set up the project', state: 'edit', status: 'busy',
+        repo: { name: 'new-service', path: '/home/dev/new-service', worktree: '/home/dev/new-service', isWorktree: false }, cwd: '/home/dev/new-service',
+        startedAt: cycle * 30000, since: cycle * 30000, subagents: [], editing: [], files: [], skills: {}, mcps: {}, tools: { Edit: 1 },
+        doing: { tool: 'Edit', what: 'package.json', kind: 'edit', for: now - cycle * 30000 } });
+    }
+  }
   return {
     now, host: 'demo', people,
     clashes: [{ worktree: '/home/dev/web-app', repo: 'web-app', who: [people[0].id, people[7].id] }],
