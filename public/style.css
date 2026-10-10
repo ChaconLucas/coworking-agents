@@ -707,3 +707,9 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 .report-body .paper h3::after, .report-body .paper h3::before, .report-body .paper h2::after { display: none; content: none; }
 .report-body .paper h2 { font: 700 28px/1.1 Georgia, serif; }
 .report-body .paper h3 { font: 700 21px/1.2 Georgia, serif; margin: 0 0 6px; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 2px solid var(--line); border-radius: 6px; background: none; color: inherit; font: 700 10px/1 var(--pix); cursor: pointer; }
+.opt.on { border-color: #ffd84d; color: #ffd84d; }
+.opt.swatch i { width: 14px; height: 14px; border: 1px solid var(--edge); border-radius: 3px; }
+.office-name { display: flex; gap: 8px; }
+.office-name input { flex: 1; max-width: 260px; padding: 8px 10px; border: 2px solid var(--line); border-radius: 6px; background: #1b1622; color: var(--ink); font: 600 13px/1 system-ui, sans-serif; }

@@ -69,7 +69,7 @@ function drawTalk() {
     r(182, H - 30, 8, 8, PAL.ink); r(183, H - 29, 6, 6, '#f4ecd8'); r(189, H - 27, 2, 3, PAL.ink);
     if (f % 8 < 5) { r(185, H - 34 - (f % 3), 1, 3, '#ffffffaa'); r(187, H - 35 - ((f + 1) % 3), 1, 3, '#ffffff88'); }
     Art.drawPlant(108, H - 36, false);
-    Art.drawCat(14, H - 28, 'sleep', t, false);
+    drawMascot(14, H - 28, 'sleep', t, false);
   } finally { ctx = prev; Art.setCtx(prev); }
 }
 

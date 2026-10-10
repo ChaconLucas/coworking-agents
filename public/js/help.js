@@ -132,7 +132,7 @@ function drawDock(t) {
       if (f % 2) r(mx + 3 + 15, desk - 9, 3, 2, '#3ddc84');
       r(mx + 12, desk - 2, 6, 2, PAL.ink);
     }
-    Art.drawCat(x0 - 30, desk - 6, 'sleep', t, false);
+    drawMascot(x0 - 30, desk - 6, 'sleep', t, false);
     // the agents: current office, sliding in from the right when "+" is clicked
     const span = PER_OFFICE * SLOT + 12;
     ctx.save(); ctx.beginPath(); ctx.rect(x0 - 2, 0, span, H); ctx.clip();

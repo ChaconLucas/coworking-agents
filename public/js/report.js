@@ -41,7 +41,7 @@ let reportTab = 'usage', todayData = null;
 function openReport(tab) { reportTab = tab || 'usage'; reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
 async function loadToday() { try { todayData = await fetch('api/report').then(r => r.json()); } catch {} if (!reportEl.hidden) renderReport(); }
 reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; if (reportTab === 'today') loadToday(); renderReport(); } });
-function tabsHtml() { return `<div class="rtabs">${[['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
+function tabsHtml() { return `<div class="rtabs">${[['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['office', T.office.tab], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
 // activity feed: newest first, grouped by hour
 function renderFeed() {
   const F = T.feed, body = reportEl.querySelector('.report-body');
@@ -101,6 +101,7 @@ function renderReport() {
   if (reportTab === 'ach') return renderAchievements();
   if (reportTab === 'paper') return renderPaper();
   if (reportTab === 'shop') return renderShop();
+  if (reportTab === 'office') return renderOffice();
   const U = T.usage, u = usageData, body = reportEl.querySelector('.report-body'), L = (data && data.limits) || {};
   const tok = n => fmtK(Math.round(Number(n) || 0));
   const card = id => {

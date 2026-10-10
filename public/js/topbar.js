@@ -1,7 +1,7 @@
 'use strict';
 // ---------------- top bar ----------------
 function renderBar() {
-  document.getElementById('host').textContent = data.host || '';
+  document.getElementById('host').textContent = prog.officeName || data.host || '';
   const c = { work: 0, need: 0, turn: 0, sleep: 0 };
   for (const p of data.people) {
     if (p.leaving) continue;
@@ -51,11 +51,12 @@ function renderBar() {
   { const rb = document.getElementById('btn-replay'); rb.title = T.replay.title; rb.querySelector('.sr').textContent = T.replay.title; rb.setAttribute('aria-pressed', !replayEl.hidden); }
   renderFocus();
   // short visible labels in the ☰ menu (the long explanation stays in the tooltip)
-  for (const [id, k] of [['btn-notify', 'notify'], ['btn-sound', 'sound'], ['btn-focus', 'focus'], ['btn-replay', 'replay'], ['btn-search', 'search'], ['btn-radio', 'radio'], ['btn-photo', 'photo']]) {
+  for (const [id, k] of [['btn-notify', 'notify'], ['btn-sound', 'sound'], ['btn-focus', 'focus'], ['btn-replay', 'replay'], ['btn-search', 'search'], ['btn-radio', 'radio'], ['btn-photo', 'photo'], ['btn-office', 'office']]) {
     const b = document.getElementById(id); let ml = b.querySelector('.ml');
     if (!ml) { ml = document.createElement('span'); ml.className = 'ml'; b.insertBefore(ml, b.querySelector('.focus-left')); }
     ml.textContent = T.menuItems[k];
   }
+  { const ob = document.getElementById('btn-office'); ob.title = T.office.tab; ob.querySelector('.sr').textContent = T.office.tab; }
   { const pb = document.getElementById('btn-photo'); pb.title = T.photo.title; pb.querySelector('.sr').textContent = T.photo.title; }
   { const sb = document.getElementById('btn-search'); sb.title = T.keys.searchTitle; sb.querySelector('.sr').textContent = T.keys.searchTitle; }
   renderUsagePill();
@@ -160,6 +161,7 @@ document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store
 document.getElementById('btn-search').onclick = () => openSearch();
 document.getElementById('btn-radio').onclick = () => setRadio(!radioOn);
 document.getElementById('btn-photo').onclick = () => { setMenu(false); groupPhoto(); };
+document.getElementById('btn-office').onclick = () => { setMenu(false); openReport('office'); };
 document.getElementById('btn-replay').onclick = () => toggleReplay(replayEl.hidden);
 document.getElementById('btn-lang').onclick = () => { achBump('lang'); lang = lang === 'pt' ? 'en' : 'pt'; T = I18N[lang]; store.set('lang', lang); renderAll(); };
 

@@ -413,7 +413,8 @@ function drawScene(t, dt) {
   updateCat(dt, t);
   updateRobot(dt);
   const lights = [], glows = [];
-  Art.drawFloor(W, H, TOP);
+  applyTheme();
+  drawThemedFloor(W, H, TOP);
   wallGlows = glows;
   const nWin = drawWall(t, sky);
   drawHolidayWall(t, nWin);
@@ -446,6 +447,7 @@ function drawScene(t, dt) {
   for (const d of desks) drawDesk(d, t, !!d.p && cs.has(d.p.id), lights, glows, sky);
   for (const s of sites) drawSite(s, t);
   drawElevator(t);
+  drawNamePlaque();
   const movers = [];
   for (const c of layout) {
     const a = c.actor;
@@ -456,7 +458,7 @@ function drawScene(t, dt) {
     else if (a.spot && a.spot.pose === 'sit') movers.push({ y: a.y, draw: () => Art.drawFront(a.x, a.y, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', mug: true }) });
     else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y + partyBounce(c.p.id, t), lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') (isLunch() ? drawFoodInHand : drawMugInHand)(a, t); } });
   }
-  movers.push({ y: cat.y, draw: () => Art.drawCat(cat.x, cat.y, cat.mode, t, cat.flip) });
+  movers.push({ y: cat.y, draw: () => drawMascot(cat.x, cat.y, cat.mode, t, cat.flip) });
   movers.push(...extraWalkers(t));
   drawPets(t, movers);
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
