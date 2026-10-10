@@ -1,6 +1,6 @@
 {
   "name": "coworking-agents",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A pixel-art coworking office for your AI coding agents (Claude Code, Codex, …): see who's working, who needs you, and who's editing the same checkout.",
   "bin": {
     "coworking-agents": "bin/coworking-agents.js"
