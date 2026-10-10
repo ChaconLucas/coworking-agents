@@ -6,8 +6,9 @@ const I18N = {
   pt: {
     working: 'trabalhando', needYou: 'precisa de você', yourTurn: 'sua vez', asleep: 'dormindo', floor: n => `Andar ${n}`, building: 'Ver prédio', agents: 'agentes', moreCerts: n => `+${n} certificado${n > 1 ? 's' : ''} — clique para ver todos`, subagents: n => `${n} subagente${n > 1 ? 's' : ''}`,
     usage: { title: 'Uso e limites', sub: 'Tokens gastos e quando cada limite reinicia', fiveHour: 'Janela de 5 horas', week: 'Semana', resets: 'reinicia em', now: 'agora', none: 'Sem dados de limite ainda.',
-      claudeHint: 'O Claude Code não grava os limites no disco — só a barra de status os recebe. Dá para ligar isso fazendo a barra de status salvar uma cópia (peça ao assistente).',
+      claudeHint: 'O Claude Code não grava seus limites em arquivo; eles só chegam à sua barra de status. Para aparecerem aqui, a barra de status precisa salvar uma cópia — é um ajuste de 2 linhas no seu statusline.sh.',
       tokens: 'Tokens das sessões abertas', outToday: 'gerados hoje', out: 'gerados', in: 'enviados', cache: 'cache lido', outShort: 'ger.', inShort: 'env.', session: 'Tokens desta sessão',
+      weekShort: 'sem', todayShort: 'hoje', open: 'Abrir relatório de uso', allTime: 'Desde sempre', limits: 'Limites', conversations: 'conversas no disco', last14: 'Tokens gerados nos últimos 14 dias', reportSub: 'Somado de todas as conversas guardadas no disco', updated: 'atualizado há', scanning: 'Somando o histórico… (alguns segundos na primeira vez)', noCost: 'Custo em dinheiro não aparece: depende do seu plano.',
       note: '“Gerados” = escritos pela IA; “enviados” = entrada nova; “cache lido” = contexto reaproveitado (mais barato).' },
     talk: { yourTurnWhy: 'Ele terminou o que você pediu e está esperando a sua próxima mensagem. Não é um pedido de aprovação.',
       send: 'Enviar para o terminal', sending: 'Enviando…', sent: app => `Enviado para a aba do ${app}.`,
@@ -60,8 +61,9 @@ const I18N = {
   en: {
     working: 'working', needYou: 'need you', yourTurn: 'your turn', asleep: 'asleep', floor: n => `Floor ${n}`, building: 'Building view', agents: 'agents', moreCerts: n => `+${n} more certificate${n > 1 ? 's' : ''} — click to see all`, subagents: n => `${n} subagent${n > 1 ? 's' : ''}`,
     usage: { title: 'Usage & limits', sub: 'Tokens spent and when each limit resets', fiveHour: '5-hour window', week: 'Week', resets: 'resets in', now: 'now', none: 'No limit data yet.',
-      claudeHint: "Claude Code doesn't write its limits to disk — only the status line receives them. Make your status line save a copy to turn this on (ask the assistant).",
+      claudeHint: "Claude Code doesn't write your limits to a file; only your status line receives them. To show them here, the status line must save a copy — a 2-line change in your statusline.sh.",
       tokens: 'Tokens of open sessions', outToday: 'out today', out: 'output', in: 'input', cache: 'cache read', outShort: 'out', inShort: 'in', session: 'Tokens of this session',
+      weekShort: 'wk', todayShort: 'today', open: 'Open usage report', allTime: 'All time', limits: 'Limits', conversations: 'conversations on disk', last14: 'Output tokens, last 14 days', reportSub: 'Summed from every conversation stored on disk', updated: 'updated', scanning: 'Adding up history… (a few seconds the first time)', noCost: "No money cost shown: it depends on your plan.",
       note: '“Output” = written by the AI; “input” = new input; “cache read” = reused context (cheaper).' },
     talk: { yourTurnWhy: "It finished what you asked and is waiting for your next message. This isn't an approval request.",
       send: 'Send to terminal', sending: 'Sending…', sent: app => `Sent to the ${app} tab.`,

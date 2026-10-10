@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { snapshot: real, report } = require('./collect');
 const { demoSnapshot, demoReport } = require('./demo');
 const { focus, sendText } = require('./focus');
+const { usage } = require('./usage');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png' };
@@ -115,6 +116,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       });
       return;
     }
+    if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : usage()));
     if (url.pathname === '/api/report') return send(res, 200, 'application/json', JSON.stringify(demo ? demoReport() : report({ privacy })));
     if (url.pathname === '/api/state') return send(res, 200, 'application/json', safeSnapshot());
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');

@@ -391,7 +391,7 @@ main:has(#office.cam) { overflow: visible; }
 .usage-list li .t { text-align: right; }
 
 /* ---- busy bar under the top bar ---- */
-.busy { position: sticky; top: 0; z-index: 4; display: flex; height: 6px; background: #14101a; border-bottom: 2px solid var(--edge); }
+.busy { position: absolute !important; top: 0; left: 0; right: 0; z-index: 2 !important; display: flex; height: 5px; background: #14101a; }
 .busy i { display: block; min-width: 6px; transition: flex-grow .6s ease; }
 .busy .b-work { background: repeating-linear-gradient(-45deg, #63c74d 0 6px, #4fae3c 6px 12px); background-size: 17px 100%; animation: busyrun .8s linear infinite; }
 .busy .b-need { background: #e43b44; animation: busyblink 1s steps(2) infinite; }
@@ -415,3 +415,39 @@ main:has(#office.cam) { overflow: visible; }
 .chip-s { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #221d29; color: #8b9bb4; border: 1px solid #2f2838; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-s.on { color: #2a1d27; background: #e8b04b; border-color: #e8b04b; font-weight: 600; }
 .chip-s.mcp.on { background: #2c9a8f; border-color: #2c9a8f; color: #fff; }
+
+/* ---- always-visible usage pill in the top bar ---- */
+.usage-pill { display: flex; align-items: center; gap: 10px; margin-left: auto; padding: 6px 10px; background: rgba(20,16,26,.86); color: #d9cdb0; border: 2px solid var(--edge); border-radius: 10px; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.usage-pill:hover { border-color: #2ce8f5; }
+.usage-pill .u { display: grid; gap: 3px; min-width: 64px; }
+.usage-pill .u span { display: flex; justify-content: space-between; gap: 6px; }
+.usage-pill .u b { font: 700 10px/1 var(--pix); color: #fff; }
+.usage-pill .u small { color: #8b9bb4; }
+.usage-pill .m { height: 4px; background: #2a2333; border-radius: 2px; overflow: hidden; }
+.usage-pill .m i { display: block; height: 100%; background: #63c74d; } .usage-pill .m i.mid { background: #feae34; } .usage-pill .m i.hi { background: #e43b44; }
+.usage-pill .sep { width: 1px; align-self: stretch; background: rgba(255,255,255,.1); }
+.bar .tools { margin-left: 8px; }
+@media (max-width: 1100px) { .usage-pill .u.opt { display: none; } }
+/* ---- big usage report ---- */
+.report { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(8, 6, 12, .66); }
+.report-box { position: relative; width: min(1040px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #1d1823; color: #ece7df; border: 3px solid #0b0a0e; outline: 2px solid #8f6a3a; outline-offset: -7px; border-radius: 8px; box-shadow: 6px 8px 0 rgba(0,0,0,.5); padding: 20px 22px; animation: rise .25s cubic-bezier(.2,.9,.3,1.2) both; }
+.report-box h2 { margin: 0; font: 700 15px/1.2 var(--pix); color: #fff; }
+.report-box .sub { color: #8b9bb4; margin: 4px 0 16px; font-size: 12px; }
+.report-box h3 { display: flex; align-items: center; gap: 8px; font: 700 9px/1 var(--pix); letter-spacing: .08em; color: #8b9bb4; margin: 20px 0 10px; text-transform: uppercase; }
+.report-box h3::after { content: ''; flex: 1; height: 2px; background: repeating-linear-gradient(90deg, #3a3045 0 4px, transparent 4px 6px); }
+.rgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.rcard { background: #221d29; border: 1px solid #2f2838; border-radius: 8px; padding: 14px; }
+.rcard h4 { margin: 0 0 10px; font: 700 11px/1 var(--pix); }
+.rcard .big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rcard .big div { background: #1a1620; border-radius: 6px; padding: 8px; }
+.rcard .big b { display: block; font: 700 14px/1.1 var(--pix); color: #fff; }
+.rcard .big small { color: #8b9bb4; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.chart { display: flex; align-items: flex-end; gap: 4px; height: 140px; padding: 6px 0 0; border-bottom: 1px solid #3a3045; }
+.chart .col { flex: 1; display: flex; flex-direction: column-reverse; min-width: 0; height: 100%; position: relative; }
+.chart .col i { display: block; width: 100%; }
+.chart .col:hover { outline: 1px solid #feae34; }
+.axis { display: flex; gap: 4px; font-size: 9px; color: #6e6577; margin-top: 4px; }
+.axis span { flex: 1; text-align: center; overflow: hidden; }
+.legend { display: flex; gap: 12px; font-size: 11px; color: #b9a88a; margin-top: 8px; }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 2px; vertical-align: -1px; }
+.report-x { position: absolute; top: 10px; right: 12px; border: 0; background: none; color: #b9a88a; font-size: 22px; cursor: pointer; }

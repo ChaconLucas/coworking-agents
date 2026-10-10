@@ -76,4 +76,11 @@ function demoReport() {
   return { since, now, rows, topFiles: [{ repo: 'web-app', rel: 'src/Checkout.tsx', n: 2 }, { repo: 'api', rel: 'auth/oauth.ts', n: 1 }], totals: { sessions: rows.length, activeMs: sum('activeMs'), tools: sum('tools'), files: 9, outTokens: sum('outTokens'), turns: sum('turns') } };
 }
 
-module.exports = { demoSnapshot, demoReport };
+function demoUsage() {
+  const byDay = {}, now = Date.now();
+  for (let i = 0; i < 14; i++) { const d = new Date(now - i * 864e5), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); byDay[k] = { input: 2e4, output: 4e5 + (i * 7919) % 9e5, cacheRead: 3e8, cacheWrite: 2e6 }; }
+  const agent = (k, models) => ({ sessions: 40, total: { input: 3e5, output: 9e6 * k, cacheRead: 6e9 * k, cacheWrite: 5e7 * k }, byDay, byModel: Object.fromEntries(models.map((m, i) => [m, { input: 1e5, output: 3e6 / (i + 1), cacheRead: 2e9, cacheWrite: 1e7 }])) });
+  return { scanning: false, scannedAt: now, byAgent: { claude: agent(1, ['claude-opus-5-5', 'claude-sonnet-5']), codex: agent(.2, ['gpt-5.5']) } };
+}
+
+module.exports = { demoSnapshot, demoReport, demoUsage };
