@@ -451,3 +451,9 @@ main:has(#office.cam) { overflow: visible; }
 .legend { display: flex; gap: 12px; font-size: 11px; color: #b9a88a; margin-top: 8px; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 2px; vertical-align: -1px; }
 .report-x { position: absolute; top: 10px; right: 12px; border: 0; background: none; color: #b9a88a; font-size: 22px; cursor: pointer; }
+
+/* usage pill lives in the top-right corner of the bar, above the counter where requests sit */
+.usage-pill { position: absolute !important; top: 10px; right: 16px; margin: 0; padding: 4px 8px; gap: 8px; font-size: 10px; z-index: 3 !important; }
+.usage-pill .u { min-width: 56px; gap: 2px; }
+.usage-pill .u b { font-size: 9px; }
+.bar .tools { margin-left: auto; }

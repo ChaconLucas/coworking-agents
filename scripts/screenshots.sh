@@ -28,4 +28,10 @@ shot 10 "lang=en&hour=22" docs/office-night.png
 shot 40 "lang=en&hour=15" docs/building.png "setBuilding(true)"
 shot 10 "lang=en&hour=11" docs/panel.png "showPerson(data.people[5].id)"
 shot 10 "lang=en&hour=20" docs/mobile.png "" "390 844"
+shot 12 "lang=en&hour=21" docs/talk.png "openTalk((data.people.find(p => p.state === 'idle') || data.people[0]).id)"
+shot 12 "lang=en&hour=21" docs/usage.png "openReport()"
+shot 12 "lang=en&hour=21" docs/house-wall.png "selected='__hall'; renderPanel()"
+shot 12 "lang=en&hour=21" docs/top-bar.png "" "1440 160"
+shot 12 "lang=en&hour=15" docs/work-site.png "arrivals.set(layout[layout.length - 1].p.id, Date.now() - 1200); lastLayoutKey = ''; renderAll()"
+shot 12 "lang=en&hour=21" docs/camera.png "showPerson(data.people[2].id)"
 agent-browser close >/dev/null 2>&1 || true
