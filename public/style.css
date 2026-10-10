@@ -457,3 +457,7 @@ main:has(#office.cam) { overflow: visible; }
 .usage-pill .u { min-width: 56px; gap: 2px; }
 .usage-pill .u b { font-size: 9px; }
 .bar .tools { margin-left: auto; }
+
+/* top bar v6: HUD and toggles ride at the top, the counter below stays free for the agents */
+.bar { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+.bar .hud .usage-pill { position: static !important; margin: 0 0 0 4px; padding: 0 4px 0 10px; background: none; border: 0; border-left: 1px solid rgba(255,255,255,.1); border-radius: 0; }

@@ -8,6 +8,21 @@
 
 ![The office at night: monitors and desk lamps light the room](docs/office-night.png)
 
+## Tour
+
+| | |
+|---|---|
+| ![Top bar](docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
+| ![Talk](docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (sent to its Terminal/iTerm tab) or jump to the terminal. |
+| ![Camera](docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
+| ![Panel](docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
+| ![Usage](docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
+| ![Work site](docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
+| ![Building](docs/building.png) | **Building view.** Many agents? Floors, each a live thumbnail. |
+| ![House wall](docs/house-wall.png) | **House wall.** Podium of the most used skills, installed skills, MCP servers and plugins. |
+| ![Night](docs/office-night.png) | **Day and night.** Lighting follows your clock; a wall switch turns the ceiling lights on or off; the rest room stays dark. |
+| ![Mobile](docs/mobile.png) | **Phone.** Works on small screens too. |
+
 ## Why
 
 When you run several AI sessions at once, you lose track of which one stopped to ask you something, which one finished, and which two are touching the same repository. coworking-agents puts all of them on one screen that you actually want to leave open.
