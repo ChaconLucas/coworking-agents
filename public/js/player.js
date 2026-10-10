@@ -9,9 +9,9 @@ const PLAYER_SPEED = 70;
 
 // rooms you can't walk through, each with its door (inside and outside points)
 function solidRooms() {
-  const out = rooms.map(R => ({ x: R.x, y: R.y, w: R.w, h: R.h, door: { x: R.doorX + 9, y: R.y + R.h }, side: 'bottom', gap: 9 }));
-  if (game) out.push({ x: game.x, y: game.y, w: game.w, h: game.h, door: { x: game.x + game.w, y: game.doorY }, side: 'right', gap: 9 });
-  if (napBox) out.push({ x: RX - 4, y: wing.nap, w: RW + 8, h: 80, door: { x: RX - 4, y: wing.nap + 37 }, side: 'left', gap: 9 });
+  const out = rooms.map(R => ({ x: R.x, y: R.y, w: R.w, h: R.h, doors: [{ x: R.doorX + 9, y: R.y + R.h, side: 'bottom' }], gap: 9 }));
+  if (game) out.push({ x: game.x, y: game.y, w: game.w, h: game.h, doors: game.doors, gap: 9 });
+  if (napBox) out.push({ x: RX - 4, y: wing.nap, w: RW + 8, h: 80, doors: [{ x: RX - 4, y: wing.nap + 37, side: 'left' }], gap: 9 });
   return out;
 }
 const inside = (R, p) => p.x > R.x && p.x < R.x + R.w && p.y > R.y && p.y < R.y + R.h;
@@ -20,25 +20,24 @@ const roomOf = p => solidRooms().find(R => inside(R, p)) || null;
 function blocked(a, b) {
   for (const R of solidRooms()) {
     if (inside(R, a) === inside(R, b)) continue;
-    const d = R.door;
-    if (R.side === 'bottom' && Math.abs(b.x - d.x) <= R.gap && Math.abs(b.y - d.y) <= 8) continue;
-    if (R.side !== 'bottom' && Math.abs(b.y - d.y) <= R.gap && Math.abs(b.x - d.x) <= 8) continue;
-    return true;
+    const through = R.doors.some(d => (d.side === 'top' || d.side === 'bottom') ? Math.abs(b.x - d.x) <= R.gap && Math.abs(b.y - d.y) <= 8 : Math.abs(b.y - d.y) <= R.gap && Math.abs(b.x - d.x) <= 8);
+    if (!through) return true;
   }
   return b.x < 2 || b.x > W - 14 || b.y < TOP - 4 || b.y > H - 18;
 }
 // path through doors: out of my room, along the corridor, into the target's room
-function doorPoints(R) {
-  const d = R.door;
-  return R.side === 'bottom' ? [{ x: d.x, y: d.y - 6 }, { x: d.x, y: d.y + 6 }] : R.side === 'right' ? [{ x: d.x - 6, y: d.y }, { x: d.x + 6, y: d.y }] : [{ x: d.x + 6, y: d.y }, { x: d.x - 6, y: d.y }];
+// [inside, outside] of the door of R closest to a point
+function doorPoints(R, near) {
+  const d = R.doors.slice().sort((p, q) => Math.hypot(p.x - near.x, p.y - near.y) - Math.hypot(q.x - near.x, q.y - near.y))[0];
+  return d.side === 'bottom' ? [{ x: d.x, y: d.y - 6 }, { x: d.x, y: d.y + 6 }] : d.side === 'top' ? [{ x: d.x, y: d.y + 6 }, { x: d.x, y: d.y - 6 }] : d.side === 'right' ? [{ x: d.x - 6, y: d.y }, { x: d.x + 6, y: d.y }] : [{ x: d.x + 6, y: d.y }, { x: d.x - 6, y: d.y }];
 }
 function planWalk(to) {
   const from = { x: me.x, y: me.y }, A = roomOf(from), B = roomOf(to);
   if (A === B || (A && B && A.x === B.x && A.y === B.y)) return [to];
   const path = [];
-  if (A) { const [i, o] = doorPoints(A); path.push(i, o); }
+  if (A) { const [i, o] = doorPoints(A, B ? { x: B.x + B.w / 2, y: B.y + B.h / 2 } : to); path.push(i, o); }
   const start = path.length ? path[path.length - 1] : from;
-  const endDoor = B ? doorPoints(B) : null, entry = endDoor ? endDoor[1] : to;
+  const endDoor = B ? doorPoints(B, start) : null, entry = endDoor ? endDoor[1] : to;
   path.push({ x: CX - 2, y: start.y }, { x: CX - 2, y: entry.y });
   if (B) path.push(endDoor[1], endDoor[0]);
   path.push(to);

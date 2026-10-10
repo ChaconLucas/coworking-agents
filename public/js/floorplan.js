@@ -127,7 +127,9 @@ function buildFloor(i) {
     y += shelfH + SHELF_GAP;
   }
   // the game room fills the width under the team rooms, door on its right wall to the corridor
-  const GH = 128, game = { x: 8, y: y + 4, w: CX - 20, h: GH, doorY: y + 4 + GH / 2 };
+  const GH = 128, gy = y + 4, gw = CX - 20;
+  const game = { x: 8, y: gy, w: gw, h: GH, doorY: gy + GH / 2,
+    doors: [{ side: 'right', x: 8 + gw, y: gy + GH / 2 }, { side: 'top', x: 8 + Math.round(gw * .2), y: gy }, { side: 'top', x: 8 + Math.round(gw * .62), y: gy }, { side: 'bottom', x: 8 + Math.round(gw * .75), y: gy + GH }] };
   y += GH + SHELF_GAP + 4;
   const occupied = ds.filter(d => d.p);
   const lay = occupied.map(d => Object.assign({}, d));

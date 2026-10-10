@@ -22,9 +22,12 @@ function drawGameRoom(G, t, glows) {
   for (let yy = 4; yy < h; yy += 8) for (let xx = (yy / 8) % 2 ? 4 : 0; xx < w; xx += 8) r(x + xx, y + yy, 2, 2, '#365b67');
   // walls (the top one has a face), door on the right wall to the corridor
   r(x - 2, y - 2, w + 4, 3, PAL.ink); r(x - 2, y + 1, w + 4, 8, PAL.wall); r(x - 2, y + 9, w + 4, 1, PAL.wallShade);
-  r(x - 2, y, 3, h + 2, PAL.ink); r(x - 2, y + h, w + 4, 3, PAL.ink);
-  r(x + w - 1, y, 3, G.doorY - y - 9, PAL.ink); r(x + w - 1, G.doorY + 9, 3, y + h - G.doorY - 9, PAL.ink);
-  r(x + w - 1, G.doorY - 9, 3, 1, '#8f553f'); r(x + w - 1, G.doorY + 8, 3, 1, '#8f553f');
+  r(x - 2, y, 3, h + 2, PAL.ink); r(x - 2, y + h, w + 4, 3, PAL.ink); r(x + w - 1, y, 3, h + 2, PAL.ink);
+  // doorways: the carpet runs through each gap, with wooden jambs
+  for (const d of G.doors) {
+    if (d.side === 'right') { r(x + w - 1, d.y - 9, 3, 18, '#2f4f5a'); r(x + w - 1, d.y - 9, 3, 1, '#8f553f'); r(x + w - 1, d.y + 8, 3, 1, '#8f553f'); }
+    else { const yy = d.side === 'top' ? y - 2 : y + h; r(d.x - 9, yy, 18, d.side === 'top' ? 12 : 3, '#2f4f5a'); r(d.x - 9, yy, 1, d.side === 'top' ? 12 : 3, '#8f553f'); r(d.x + 8, yy, 1, d.side === 'top' ? 12 : 3, '#8f553f'); }
+  }
   // left: two arcades and a bookshelf on the wall
   Art.drawArcade(x + 8, y + 6, t, glows); Art.drawArcade(x + 30, y + 6, t, glows);
   // wall centre: notice board (today's files) and the newspaper rack (the weekly paper)

@@ -51,7 +51,10 @@ function exitPath(pt, cell) {
     const R = cell.room;
     return [{ x: pt.x, y: cell.aisle }, { x: R.doorX + 9, y: cell.aisle }, { x: R.doorX + 9, y: R.y + R.h + 6 }];
   }
-  if (gameBox && pt.x < CX && pt.y >= gameBox.y && pt.y <= gameBox.y + gameBox.h) return [{ x: pt.x, y: gameBox.doorY }, { x: gameBox.x + gameBox.w + 4, y: gameBox.doorY }];
+  if (gameBox && pt.x < CX && pt.y >= gameBox.y && pt.y <= gameBox.y + gameBox.h) { // the closest of its doors
+    const d = gameBox.doors.slice().sort((p, q) => Math.hypot(p.x - pt.x, p.y - pt.y) - Math.hypot(q.x - pt.x, q.y - pt.y))[0];
+    return d.side === 'right' ? [{ x: pt.x, y: d.y }, { x: d.x + 4, y: d.y }] : [{ x: d.x, y: pt.y }, { x: d.x, y: d.y + (d.side === 'top' ? -8 : 8) }];
+  }
   if (pt.y >= wing.meet && pt.y < wing.nap) return [{ x: pt.x, y: wing.meet + 40 }, { x: RX + 2, y: wing.meet + 40 }];
   return [{ x: pt.x, y: pt.y + 22 }];
 }
