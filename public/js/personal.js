@@ -135,22 +135,24 @@ function renderOffice() {
 }
 reportEl.addEventListener('click', e => {
   const o = e.target.closest('[data-opt]');
-  if (o) {
+  if (o) { // live: mark the chosen button and refresh the preview, nothing else is redrawn
     if (o.dataset.opt === 'mascot') { setProgress('mascot', o.dataset.val); achAdd('themesTried', 'mascot:' + o.dataset.val); achBump('decorate'); }
     else setOpt(o.dataset.opt, o.dataset.val);
-    renderOffice(); return;
+    reportEl.querySelectorAll(`[data-opt="${o.dataset.opt}"]`).forEach(b => b.classList.toggle('on', b === o));
+    lastLayoutKey = ''; if (data && !building && !trophyView) drawScene(performance.now(), 0); updatePreview(); return;
   }
-  if (e.target.closest('[data-you-look]')) { avatars.__you = (avatars.__you || 0) + 1; saveProgress(); achBump('avatars'); renderOffice(); return; }
-  if (e.target.closest('[data-save-name]')) { const v = document.getElementById('office-name').value.trim().slice(0, 14); setProgress('officeName', v); achBump('decorate'); renderOffice(); if (data) renderBar(); }
+  if (e.target.closest('[data-you-look]')) { avatars.__you = (avatars.__you || 0) + 1; saveProgress(); achBump('avatars'); const f = document.getElementById('you-face'); if (f) { f.innerHTML = ''; f.appendChild(Art.portrait('you:' + avatars.__you)); } return; }
+  if (e.target.closest('[data-save-name]')) { const v = document.getElementById('office-name').value.trim().slice(0, 14); setProgress('officeName', v); achBump('decorate'); if (data) renderBar(); updatePreview(); }
 });
 reportEl.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'office-name') reportEl.querySelector('[data-save-name]').click(); });
 
-// live preview: a scaled copy of the office (which keeps drawing behind the modal), refreshed twice a second
-setInterval(() => {
+// live preview: a scaled copy of the office (which keeps drawing behind the modal), refreshed ~7 times a second
+setInterval(() => updatePreview(), 150);
+function updatePreview() {
   const pv = document.getElementById('office-preview');
   if (!pv || reportEl.hidden || reportTab !== 'office') return;
   const src = document.getElementById('cv'), crop = Math.min(src.height, Math.round(src.width * .42));
   const h = Math.round(Math.min(innerHeight * .3, 240)), w = Math.round(h * src.width / crop);
   pv.style.height = h + 'px'; pv.width = w; pv.height = h;
   const c = pv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(src, 0, 0, src.width, crop, 0, 0, pv.width, pv.height);
-}, 500);
+}
