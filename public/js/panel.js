@@ -135,6 +135,7 @@ overlay.addEventListener('click', e => {
   if (e.target.closest('[data-usage]')) return openReport();
   if (e.target.closest('[data-weather]')) return enableWeather(true);
   if (e.target.closest('[data-ach]')) return openReport('ach');
+  if (e.target.closest('[data-neon]')) return neonClick();
   if (e.target.closest('[data-radio]')) { setRadio(!radioOn); lastHits = ''; renderOverlay(); return; }
   if (e.target.closest('[data-switch]')) { achBump('lights'); lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); return; } // wall light switch
   const cb = e.target.closest('[data-compact]');

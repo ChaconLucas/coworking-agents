@@ -84,6 +84,7 @@ function renderOverlay() {
   box(moodBox, '', T.mood[officeMood()]);
   box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
   box(caseBox, 'data-ach="1"', T.trophyRoom);
+  box(neonBox, 'data-neon="1"', '</>');
   box(noticeBox, '', T.noticeTitle + '\n' + (boardFiles.map(f => `${f.rel} · ${f.repo}${f.n > 1 ? ' · ' + f.n + '×' : ''}`).join('\n') || T.noticeNone));
   box(tvBox, '', meetInfo.people.filter(m => !m.lead).map(m => m.title || m.label).join('\n'));
   if (clockBox && data) { const d0 = new Date(); d0.setHours(0, 0, 0, 0); const ins = data.people.filter(p => !p.leaving && p.startedAt >= d0.getTime()).sort((a, b) => a.startedAt - b.startedAt);

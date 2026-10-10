@@ -119,13 +119,12 @@ function drawShopWall(t, glows) {
   if (owns('disco')) { const x = CX, y = TOP + 4; r(x, TOP - 6, 1, 6, '#c0cbdc'); r(x - 3, y, 7, 7, '#c0cbdc'); for (let i = 0; i < 6; i++) r(x - 3 + (i * 2 + ((t / 150) | 0)) % 7, y + (i % 3) * 2, 1, 1, ['#ff6ec7', '#2ce8f5', '#ffd84d'][i % 3]); if (partyUntil > Date.now()) glows.push({ x, y: y + 3, r: 60, c: ['#ff6ec7', '#2ce8f5', '#ffd84d'][((t / 300) | 0) % 3] }); }
 }
 
-// ---- party mode (hidden): type "party" anywhere ----
-let partyUntil = 0;
-{ let buf = ''; document.addEventListener('keydown', e => {
-  const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
-  buf = (buf + (e.key.length === 1 ? e.key.toLowerCase() : '')).slice(-5);
-  if (buf === 'party' || buf === 'festa') { partyUntil = Date.now() + 10000; achBump('parties'); confettiAt = Date.now(); playTune('trophy'); checkAchievements(); }
-}); }
+// ---- party mode (hidden): three quick clicks on the </> neon sign ----
+let partyUntil = 0, neonClicks = [];
+function neonClick() {
+  const now = Date.now(); neonClicks = neonClicks.filter(t => now - t < 1500).concat(now);
+  if (neonClicks.length >= 3) { neonClicks = []; partyUntil = now + 10000; achBump('parties'); confettiAt = now; playTune('trophy'); checkAchievements(); }
+}
 const partying = () => partyUntil > Date.now();
 function partyLights(t) {
   if (!partying()) return;
