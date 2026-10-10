@@ -542,3 +542,7 @@ main:has(#office.cam) { overflow: visible; }
 /* side panel: sticky close button */
 .panel .close { position: sticky !important; top: 0; float: right; margin: -6px -6px 0 0; z-index: 3; width: 30px; height: 30px; display: grid; place-items: center; background: #1d1823 !important; border: 2px solid #3a3045 !important; border-radius: 6px; }
 .rcard h4 .ailogo { display: inline-flex; width: auto; padding: 0; background: none; flex: none; }
+/* scroll areas sit inside the gold inner border so scrolled content never crosses it */
+.talk-scroll, .report-body { margin: 9px; border-radius: 4px; }
+.talk-x, .report-x { top: 16px; right: 18px; }
+.talk-box, .report-box { outline-offset: -6px; }
