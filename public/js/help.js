@@ -80,10 +80,12 @@ function drawOffice(ox, B, t, page) {
     Art.blit(Art.portrait(d.p.id), x + 6, desk - 18);
     r(x + 12, desk - 7, 14, 8, PAL.ink); r(x + 13, desk - 6, 12, 6, '#c0cbdc'); r(x + 18, desk - 4, 2, 2, '#ffffff');
     const urgent = d.p.state === 'needs_you' || d.p.state === 'waiting';
-    if (urgent) { // red badge
-      r(x + 18, desk - 22, 7, 7, PAL.ink); r(x + 19, desk - 21, 5, 5, '#e43b44'); r(x + 21, desk - 20, 1, 2, '#fff'); r(x + 21, desk - 17, 1, 1, '#fff');
-      if (f % 4 < 2) { r(x + 5, desk - 22, 1, 2, '#feae34'); r(x + 9, desk - 24, 1, 3, '#feae34'); }
-    } else Art.bubble(x + 20, desk - 30, 'done', t); // finished, your turn (not a request)
+    // small speech bubble to the right of the head, fully inside the bar, tail pointing at the face
+    const bx = x + 21, by = desk - 19;
+    r(bx, by, 9, 7, PAL.ink); r(bx + 1, by + 1, 7, 5, '#fff'); r(bx - 1, by + 4, 2, 1, PAL.ink); r(bx, by + 4, 1, 1, '#fff');
+    if (urgent) { r(bx + 4, by + 2, 1, 2, '#e43b44'); r(bx + 4, by + 5, 1, 1, '#e43b44'); }
+    else { r(bx + 2, by + 3, 1, 1, '#3e8948'); r(bx + 3, by + 4, 1, 1, '#3e8948'); r(bx + 4, by + 3, 1, 1, '#3e8948'); r(bx + 5, by + 2, 1, 1, '#3e8948'); r(bx + 6, by + 1, 1, 1, '#3e8948'); }
+    if (urgent && f % 4 < 2) { r(x + 4, desk - 21, 1, 2, '#feae34'); r(x + 8, desk - 22, 1, 2, '#feae34'); }
     // something on the counter between people
     if (k % 2) { r(x + 31, desk - 5, 5, 5, PAL.ink); r(x + 32, desk - 4, 3, 3, Art.SHIRT[Art.hash(d.p.id) % Art.SHIRT.length]); if (f % 8 < 5) r(x + 33, desk - 8 - (f % 3), 1, 2, '#ffffff88'); }
     else if (k < 3) { r(x + 31, desk - 5, 6, 5, PAL.pot); r(x + 32, desk - 10, 1, 5, PAL.leafLight); r(x + 34, desk - 11, 1, 6, PAL.leaf); r(x + 35, desk - 9, 1, 4, PAL.leafLight); }
@@ -143,7 +145,7 @@ function drawDock(t) {
     }
     ctx.restore();
     // place the "+" right after the fourth seat
-    dock.style.left = ((x0 + span) * DOCK_S + 4) + 'px';
+    dock.style.left = ((x0 + span) * DOCK_S + 2) + 'px'; dock.style.top = ((desk - 17) * DOCK_S) + 'px';
   } finally { ctx = prev; Art.setCtx(prev); }
 }
 setInterval(() => { if (data) drawDock(performance.now()); }, 90);

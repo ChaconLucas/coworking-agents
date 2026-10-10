@@ -705,22 +705,22 @@ const aiIconCache = new Map();
 function aiIcon(id, color) {
   const k = id + color;
   if (aiIconCache.has(k)) return aiIconCache.get(k);
-  const cv = document.createElement('canvas'); cv.width = 11; cv.height = 11;
-  const c = cv.getContext('2d'), P = (x, y, w = 1, h = 1, col = color) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-  if (id === 'claude') { // Claude's spark: a burst of rounded rays
-    const rays = [[5,0,1,4],[5,7,1,4],[0,5,4,1],[7,5,4,1],[1,1,1,1],[2,2,2,2],[9,1,1,1],[7,2,2,2],[1,9,1,1],[2,7,2,2],[9,9,1,1],[7,7,2,2],[3,0,1,2],[7,0,1,2],[3,9,1,2],[7,9,1,2],[0,3,2,1],[0,7,2,1],[9,3,2,1],[9,7,2,1]];
-    for (const [x, y, w, h] of rays) P(x, y, w, h);
-    P(4, 4, 3, 3);
-  } else if (id === 'codex') { // OpenAI's knot: a hexagonal blossom of interlocking loops
-    P(3, 0, 5, 1); P(1, 1, 2, 2); P(8, 1, 2, 2); P(0, 3, 1, 5); P(10, 3, 1, 5); P(1, 8, 2, 2); P(8, 8, 2, 2); P(3, 10, 5, 1);
-    P(4, 2, 3, 1); P(2, 4, 1, 3); P(8, 4, 1, 3); P(4, 8, 3, 1); P(3, 3, 1, 1); P(7, 3, 1, 1); P(3, 7, 1, 1); P(7, 7, 1, 1);
-    P(5, 1, 1, 4); P(5, 6, 1, 4); P(4, 5, 3, 1, '#0006');
-  } else if (id === 'gemini') { // four-point sparkle
-    P(5, 0, 1, 11); P(0, 5, 11, 1); P(4, 2, 3, 7); P(2, 4, 7, 3); P(3, 3, 5, 5, '#ffffff22');
-  } else { // others: a diamond
-    for (let i = 0; i < 6; i++) { P(5 - i, i, i * 2 + 1, 1); P(5 - i, 10 - i, i * 2 + 1, 1); }
-    P(4, 4, 3, 3, '#0006');
+  const N = 15, cv = document.createElement('canvas'); cv.width = N; cv.height = N;
+  const c = cv.getContext('2d'), on = new Set(), P = (x, y) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < N && y < N) on.add(x + ',' + y); };
+  const line = (x0, y0, x1, y1, w) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 3); for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n; P(x, y); if (w > 1) { P(x + .5, y); P(x, y + .5); } } };
+  const C = 7;
+  if (id === 'claude') { // starburst of tapered rays (Claude's mark)
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2 + .13, R = k % 2 ? 6 : 7.2; line(C + Math.cos(a) * 1.5, C + Math.sin(a) * 1.5, C + Math.cos(a) * R, C + Math.sin(a) * R, k % 3 ? 1 : 2); }
+    for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) P(C + x, C + y);
+  } else if (id === 'codex') { // OpenAI blossom: six interlocking strokes around a hexagonal hole
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = a + Math.PI / 3; line(C + Math.cos(a) * 3, C + Math.sin(a) * 3, C + Math.cos(b) * 6.6, C + Math.sin(b) * 6.6, 2); line(C + Math.cos(b) * 6.6, C + Math.sin(b) * 6.6, C + Math.cos(b + .5) * 6.2, C + Math.sin(b + .5) * 6.2, 2); }
+  } else if (id === 'gemini') { // four-point star with curved sides
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (Math.sqrt(Math.abs(x - C)) + Math.sqrt(Math.abs(y - C)) <= 2.75) P(x, y);
+  } else { // others: diamond
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (Math.abs(x - C) + Math.abs(y - C) <= 6) P(x, y);
   }
+  c.fillStyle = color;
+  for (const p of on) { const [x, y] = p.split(',').map(Number); c.fillRect(x, y, 1, 1); }
   aiIconCache.set(k, cv);
   return cv;
 }

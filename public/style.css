@@ -524,3 +524,8 @@ main:has(#office.cam) { overflow: visible; }
 .rcard { border-top: 3px solid #2f2838; }
 .rcard h4 { justify-content: flex-start; gap: 8px; } .rcard h4 .ailogo { margin: 0; }
 .ltop > span { gap: 6px; } .ltop .ailogo { margin: 0; }
+
+/* "+N more" next office: pixel arrow tag at the end of the counter */
+.scene-more { top: auto !important; transform: none !important; width: auto !important; height: 30px !important; padding: 0 10px 0 8px; display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--edge) !important; border-radius: 4px !important; background: #f4ecd8 !important; color: #2a1d27 !important; font: 700 11px/1 var(--pix) !important; box-shadow: 3px 3px 0 rgba(0,0,0,.45) !important; animation: none !important; }
+.scene-more::after { content: ''; border: 6px solid transparent; border-left: 7px solid #d97757; border-right: 0; }
+.scene-more:hover { background: #fff !important; transform: translateX(2px) !important; }

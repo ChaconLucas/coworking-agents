@@ -19,36 +19,32 @@ function pixText(x, y, str, c) {
   return cx - x;
 }
 function drawUsageBoard(x, y, t) {
-  // a wide wall screen: one column per AI with its name, then 5H and WK meters
-  // two AIs at a time; with more, the screen pages through them every 5 seconds
+  // wall screen: per AI a logo + name, then 5H and WK as segmented meters with the value
   const L = (data && data.limits) || {}, all = Object.keys(AGENT).filter(id => L[id] && (L[id].primary || L[id].secondary));
   const PER = 2, pages = Math.max(1, Math.ceil(all.length / PER)), page = Math.floor(t / 5000) % pages;
   const ids = all.slice(page * PER, page * PER + PER);
-  const colW = 64, w = Math.max(1, Math.min(PER, all.length)) * colW + 4, h = 34, f = (t / 300) | 0;
+  const colW = 66, w = Math.max(1, Math.min(PER, all.length)) * colW + 4, h = 36;
   usageBox = { x, y, w, h };
-  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#5a6988'); r(x, y, w, h, '#0b0e18');
+  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, '#262b44'); r(x, y, w, h, '#090b13');
+  r(x, y, w, 1, '#ffffff10');
   ids.forEach((id, i) => {
     const cx = x + 3 + i * colW, a = AGENT[id], l = L[id];
-    if (i) r(cx - 2, y + 3, 1, h - 6, '#2a3350');
-    ctx.drawImage(Art.aiIcon(id, a.color), cx + 1, y + 1);
-    pixText(cx + 15, y + 4, a.label.split(' ')[0].toUpperCase().slice(0, 6), a.color);
+    if (i) r(cx - 2, y + 4, 1, h - 8, '#1e2436');
+    ctx.drawImage(Art.aiIcon(id, a.color), cx, y + 2);
+    pixText(cx + 18, y + 7, a.label.split(' ')[0].toUpperCase().slice(0, 6), '#e8ecf4');
     [['5H', l.primary], ['WK', l.secondary]].forEach(([lbl, wdw], k) => {
       if (!wdw) return;
-      const gy = y + 13 + k * 9, pct = Math.max(0, Math.min(100, wdw.usedPercent));
-      const col = pct > 85 ? '#ff4d57' : pct > 60 ? '#ffc23a' : '#7dff5c';
-      pixText(cx + 1, gy, lbl, '#c8d2e6');
-      const bx = cx + 10, bw = colW - 30, fill = Math.round(bw * pct / 100);
-      r(bx, gy, bw, 5, '#1b2236');
-      for (let q = 0; q < fill; q++) r(bx + q, gy, 1, 5, (q + ((t / 90) | 0)) % 6 < 3 ? col : shade(col, .78));
-      r(bx, gy, fill, 1, '#ffffff55');
+      const gy = y + 20 + k * 8, pct = Math.max(0, Math.min(100, wdw.usedPercent));
+      const col = pct > 85 ? '#ff4d57' : pct > 60 ? '#ffc23a' : '#6ee05a';
+      pixText(cx, gy, lbl, '#7d8aa8');
+      const bx = cx + 10, segs = 9, sw = 3;
+      for (let q = 0; q < segs; q++) r(bx + q * (sw + 1), gy, sw, 5, q < Math.round(pct / 100 * segs) ? col : '#1a2033');
       const txt = Math.round(pct) + '%';
-      pixText(cx + colW - 6 - (txt.length * 4 - 1), gy, txt, '#ffffff');
+      pixText(cx + colW - 6 - (txt.length * 4 - 1), gy, txt, col);
     });
   });
-  if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h - 3, 2, 1, k === page ? '#ffffff' : '#3a4466'); // page dots
-  if (!ids.length) for (let i = 0; i < 3; i++) r(x + 6, y + 8 + i * 7, 20 + ((f + i) % 3) * 8, 2, '#2a3350');
-  r(x + w - 3, y + 1, 2, 1, f % 2 ? '#7dff5c' : '#1f3a24');
-  if (wallGlows) wallGlows.push({ x: x + w / 2, y: y + h / 2, r: 40, c: '#7dff5c' });
+  if (pages > 1) for (let k = 0; k < pages; k++) r(x + w / 2 - pages * 2 + k * 4, y + h - 2, 2, 1, k === page ? '#ffffff' : '#3a4466');
+  if (!ids.length) for (let i = 0; i < 3; i++) r(x + 6, y + 8 + i * 7, 20 + i * 8, 2, '#2a3350');
 }
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
