@@ -400,3 +400,18 @@ main:has(#office.cam) { overflow: visible; }
 @keyframes busyrun { to { background-position: 17px 0; } }
 @keyframes busyblink { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .busy .b-work, .busy .b-need { animation: none; } }
+
+/* ---- house wall (hall of fame) ---- */
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin: 6px 0 14px; }
+.pod { flex: 1; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.pod .medal { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font: 700 12px/1 var(--pix); color: #2a1d27; border: 2px solid var(--edge); box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); }
+.pod b { font-size: 12px; color: #fff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod small { font: 700 10px/1 var(--pix); color: #b9a88a; }
+.pod i { display: block; width: 100%; border: 2px solid var(--edge); border-bottom: 0; border-radius: 4px 4px 0 0; }
+.pod.p1 .medal { background: #feae34; } .pod.p1 i { height: 46px; background: linear-gradient(#e8a02c, #b97c22); }
+.pod.p2 .medal { background: #c0cbdc; } .pod.p2 i { height: 32px; background: linear-gradient(#a8b4c8, #7c889c); }
+.pod.p3 .medal { background: #e07a4a; } .pod.p3 i { height: 22px; background: linear-gradient(#c96a3e, #9a4e2c); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.chip-s { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #221d29; color: #8b9bb4; border: 1px solid #2f2838; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-s.on { color: #2a1d27; background: #e8b04b; border-color: #e8b04b; font-weight: 600; }
+.chip-s.mcp.on { background: #2c9a8f; border-color: #2c9a8f; color: #fff; }

@@ -37,13 +37,20 @@ function renderPanel() {
   const P = T.panel;
   if (selected === '__usage') return renderUsage(P);
   if (selected === '__hall') {
+    // podium for the top 3, bars for the rest, compact chips for everything installed (used ones lit)
     const section = (id, c) => {
       const a = AGENT[id] || { label: id, color: '#888' };
+      const top = c.topSkills.slice(0, 3), rest = c.topSkills.slice(3), max = c.topSkills.length ? c.topSkills[0].count : 1;
+      const used = new Map(c.topSkills.map(x => [x.name, x.count]));
+      const order = [1, 0, 2].filter(i => top[i]);
+      const podium = top.length ? `<div class="podium">${order.map(i => `<div class="pod p${i + 1}"><span class="medal">${i + 1}</span><b title="${esc(top[i].name)}">${esc(top[i].name)}</b><small>${Number(top[i].count) || 0}×</small><i></i></div>`).join('')}</div>` : '';
+      const bars = rest.length ? `<ul class="bars">${rest.map(x => `<li><code title="${esc(x.name)}">${esc(x.name)}</code><span class="tbar"><i style="width:${(x.count / max * 100).toFixed(1)}%"></i></span><span class="t">${Number(x.count) || 0}</span></li>`).join('')}</ul>` : '';
+      const chips = (list, kind) => list.length ? `<div class="chips">${list.map(n => `<span class="chip-s ${used.has(n) ? 'on' : ''} ${kind}" title="${esc(n)}${used.has(n) ? ' · ' + used.get(n) + '×' : ''}">${esc(n)}</span>`).join('')}</div>` : '';
       return `<h3 style="color:${a.color}">${esc(a.label)}</h3>
-      ${c.topSkills.length ? `<p class="note">${esc(P.topSkills)}</p><ul class="list">${c.topSkills.map((s, i) => `<li><span class="k">${['🥇', '🥈', '🥉'][i] || '·'}</span>${esc(s.name)}<span class="t">${Number(s.count) || 0}×</span></li>`).join('')}</ul>` : ''}
-      ${c.skills.length ? `<p class="note">${esc(P.installed)}</p><div class="certs">${c.skills.map(s => `<div class="cert" style="--c:${CERT.skill}"><small>${T.kinds.skill}</small>${esc(s)}</div>`).join('')}</div>` : ''}
-      ${c.mcps.length ? `<p class="note">${esc(P.mcps)}</p><div class="certs">${c.mcps.map(s => `<div class="cert" style="--c:${CERT.mcp}"><small>MCP</small>${esc(s)}</div>`).join('')}</div>` : ''}
-      ${c.plugins.length ? `<p class="note">${esc(P.plugins)}</p><ul class="list">${c.plugins.map(s => `<li>${esc(s.name)}<span class="t">${Number(s.count) || 0}×</span></li>`).join('')}</ul>` : ''}`;
+        ${top.length ? `<p class="note">${esc(P.topSkills)}</p>${podium}${bars}` : ''}
+        ${c.skills.length ? `<p class="note">${esc(P.installed)} · ${c.skills.length}</p>${chips(c.skills, 'skill')}` : ''}
+        ${c.mcps.length ? `<p class="note">${esc(P.mcps)} · ${c.mcps.length}</p>${chips(c.mcps, 'mcp')}` : ''}
+        ${c.plugins.length ? `<p class="note">${esc(P.plugins)} · ${c.plugins.length}</p>${chips(c.plugins.map(x => x.name), 'plugin')}` : ''}`;
     };
     panelBody.innerHTML = `<h2>${esc(P.hall)}</h2><p class="sub">${esc(data.host)}</p>` +
       Object.entries(data.credentials || {}).map(([id, c]) => section(id, c)).join('');
