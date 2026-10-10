@@ -724,9 +724,15 @@ function aiIcon(id, color) {
   aiIconCache.set(k, cv);
   return cv;
 }
+// a fresh copy for the DOM: one canvas element can only live in one place on the page
+function aiIconEl(id, color) {
+  const src = aiIcon(id, color), c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src, 0, 0);
+  return c;
+}
 
 window.Art = {
-  aiIcon, portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
+  aiIcon, aiIconEl, portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
   PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,

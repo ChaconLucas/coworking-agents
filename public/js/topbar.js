@@ -32,7 +32,7 @@ function renderBar() {
   const html = [...lanes.entries()].map(([id, l]) => `<span class="lane" style="flex:${l.n}" data-ai="${esc(id)}" title="${esc((AGENT[id] || {}).label || id)}: ${l.work} ${esc(T.working)} · ${l.need} ${esc(T.needYou)} · ${l.turn} ${esc(T.yourTurn)} · ${l.sleep} ${esc(T.asleep)}"><span class="ico"></span><span class="nm">${esc(((AGENT[id] || {}).label || id).split(' ')[0])}</span><span class="segs">${seg(l.work, 'b-work', T.working)}${seg(l.need, 'b-need', T.needYou)}${seg(l.turn, 'b-turn', T.yourTurn)}${seg(l.sleep, 'b-sleep', T.asleep)}</span><b>${l.n}</b></span>`).join('');
   if (busy.dataset.html !== html) {
     busy.dataset.html = html; busy.innerHTML = html;
-    busy.querySelectorAll('.lane').forEach(el => { const id = el.dataset.ai, a = AGENT[id] || { color: '#8a8f98' }; el.querySelector('.ico').appendChild(Art.aiIcon(id, a.color)); });
+    busy.querySelectorAll('.lane').forEach(el => { const id = el.dataset.ai, a = AGENT[id] || { color: '#8a8f98' }; el.querySelector('.ico').appendChild(Art.aiIconEl(id, a.color)); });
   }
   busy.setAttribute('aria-label', `${c.work} ${T.working}, ${c.need} ${T.needYou}, ${c.turn} ${T.yourTurn}, ${c.sleep} ${T.asleep}`);
   document.title = (c.need ? `(${c.need}) ` : '') + 'coworking-agents';
