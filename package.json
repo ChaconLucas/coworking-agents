@@ -14,7 +14,8 @@
     "LICENSE",
     "commands",
     "skills",
-    "AGENTS.md"
+    "AGENTS.md",
+    "ROADMAP.md"
   ],
   "engines": {
     "node": ">=18"
