@@ -4,7 +4,7 @@ const CTX_WARN = .75;               // from here a "compact" button shows over t
 const LIMIT_STEPS = [80, 95];       // notify once per window when usage crosses these
 const alerted = new Set();
 
-const ctxPct = p => p.ctx && (p.ctxMax || (p.ctx > 2e5 ? 1e6 : 2e5)) ? p.ctx / (p.ctxMax || (p.ctx > 2e5 ? 1e6 : 2e5)) : 0;
+const ctxPct = p => p.ctx && p.ctxMax ? p.ctx / p.ctxMax : 0; // unknown window size = no percentage, no compact button
 const canType = () => !data || !data.platform || data.platform === 'darwin'; // typing into a terminal tab is macOS-only
 const canCompact = p => !replayAt && canType() && p.agent === 'claude' && !p.leaving && (p.state === 'idle' || p.state === 'asleep') && ctxPct(p) >= CTX_WARN && p.entrypoint !== 'claude-desktop';
 

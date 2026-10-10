@@ -164,6 +164,26 @@ Linux and Windows support is written against their process tools but has not bee
 - **Secrets are masked.** Tokens, passwords, API keys and `Bearer` values inside commands are replaced with `•••` before display.
 - **`--private` mode** for screen sharing hides agent names, branches, repo names (replaced by aliases like `repo A`), session titles, paths, file names, questions, skills, MCP names and the host name.
 
+## Claude rate limits and context window
+
+Claude Code only hands these numbers to your **status line** script, so the office reads a copy that the script saves. Add this to your status line (Python; `d` is the JSON Claude Code sends on stdin):
+
+```python
+import os, json, time
+base = os.path.expanduser('~/.config/coworking-agents'); os.makedirs(base, exist_ok=True)
+rl = d.get('rate_limits') or {}
+if rl:
+    json.dump({'at': int(time.time() * 1000), 'five_hour': rl.get('five_hour'), 'seven_day': rl.get('seven_day')}, open(base + '/claude-limits.json', 'w'))
+size = (d.get('context_window') or {}).get('context_window_size')
+if size and d.get('session_id'):
+    p = base + '/claude-context.json'
+    try: m = json.load(open(p))
+    except Exception: m = {}
+    m[d['session_id']] = size; json.dump(dict(list(m.items())[-200:]), open(p, 'w'))
+```
+
+Without it, the context percentage shows only once it is measurable (a reply past 200k tokens proves a 1M window); until then the panel shows the token count and "window size unknown", and no compact button appears.
+
 ## Limitations
 
 - **Codex has no live-session registry.** "Open" means a Codex process is running and the conversation was touched in the last 3 hours, so a closed Codex chat can linger for a while.

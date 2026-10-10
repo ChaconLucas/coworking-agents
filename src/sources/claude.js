@@ -49,13 +49,15 @@ function absorb(st, d) {
   if (d.type === 'ai-title' && d.aiTitle) st.title = d.aiTitle;
   if (d.type === 'permission-mode' && d.permissionMode) st.permissionMode = d.permissionMode;
   if (d.type === 'last-prompt' && d.lastPrompt && !st.lastPrompt) st.lastPrompt = short(d.lastPrompt, 220); // fallback only: the user message itself is richer
+  // a finished /compact: Claude writes the new context size here, long before the next reply carries usage
+  if (d.type === 'system' && d.subtype === 'compact_boundary') { const post = d.compactMetadata && Number(d.compactMetadata.postTokens); st.ctx = post >= 0 ? post : 0; st.ctxAfterCompact = true; st.compactedAt = ts; }
   if (d.type === 'system' && d.subtype === 'turn_duration') { st.pending.clear(); st.turns++; st.turnOpen = false; event(st, ts, 'idle'); }
   // the conversation is written immediately: a new message of yours or a model reply = turn open
   const prompt = d.type === 'user' && !d.isMeta && d.message && !isToolResult(d.message.content);
   if (prompt) {
     event(st, ts, 'thinking');
     const c = d.message.content, text = typeof c === 'string' ? c : Array.isArray(c) ? c.filter(x => x.type === 'text').map(x => x.text).join(' ') : '';
-    if (d.isCompactSummary) { st.compactedAt = ts; st.turnText = ''; } // the summary of a /compact is not something you asked
+    if (d.isCompactSummary) { st.compactedAt = ts; st.turnText = ''; if (!st.ctxAfterCompact) st.ctx = 0; } // no boundary note: size unknown until the next reply // the summary of a /compact is not something you asked
     else if (text && !text.startsWith('<') && !/^\[Request interrupted/.test(text)) { st.lastPrompt = short(text, 220); st.lastPromptAt = ts; st.turnText = ''; }
   }
   if (d.type === 'assistant' || prompt) st.turnOpen = true;
@@ -67,7 +69,9 @@ function absorb(st, d) {
     // one API message is written as several entries (one per content block) with the same usage: count it once
     if (u && (!m.id || m.id !== st.lastMsgId)) {
       st.lastMsgId = m.id;
+      st.ctxAfterCompact = false;
       st.ctx = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+      if (st.ctx > (st.ctxPeak || 0)) st.ctxPeak = st.ctx;
       addTokens(st, ts, u.output_tokens || 0);
       st.usage.input += u.input_tokens || 0; st.usage.output += u.output_tokens || 0;
       st.usage.cacheRead += u.cache_read_input_tokens || 0; st.usage.cacheWrite += u.cache_creation_input_tokens || 0;
@@ -158,12 +162,15 @@ function sessions(now) {
   const dir = path.join(DIR(), 'sessions');
   let files = [];
   try { files = fs.readdirSync(dir).filter(f => /^\d+\.json$/.test(f)); } catch { return []; }
-  const out = [];
+  const out = [], windows = contextWindows();
   for (const f of files) {
     const s = safeJson(path.join(dir, f)); // the *.key files next to it are never read
     if (!s || !s.sessionId || !alive(s.pid)) continue;
     const tp = findTranscript(s.sessionId);
     const st = tp ? read(tp) : null;
+    // context window size, measured: what the status line reported for this session, or 1M once a reply
+    // went past 200k (it can't exceed its window). Otherwise unknown (0): no percentage is shown.
+    if (st) st.ctxMax = windows[s.sessionId] || (st.ctxPeak > 2e5 ? 1e6 : 0);
     out.push({
       agent: 'claude', id: s.sessionId, name: s.name || 'claude-' + s.pid, pid: s.pid,
       kind: s.kind, entrypoint: s.entrypoint || '', version: s.version, status: statusOf(s, st, now),
@@ -200,6 +207,13 @@ function limits() {
   if (!d) return null;
   const w = x => x && { usedPercent: Number(x.used_percentage ?? x.used_percent ?? x.utilization) || 0, windowMinutes: Number(x.window_minutes) || 0, resetsAt: (() => { const v = x.resets_at ?? x.reset_at; return typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(v) || 0; })() };
   return { at: Number(d.at) || 0, primary: w(d.five_hour), secondary: w(d.seven_day) };
+}
+
+// per-session context window sizes copied by the status line (see README, "Rate limits and context")
+function contextWindows() {
+  const d = safeJson(path.join(os.homedir(), '.config', 'coworking-agents', 'claude-context.json')) || {}, out = {};
+  for (const [id, v] of Object.entries(d)) { const n = Number(v && typeof v === 'object' ? v.size : v); if (n > 0) out[id] = n; }
+  return out;
 }
 
 function credentials() {

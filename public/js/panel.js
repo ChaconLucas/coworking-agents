@@ -65,7 +65,7 @@ function renderPanel() {
   const p = data.people.find(x => x.id === selected);
   if (!p) { selected = null; panel.hidden = true; return; }
   const col = KIND_COLOR[p.state] || '#888';
-  const ctxMax = p.ctxMax || (p.ctx > 2e5 ? 1e6 : 2e5), ctxPct = Math.min(1, p.ctx / ctxMax);
+  const ctxMax = p.ctxMax || 0, ctxPct = ctxMax ? Math.min(1, p.ctx / ctxMax) : 0;
   const certs = certsOf(p);
   const tools = Object.entries(p.tools || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const toolMax = tools.length ? tools[0][1] : 1;
@@ -97,7 +97,7 @@ function renderPanel() {
     ${p.files && p.files.length ? `<h3>${esc(P.filesNow)}</h3><ul class="list files">${p.files.map(f => `<li><span class="k">✎</span><code title="${esc(f.repo + '/' + f.rel)}">${esc(f.rel)}</code><span class="t">${esc(ago(data.now - f.at))}</span></li>`).join('')}</ul>` : ''}
     ${p.subagents.length ? `<h3>${P.team}</h3><ul class="list">${p.subagents.map(a => `<li><span class="k">${KIND_ICON[a.state] || '•'}</span><span><b>${esc(a.type)}</b> ${esc(a.description)}${a.doing ? `<br><span class="note">${esc(a.doing)}</span>` : ''}</span></li>`).join('')}</ul>` : ''}
     ${p.usage ? `<h3>${esc(T.usage.session)}</h3><div class="stats tok"><div><b>${fmtTok(p.usage.output)}</b><small>${esc(T.usage.out)}</small></div><div><b>${fmtTok(p.usage.input + p.usage.cacheWrite)}</b><small>${esc(T.usage.in)}</small></div><div><b>${fmtTok(p.usage.cacheRead)}</b><small>${esc(T.usage.cache)}</small></div></div>` : ''}
-    ${p.ctx ? `<h3>${P.context}</h3><div class="blocks">${blocks}</div><div class="ctx-row"><span>${esc(P.tokens(fmtK(p.ctx)))}</span><span>${Math.round(ctxPct * 100)}% / ${fmtK(ctxMax)}</span></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
+    ${p.ctx ? `<h3>${P.context}</h3>${ctxMax ? `<div class="blocks">${blocks}</div>` : ''}<div class="ctx-row"><span>${esc(P.tokens(fmtK(p.ctx)))}</span><span>${ctxMax ? `${Math.round(ctxPct * 100)}% / ${fmtK(ctxMax)}` : esc(P.ctxUnknown)}</span></div><p class="note">${esc(P.ctxNote)}</p>` : ''}
     <h3>${P.where}</h3><dl>
       ${p.repo ? `<dt>${P.repo}</dt><dd>${esc(p.repo.name)}${p.repo.isWorktree ? ` <span class="note">(${P.worktree})</span>` : ''}</dd>` : ''}
       ${branch ? `<dt>${P.branch}</dt><dd><code>${esc(branch)}</code></dd>` : ''}

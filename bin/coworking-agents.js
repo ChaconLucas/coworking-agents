@@ -25,8 +25,9 @@ if (flag('-h') || flag('--help')) {
 
 if (flag('--json')) {
   const { snapshot } = require('../src/collect');
-  console.log(JSON.stringify(snapshot({ privacy: flag('--private') }), null, 2));
-  process.exit(0);
+  // write and let Node exit on its own: process.exit() cuts a big snapshot short when stdout is a pipe
+  process.stdout.write(JSON.stringify(snapshot({ privacy: flag('--private') }), null, 2) + '\n');
+  return;
 }
 
 function open(url) {

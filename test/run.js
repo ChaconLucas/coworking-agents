@@ -165,6 +165,19 @@ assert.deepStrictEqual(priv.clashes.map(c => c.who.sort()).sort(), by('B') ? [['
 fs.appendFileSync(path.join(claude, 'projects', 'p', 'A.jsonl'), line(result('e1', now)));
 assert.strictEqual(snapshot().people.find(p => p.id === 'A').state, 'thinking');
 
+// context window: never guessed. Unknown until measured; a reply past 200k proves a 1M window;
+// a finished /compact sets the new size right away (the button must not come back on a compacted session)
+const sleepK = spawn('sleep', ['30']);
+const ctxUse = (n, ts) => ({ type: 'assistant', timestamp: iso(ts), message: { id: 'k' + n, model: 'claude-x', usage: { input_tokens: n }, content: [{ type: 'text', text: 'ok' }] } });
+session(sleepK.pid, 'K', 'idle', [ctxUse(150000, now - 5000)]);
+const K = () => snapshot().people.find(p => p.id === 'K');
+assert.ok(K() && K().ctx === 150000 && K().ctxMax === 0, 'window size unknown: no percentage');
+fs.appendFileSync(path.join(claude, 'projects', 'p', 'K.jsonl'), line(ctxUse(780000, now - 4000)));
+assert.strictEqual(K().ctxMax, 1e6, 'a reply past 200k means a 1M window');
+fs.appendFileSync(path.join(claude, 'projects', 'p', 'K.jsonl'), line({ type: 'system', subtype: 'compact_boundary', timestamp: iso(now - 3000), compactMetadata: { trigger: 'manual', preTokens: 780000, postTokens: 7000 } }) + line({ type: 'user', isCompactSummary: true, timestamp: iso(now - 3000), message: { content: 'summary' } }));
+assert.strictEqual(K().ctx, 7000, 'after /compact the context is the size Claude wrote, not the last reply');
+sleepK.kill();
+
 // the stylesheet must have balanced braces (one stray "@media {" silently breaks everything after it)
 {
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
