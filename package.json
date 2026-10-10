@@ -25,7 +25,8 @@
     "start": "node bin/coworking-agents.js",
     "demo": "node bin/coworking-agents.js --demo",
     "test": "node test/run.js",
-    "screenshots": "bash scripts/screenshots.sh"
+    "screenshots": "bash scripts/screenshots.sh",
+    "video": "node scripts/record-video.js"
   },
   "keywords": [
     "ai",

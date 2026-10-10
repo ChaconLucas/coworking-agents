@@ -1,23 +1,67 @@
 <p align="center">
-  <img src="docs/logo.png" width="128" alt="coworking-agents logo">
+  <img src="docs/logo.png" width="112" alt="coworking-agents logo">
 </p>
 
 <h1 align="center">coworking-agents</h1>
 
-<p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Claude Code · Codex · walk around · trophies · zero dependencies · local only</p>
+<p align="center"><b>A live pixel-art office for your AI coding agents.</b><br>Every Claude Code and Codex session becomes a person at a desk.</p>
 
-<p align="center"><a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/v/coworking-agents" alt="npm"></a></p>
+<p align="center">
+  <a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/v/coworking-agents?color=e8804a" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/coworking-agents"><img src="https://img.shields.io/npm/dm/coworking-agents?color=4f7fd9" alt="npm downloads"></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A518-5bbf6a" alt="Node 18+">
+  <img src="https://img.shields.io/badge/dependencies-0-5bbf6a" alt="zero dependencies">
+  <img src="https://img.shields.io/badge/runs-100%25%20local-c75fa8" alt="runs 100% local">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8a8494" alt="MIT license"></a>
+</p>
 
-**A live pixel-art office for your AI coding agents.** Every open session (Claude Code, Codex, …) becomes a person at a desk. At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs.
+<p align="center">
+  <a href="https://portfolio-delta-five-78.vercel.app/demos/coworking/index.html?lang=en"><b>▶ Try the live demo</b></a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#see-it-in-action">See it in action</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#as-a-claude-code-plugin">Claude Code plugin</a>
+</p>
 
-![The office by day](docs/office-day.png)
+<p align="center"><img src="docs/demo.webp" alt="The office at night: agents typing at their desks, toasts asking for you, the camera flying in to one agent and its side panel"></p>
 
-![The office at night: monitors and desk lamps light the room](docs/office-night.png)
+At a glance you see who is working, who needs you (and what they are asking), whose turn it is, and which sessions are editing the same checkout, even across different AIs. Reply to an agent or jump to its terminal tab straight from the office.
+
+## Try it in 10 seconds
+
+```bash
+npx coworking-agents --demo   # a fake office with every state, no sessions needed
+npx coworking-agents          # your real sessions
+```
+
+Or **[open the live demo](https://portfolio-delta-five-78.vercel.app/demos/coworking/index.html?lang=en)** in your browser: nothing to install. It runs the same `--demo` office (with no server and no AI calls), so you can click the agents, open the panels and walk around.
+
+## See it in action
+
+<p align="center"><img src="docs/tour.webp" alt="Tour: the office, the camera flying in to an agent with its side panel, talking to an agent that finished, the usage report, the server room and the rooftop"></p>
+
+<p align="center"><sub>The office → click an agent (camera + side panel) → talk to one that is waiting → usage report → server room → rooftop.</sub></p>
+
+## How it works
+
+```mermaid
+flowchart LR
+  CC["Claude Code<br/>~/.claude sessions + transcripts"] --> S
+  CX["Codex<br/>~/.codex sessions"] --> S
+  OT["Gemini CLI, Aider, OpenCode…<br/>running processes"] --> S
+  S["Local Node server<br/>zero dependencies · 127.0.0.1"] -- "state of every session, every second (SSE)" --> O["The office in your browser<br/>pixel-art canvas"]
+  O -- "reply · answer · compact · go to terminal" --> T["Your Terminal / iTerm tab"]
+```
+
+1. **Read, never write.** The server reads the files each AI already keeps on disk (the live-session registry and the transcripts). No hooks, nothing installed into the AIs, no model is ever called.
+2. **One snapshot per second.** It works out what every session is doing (editing, in the terminal, thinking, delegating, waiting for you) and streams it to the page over Server-Sent Events.
+3. **Drawn as an office.** One room per repository, one desk per session, the kitchen when it's your turn, the meeting room when it delegates, a red **!** when it needs you.
 
 ## Tour
 
 | | |
 |---|---|
+| ![The office by day](docs/office-day.png) | **The office.** One room per repository, a desk per session, a shared wing with the kitchen, the glass meeting room and the nap corner. |
 | ![Top bar](docs/top-bar.png) | **Top bar.** One HUD with the counters and the usage meters; the counter below is where agents waiting on you sit (4 per office, **+** slides to the next). |
 | ![Talk](docs/talk.png) | **Talk.** Click a waiting agent: it says what it wants at its desk. Reply right there (typed into its Terminal/iTerm tab for Claude Code and Codex CLI) or jump to it. |
 | ![Camera](docs/camera.png) | **Camera.** Click an agent and the camera flies in to its desk with a spotlight; the side panel shows everything about the session. |
@@ -288,6 +332,7 @@ module.exports = {
 npm test             # builds fake ~/.claude and ~/.codex folders and checks the collector and the server
 npm run demo         # the fake office with every state
 npm run screenshots  # regenerates docs/*.png from demo mode (needs agent-browser on PATH)
+npm run video        # re-records docs/demo.webp and docs/tour.webp (needs agent-browser and img2webp)
 node bin/coworking-agents.js --json   # one snapshot of the state, as JSON
 ```
 
