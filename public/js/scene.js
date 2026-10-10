@@ -301,19 +301,21 @@ function drawDevCorner(t, glows) {
   let x = 16;
   const items = [
     w => { Art.drawArcade(x, y, t, glows); return 26; },
-    w => { Art.drawArcade(x, y, t, glows); return 30; },
-    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
     w => { Art.drawDiagramBoard(x, y + 2); return 40; },
-    w => { Art.drawPlant(x, y + 12, true); return 26; },
-    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
-    w => { Art.drawBeanBag(x, y + 16, '#3b5dc9'); return 30; },
-    w => { Art.drawPlant(x, y + 12, true); return 26; },
     w => { const playing = !!devSpots && !!devSpots.foos && layout.filter(c => c.actor && c.actor.mode === 'lounge' && c.actor.spot && devSpots.foos.some(s => s.x === c.actor.spot.x && s.y === c.actor.spot.y)).length >= 2; drawFoosball(x + 12, y + 6, t, playing); spotsAt.foos = [{ x: x - 2, y: y + 4, zone: 'lounge', pose: 'stand' }, { x: x + 54, y: y + 4, zone: 'lounge', pose: 'stand', flip: true }]; return 82; },
     w => { drawCooler(x + 14, y + 2, t); spotsAt.cooler = [{ x: x - 2, y: y + 8, zone: 'lounge', pose: 'stand' }, { x: x + 26, y: y + 8, zone: 'lounge', pose: 'stand', flip: true }]; return 52; },
     w => { drawAquarium(x, y + 4, t, glows); return 42; },
+    w => { drawTrophyCase(x, y, t, glows); return 60; },
+    w => { drawNoticeBoard(x, y); return 54; },
     w => { drawPool(x, y + 2); return 68; },
+    w => { Art.drawPlant(x, y + 12, true); return 26; },
+    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
+    w => { Art.drawBeanBag(x, y + 16, '#3b5dc9'); return 30; },
+    w => { Art.drawArcade(x, y, t, glows); return 30; },
+    w => { Art.drawPlant(x, y + 12, true); return 26; },
+    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
   ];
-  const spotsAt = {};
+  const spotsAt = {}; noticeBox = null; caseBox = null;
   for (const draw of items) { if (x > CX - 40 - 40) break; x += draw(); }
   devSpots = spotsAt;
 }
@@ -344,7 +346,7 @@ function drawWing(t, lights, glows, pingPlaying, meeting) {
   for (let yy = 2; yy < 98; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < RW + 4; xx += 4) r(RX - 2 + xx, my + yy, 1, 1, '#465270');
   Art.drawGlassWall(RX - 2, my, RW + 4, 98, null);
   r(RX - 2, my + 32, 4, 18, '#4f5c7a'); // door on the corridor side
-  Art.drawTV(RX + 8, my + 8, 18, 12, t, meeting);
+  tvBox = null; if (!drawMeetingTV(RX + 8, my + 8, 18, 12, t)) Art.drawTV(RX + 8, my + 8, 18, 12, t, meeting);
   if (meeting) glows.push({ x: RX + 17, y: my + 14, r: 20, c: '#feae34' });
   lights.push({ x: RX + RW / 2, y: my + 46, r: 46 });
   // rest room: closed, door on the corridor side, lights always off (see drawScene)

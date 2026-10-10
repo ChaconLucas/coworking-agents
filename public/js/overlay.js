@@ -83,6 +83,9 @@ function renderOverlay() {
   box(trophyBox, 'data-ach="1"', T.ach.shelfTip);
   box(moodBox, '', T.mood[officeMood()]);
   box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
+  box(caseBox, 'data-ach="1"', T.trophyRoom);
+  box(noticeBox, '', T.noticeTitle + '\n' + (boardFiles.map(f => `${f.rel} · ${f.repo}${f.n > 1 ? ' · ' + f.n + '×' : ''}`).join('\n') || T.noticeNone));
+  box(tvBox, '', meetInfo.people.filter(m => !m.lead).map(m => m.title || m.label).join('\n'));
   if (clockBox && data) { const d0 = new Date(); d0.setHours(0, 0, 0, 0); const ins = data.people.filter(p => !p.leaving && p.startedAt >= d0.getTime()).sort((a, b) => a.startedAt - b.startedAt);
     box(clockBox, '', T.clockIn + '\n' + (ins.map(p => `${new Date(p.startedAt).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' })}  ${p.name}`).join('\n') || T.clockNone)); }
   { const th = idleThought(); if (th) tags.push(`<span class="thought" style="left:${(th.c.actor.x + 8) * S}px;top:${(th.c.actor.y - 6) * S}px">${esc(th.text)}</span>`); }

@@ -162,3 +162,56 @@ function idleThought() {
   const slot = Math.floor(Date.now() / 15000), c = long[slot % long.length], lines = T.thoughts;
   return { c, text: lines[(slot + hash(c.p.id)) % lines.length] };
 }
+
+// ---- meeting TV: one bar per subagent in the room, coloured by what it's doing ----
+function drawMeetingTV(x, y, w, h, t) {
+  const subs = meetInfo.people.filter(m => !m.lead);
+  if (!subs.length) return false;
+  r(x - 2, y - 2, w + 4, h + 4, PAL.ink); r(x - 1, y - 1, w + 2, h + 2, PAL.bezel); r(x, y, w, h, '#101420');
+  const n = Math.min(subs.length, 4), bh = Math.max(2, Math.floor((h - 2) / n) - 1);
+  subs.slice(0, n).forEach((m, i) => {
+    const k = (Math.sin(t / 400 + i * 1.7) + 1) / 2, len = 3 + Math.round(k * (w - 6));
+    r(x + 1, y + 1 + i * (bh + 1), len, bh, ['#63c74d', '#2ce8f5', '#feae34', '#ff6ec7'][i % 4]);
+  });
+  tvBox = { x: x - 2, y: y - 2, w: w + 4, h: h + 4 };
+  return true;
+}
+let tvBox = null;
+
+// ---- notice board in the dev corner: today's most edited files as post-its (from the daily report) ----
+let boardFiles = [], boardAt = 0;
+function refreshBoardFiles() {
+  if (Date.now() - boardAt < 5 * 60000) return;
+  boardAt = Date.now();
+  fetch('api/report').then(r => r.json()).then(j => { boardFiles = (j.topFiles || []).slice(0, 4); }).catch(() => {});
+}
+function drawNoticeBoard(x, y) {
+  refreshBoardFiles();
+  r(x - 1, y - 1, 46, 30, PAL.ink); r(x, y, 44, 28, '#b97c48'); r(x + 1, y + 1, 42, 26, '#c98f5a');
+  const cols = ['#ffd84d', '#ff9ccf', '#9fe3a0', '#9fd3ff'];
+  boardFiles.forEach((f, i) => {
+    const px = x + 2 + (i % 2) * 21, py = y + 2 + Math.floor(i / 2) * 13;
+    r(px, py, 19, 11, cols[i]); r(px + 8, py, 3, 1, '#e43b44');
+    const name = String(f.rel || '').split('/').pop().replace(/\.[^.]+$/, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    pixText(px + 2, py + 4, name || '?', '#2a1d27');
+  });
+  if (!boardFiles.length) pixText(x + 14, y + 11, '...', '#6b4a33');
+  noticeBox = { x: x - 1, y: y - 1, w: 46, h: 30 };
+}
+let noticeBox = null;
+
+// ---- trophy room corner: legend-tier achievements on pedestals ----
+function drawTrophyCase(x, y, t, glows) {
+  const legends = achState().filter(a => a.tier >= 5);
+  r(x - 1, y - 1, 52, 32, PAL.ink); r(x, y, 50, 30, '#2b2336'); r(x, y, 50, 2, '#d9a441');
+  const n = Math.min(4, legends.length);
+  for (let i = 0; i < 4; i++) {
+    const cx = x + 4 + i * 12;
+    r(cx, y + 22, 9, 6, '#4a3d5a'); r(cx, y + 22, 9, 1, '#6b5a7a');
+    if (i < n) { const c = TIER_COLOR[5]; r(cx + 2, y + 12, 5, 5, c); r(cx + 1, y + 12, 1, 2, c); r(cx + 7, y + 12, 1, 2, c); r(cx + 4, y + 17, 1, 3, c); r(cx + 2, y + 20, 5, 2, '#c050a0'); if (((t / 200) | 0) % 7 === i) r(cx + 6, y + 10, 1, 1, '#ffffff'); }
+  }
+  if (prog.super) { r(x + 21, y + 3, 8, 5, '#ffd84d'); r(x + 21, y + 2, 2, 1, '#ffd84d'); r(x + 24, y + 1, 2, 2, '#ffd84d'); r(x + 27, y + 2, 2, 1, '#ffd84d'); }
+  if (legends.length) glows.push({ x: x + 25, y: y + 15, r: 26, c: '#ff6ec7' });
+  caseBox = { x: x - 1, y: y - 1, w: 52, h: 32 };
+}
+let caseBox = null;
