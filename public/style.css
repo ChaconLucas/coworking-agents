@@ -672,3 +672,10 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 .ach-g { margin: 14px 0 6px; font: 700 10px/1 var(--pix); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
 .ach.secret { border-style: dashed; }
 .ach.secret .ach-ico { color: #8b9bb4; }
+.wallet { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; font-size: 13px; }
+.wallet b { font: 700 14px/1 var(--pix); color: #ffd84d; }
+.wallet .note { flex-basis: 100%; }
+.coin { width: 14px; height: 14px; background: #ffd84d; border: 2px solid #8a6420; border-radius: 50%; box-shadow: inset -2px -2px 0 #d9a441; }
+.ach.super { grid-template-columns: 44px 1fr; border-color: #c0cbdc; background: linear-gradient(135deg, rgba(255,216,77,.08), rgba(44,232,245,.06)); margin-bottom: 8px; --c: #ffd84d; }
+.ach.super.on { opacity: 1; border-color: #ffd84d; box-shadow: 0 0 18px rgba(255,216,77,.35); }
+.ach.super .ach-ico { width: 44px; height: 44px; font-size: 24px; }

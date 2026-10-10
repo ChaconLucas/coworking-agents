@@ -6,16 +6,15 @@ const KIND_ICON = { edit: '✎', read: '◉', terminal: '›_', web: '◍', dele
 
 const fmtTok = n => fmtK(Math.round(Number(n) || 0));
 // chosen avatars, remembered per session name across runs (n = how many times "new look" was clicked)
-let avatars = store.get('avatars', {});
-if (!avatars || typeof avatars !== 'object') avatars = {};
+const avatars = prog.avatars; // saved in progress.json
 function applyAvatars() {
   const m = new Map();
   if (data) for (const p of data.people) { const n = avatars[p.name]; if (n) m.set(p.id, p.name + '#' + n); }
   Art.setLookSeeds(m);
 }
 function nextAvatar(p, reset) {
-  if (reset) delete avatars[p.name]; else { avatars[p.name] = (avatars[p.name] || 0) + 1; achBump('avatars'); }
-  store.set('avatars', avatars); applyAvatars(); renderPanel(); lastHits = ''; renderOverlay();
+  if (reset) avatars[p.name] = 0; else { avatars[p.name] = (avatars[p.name] || 0) + 1; achBump('avatars'); }
+  saveProgress(); applyAvatars(); renderPanel(); lastHits = ''; renderOverlay();
 }
 // estimated money at API list prices; never shown without a price (see src/prices.js)
 const fmtUSD = n => { const d = n >= 100 ? 0 : n >= 1 ? 2 : 3; return 'US$ ' + n.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en', { minimumFractionDigits: d, maximumFractionDigits: d }); };

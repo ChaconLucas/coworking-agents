@@ -5,9 +5,8 @@
 // sessions from the live snapshot, cat pets from clicks. Records of live-only facts are kept in this browser.
 const TIER_COLOR = ['#8b9bb4', '#cd7f32', '#c0cbdc', '#ffd84d', '#2ce8f5', '#ff6ec7'];
 const TIER_NAME = ['locked', 'bronze', 'silver', 'gold', 'diamond', 'legend'];
-let achRecord = store.get('achRecord', {});
-if (!achRecord || typeof achRecord !== 'object') achRecord = {};
-const achSave = () => store.set('achRecord', achRecord);
+const achRecord = prog.record; // saved in progress.json (see progress.js)
+const achSave = () => saveProgress();
 const recordMax = (k, v) => { if (v > (achRecord[k] || 0)) { achRecord[k] = v; achSave(); } };
 function achBump(k, n = 1) { achRecord[k] = (achRecord[k] || 0) + n; achSave(); }
 function achAdd(k, v) { const a = Array.isArray(achRecord[k]) ? achRecord[k] : (achRecord[k] = []); if (!a.includes(v)) { a.push(v); achSave(); } }
@@ -51,58 +50,63 @@ function achFacts() {
     parallel: achCount('parallel'), aiKinds: achCount('aiKinds'), pets: achCount('pets'), zeroQueue: achCount('zeroQueue'),
     clashes: achCount('clashes'), team: achCount('team'), bigCtx: achCount('bigCtx'), files: achCount('files'), sessionTools: achCount('sessionTools'),
     fast: achCount('fast'), patience: achCount('patience'), compacts: achCount('compacts'), focusDone: achCount('focusDone'),
-    replay: achCount('replay'), avatars: achCount('avatars'), lights: achCount('lights'), weather: achCount('weather'),
+    replay: achCount('replay'), avatars: achCount('avatars'), lights: achCount('lights'), weatherDays: achCount('weatherDays'),
     holidays: achCount('holidays'), lang: achCount('lang'), openDays: achCount('openDays'), catVisits: achCount('catVisits'),
-    nightShift: achCount('nightShift'), konami: achCount('konami'), first: 1,
+    nightShift: achCount('nightShift'), konami: achCount('konami'),
   };
 }
 
 // group: where it comes from (history, live, you); secret: hidden as ??? until the first tier
 const ACH = [
-  { id: 'first', g: 'you', icon: '👋', fact: 'first', steps: [1] },
   { id: 'marathon', g: 'history', icon: '⏱', fact: 'dayHours', steps: [2, 4, 8, 12, 20] },
   { id: 'hands', g: 'history', icon: '✎', fact: 'dayTools', steps: [100, 500, 1000, 3000, 6000] },
-  { id: 'sprint', g: 'history', icon: '⚡', fact: 'dayOut', steps: [2e5, 1e6, 3e6, 6e6] },
+  { id: 'sprint', g: 'history', icon: '⚡', fact: 'dayOut', steps: [2e5, 1e6, 3e6, 6e6, 1e7] },
   { id: 'streak', g: 'history', icon: '🔥', fact: 'streak', steps: [3, 7, 14, 30, 60] },
   { id: 'veteran', g: 'history', icon: '★', fact: 'days', steps: [7, 30, 90, 180, 365] },
-  { id: 'longday', g: 'history', icon: '🌗', fact: 'longDays', steps: [1, 5, 15, 40] },
-  { id: 'owl', g: 'history', icon: '☾', fact: 'nights', steps: [1, 5, 15, 40] },
-  { id: 'early', g: 'history', icon: '☀', fact: 'early', steps: [1, 5, 15, 40] },
-  { id: 'monday', g: 'history', icon: '☕', fact: 'mondays', steps: [1, 4, 12] },
-  { id: 'friday', g: 'history', icon: '🍕', fact: 'fridays', steps: [1, 4, 12] },
-  { id: 'weekend', g: 'history', icon: '⛱', fact: 'weekends', steps: [1, 4, 12, 30] },
-  { id: 'duo', g: 'history', icon: '⚭', fact: 'dualAI', steps: [1, 5, 20] },
+  { id: 'longday', g: 'history', icon: '🌗', fact: 'longDays', steps: [1, 5, 15, 40, 100] },
+  { id: 'owl', g: 'history', icon: '☾', fact: 'nights', steps: [1, 5, 15, 40, 100] },
+  { id: 'early', g: 'history', icon: '☀', fact: 'early', steps: [1, 5, 15, 40, 100] },
+  { id: 'monday', g: 'history', icon: '☕', fact: 'mondays', steps: [1, 4, 12, 26, 52] },
+  { id: 'friday', g: 'history', icon: '🍕', fact: 'fridays', steps: [1, 4, 12, 26, 52] },
+  { id: 'weekend', g: 'history', icon: '⛱', fact: 'weekends', steps: [1, 4, 12, 30, 80] },
+  { id: 'duo', g: 'history', icon: '⚭', fact: 'dualAI', steps: [1, 5, 20, 50, 100] },
   { id: 'tokens', g: 'history', icon: '◉', fact: 'output', steps: [1e6, 1e7, 5e7, 1e8, 5e8] },
-  { id: 'elephant', g: 'history', icon: '🐘', fact: 'cache', steps: [1e9, 1e10, 5e10, 1e11] },
-  { id: 'whale', g: 'history', icon: '$', fact: 'usd', steps: [100, 1000, 10000, 50000] },
-  { id: 'talker', g: 'history', icon: '❝', fact: 'convs', steps: [10, 50, 200, 500] },
-  { id: 'collector', g: 'history', icon: '🧩', fact: 'models', steps: [2, 4, 6, 10] },
-  { id: 'swiss', g: 'history', icon: '🔧', fact: 'skills', steps: [5, 20, 50] },
-  { id: 'wired', g: 'history', icon: '🔌', fact: 'mcps', steps: [1, 3, 8] },
+  { id: 'elephant', g: 'history', icon: '🐘', fact: 'cache', steps: [1e9, 1e10, 5e10, 1e11, 5e11] },
+  { id: 'whale', g: 'history', icon: '$', fact: 'usd', steps: [100, 1000, 10000, 50000, 100000] },
+  { id: 'talker', g: 'history', icon: '❝', fact: 'convs', steps: [10, 50, 200, 500, 1000] },
+  { id: 'collector', g: 'history', icon: '🧩', fact: 'models', steps: [2, 4, 6, 10, 15] },
+  { id: 'swiss', g: 'history', icon: '🔧', fact: 'skills', steps: [5, 20, 50, 100, 200] },
+  { id: 'wired', g: 'history', icon: '🔌', fact: 'mcps', steps: [1, 3, 8, 15, 30] },
   { id: 'orchestra', g: 'live', icon: '♫', fact: 'parallel', steps: [3, 5, 8, 12, 20] },
-  { id: 'polyglot', g: 'live', icon: '◆', fact: 'aiKinds', steps: [2, 3, 4] },
-  { id: 'boss', g: 'live', icon: '⚑', fact: 'team', steps: [2, 4, 8] },
-  { id: 'giant', g: 'live', icon: '🧠', fact: 'bigCtx', steps: [2e5, 5e5, 9e5] },
-  { id: 'writer', g: 'live', icon: '📄', fact: 'files', steps: [5, 15, 30] },
-  { id: 'workaholic', g: 'live', icon: '⚙', fact: 'sessionTools', steps: [200, 500, 1000] },
-  { id: 'bump', g: 'live', icon: '💥', fact: 'clashes', steps: [1, 5, 20] },
-  { id: 'fast', g: 'live', icon: '🏃', fact: 'fast', steps: [1, 10, 50, 200] },
-  { id: 'patience', g: 'live', icon: '🗿', fact: 'patience', steps: [1, 5] },
-  { id: 'inbox', g: 'live', icon: '✓', fact: 'zeroQueue', steps: [1, 10, 50] },
-  { id: 'regular', g: 'you', icon: '🏢', fact: 'openDays', steps: [3, 7, 30, 100] },
-  { id: 'janitor', g: 'you', icon: '🧹', fact: 'compacts', steps: [1, 5, 20] },
-  { id: 'monk', g: 'you', icon: '🧘', fact: 'focusDone', steps: [1, 5, 25] },
-  { id: 'timetravel', g: 'you', icon: '⏪', fact: 'replay', steps: [1, 10, 30] },
-  { id: 'stylist', g: 'you', icon: '🎲', fact: 'avatars', steps: [1, 10, 50] },
-  { id: 'electrician', g: 'you', icon: '💡', fact: 'lights', steps: [1, 20, 100] },
-  { id: 'weatherman', g: 'you', icon: '🌦', fact: 'weather', steps: [1] },
-  { id: 'bilingual', g: 'you', icon: '🗣', fact: 'lang', steps: [1, 10] },
-  { id: 'party', g: 'you', icon: '🎉', fact: 'holidays', steps: [1, 3, 6] },
-  { id: 'cat', g: 'you', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200] },
-  { id: 'catwatch', g: 'live', icon: '🐈', fact: 'catVisits', steps: [1, 10, 50] },
-  { id: 'nightshift', g: 'you', icon: '🌙', fact: 'nightShift', steps: [1], secret: true },
-  { id: 'konami', g: 'you', icon: '🕹', fact: 'konami', steps: [1], secret: true },
+  { id: 'polyglot', g: 'live', icon: '◆', fact: 'aiKinds', steps: [2, 3, 4, 5, 6] },
+  { id: 'boss', g: 'live', icon: '⚑', fact: 'team', steps: [2, 4, 8, 12, 20] },
+  { id: 'giant', g: 'live', icon: '🧠', fact: 'bigCtx', steps: [2e5, 4e5, 6e5, 8e5, 9.5e5] },
+  { id: 'writer', g: 'live', icon: '📄', fact: 'files', steps: [5, 15, 30, 60, 100] },
+  { id: 'workaholic', g: 'live', icon: '⚙', fact: 'sessionTools', steps: [200, 500, 1000, 2000, 4000] },
+  { id: 'bump', g: 'live', icon: '💥', fact: 'clashes', steps: [1, 5, 20, 50, 100] },
+  { id: 'fast', g: 'live', icon: '🏃', fact: 'fast', steps: [1, 10, 50, 200, 500] },
+  { id: 'patience', g: 'live', icon: '🗿', fact: 'patience', steps: [1, 5, 15, 40, 100] },
+  { id: 'inbox', g: 'live', icon: '✓', fact: 'zeroQueue', steps: [1, 10, 50, 150, 500] },
+  { id: 'regular', g: 'you', icon: '🏢', fact: 'openDays', steps: [1, 7, 30, 100, 365] },
+  { id: 'janitor', g: 'you', icon: '🧹', fact: 'compacts', steps: [1, 5, 20, 50, 100] },
+  { id: 'monk', g: 'you', icon: '🧘', fact: 'focusDone', steps: [1, 5, 25, 60, 150] },
+  { id: 'timetravel', g: 'you', icon: '⏪', fact: 'replay', steps: [1, 10, 30, 100, 300] },
+  { id: 'stylist', g: 'you', icon: '🎲', fact: 'avatars', steps: [1, 10, 50, 150, 500] },
+  { id: 'electrician', g: 'you', icon: '💡', fact: 'lights', steps: [1, 20, 100, 300, 1000] },
+  { id: 'weatherman', g: 'you', icon: '🌦', fact: 'weatherDays', steps: [1, 7, 30, 100, 365] },
+  { id: 'bilingual', g: 'you', icon: '🗣', fact: 'lang', steps: [1, 10, 30, 100, 300] },
+  { id: 'party', g: 'you', icon: '🎉', fact: 'holidays', steps: [1, 3, 6, 12, 24] },
+  { id: 'cat', g: 'you', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200, 1000] },
+  { id: 'catwatch', g: 'live', icon: '🐈', fact: 'catVisits', steps: [1, 10, 50, 150, 500] },
+  { id: 'nightshift', g: 'you', icon: '🌙', fact: 'nightShift', steps: [1, 3, 7, 15, 30], secret: true },
+  { id: 'konami', g: 'you', icon: '🕹', fact: 'konami', steps: [1, 3, 10, 25, 50], secret: true },
 ];
+
+// coins: every tier reached pays out; the super achievement pays 1000. Spent coins are in prog.spent.
+const TIER_COINS = [0, 10, 20, 30, 40, 50];
+const superDone = st => st.every(a => a.tier >= 5);
+function coinsEarned(st = achState()) { return st.reduce((n, a) => n + TIER_COINS.slice(1, a.tier + 1).reduce((x, y) => x + y, 0), 0) + (superDone(st) ? 1000 : 0); }
+const coins = () => Math.max(0, coinsEarned() - prog.spent);
 
 function achState() {
   const f = achFacts();
@@ -114,7 +118,7 @@ function achState() {
 }
 
 // live facts: how many sessions at once, how many different AIs at once, and emptying a long queue
-let achLevels = store.get('achLevels', null), achQueueWas = 0;
+let achQueueWas = 0;
 const achWait = new Map(); // id → when it started asking
 function checkAchievements() {
   if (!data || replayAt) return;
@@ -137,9 +141,9 @@ function checkAchievements() {
   achQueueWas = need;
   if (!usageData || !usageData.days) return; // history not scanned yet: don't announce half the picture
   const st = achState(), now = Object.fromEntries(st.map(a => [a.id, a.tier]));
-  if (achLevels) {
+  if (prog.levels) {
     // only achievements that existed last time get announced (new ones in an update join quietly), 3 at most
-    const ups = st.filter(a => a.id in achLevels && a.tier > achLevels[a.id]);
+    const ups = st.filter(a => a.id in prog.levels && a.tier > prog.levels[a.id]);
     if (ups.length > 3) toast(`<b>${esc(T.ach.many(ups.length - 3))}</b>`, 'ok');
     for (const a of ups.slice(0, 3)) {
       const A = T.ach, info = A.list[a.id];
@@ -148,7 +152,8 @@ function checkAchievements() {
       trophyFlash = Date.now(); if (a.tier >= 5 || a.secret) confettiAt = Date.now();
     }
   }
-  achLevels = now; store.set('achLevels', now);
+  if (!prog.super && superDone(st)) { prog.super = Date.now(); toast(`<b>${esc(T.ach.superUnlocked)}</b>${esc(T.ach.superDone)}`, 'ok sticky'); playTune('trophy'); confettiAt = Date.now(); }
+  prog.levels = now; saveProgress();
 }
 let trophyFlash = 0;
 
@@ -175,7 +180,10 @@ function renderAchievements() {
     return `<div class="ach ${a.tier ? 'on' : ''}" style="--c:${c}"><span class="ach-ico">${a.icon}</span><div><b>${esc(info.name)}</b><small>${esc(a.tier ? A.tiers[a.tier] : A.locked)}</small><p>${esc(info.desc(a.next || a.steps[a.max - 1]))}</p>
       <div class="ach-bar"><i style="width:${(a.progress * 100).toFixed(1)}%"></i></div><div class="ach-foot"><span class="pips">${pips}</span><span>${a.next ? `${esc(fmtStep(a, a.value))} / ${esc(fmtStep(a, a.next))}` : esc(A.maxed)}</span></div></div></div>`;
   };
-  body.innerHTML = tabsHtml() + `<h3>${esc(A.aotm)} · ${esc(monthName)}</h3><p class="sub">${esc(A.aotmSub)}</p>${podium}
+  const legends = st.filter(a => a.tier >= 5).length, done = superDone(st);
+  const superCard = `<div class="ach super ${done ? 'on' : ''}"><span class="ach-ico">👑</span><div><b>${esc(A.superName)}</b><small>${esc(done ? A.tiers[5] : A.locked)}</small><p>${esc(done ? A.superDone : A.superDesc)}</p><div class="ach-bar"><i style="width:${(legends / st.length * 100).toFixed(1)}%"></i></div><div class="ach-foot"><span></span><span>${legends} / ${st.length}</span></div></div></div>`;
+  const wallet = `<div class="wallet"><span class="coin"></span><b>${coins().toLocaleString(lang === 'pt' ? 'pt-BR' : 'en')}</b> ${esc(A.coins)}<span class="note">${esc(A.coinsHow)}</span></div>`;
+  body.innerHTML = tabsHtml() + `${wallet}${superCard}<h3>${esc(A.aotm)} · ${esc(monthName)}</h3><p class="sub">${esc(A.aotmSub)}</p>${podium}
     <h3>${esc(A.title)} · ${got}/${all}</h3><p class="sub">${esc(A.sub)}</p>
     ${['history', 'live', 'you'].map(g => `<h4 class="ach-g">${esc(A.groups[g])}</h4><div class="achs">${st.filter(a => a.g === g).sort((x, y) => (x.secret && !x.tier) - (y.secret && !y.tier) || y.tier / y.max - x.tier / x.max || y.progress - x.progress).map(card).join('')}</div>`).join('')}`;
   body.querySelectorAll('[data-face]').forEach(el => el.appendChild(Art.portrait(el.dataset.face)));

@@ -151,7 +151,8 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Daily report as Markdown:** one click copies it, ready for a standup.
 - **Focus mode:** sounds and system notifications pause for 25 or 50 minutes; the office keeps updating.
 - **Pick an avatar:** the die next to an agent's face in the panel rolls a new look, remembered for that session name; ↺ goes back.
-- **Achievements:** 43 of them, with tiers from bronze to legend, measured from your history (busiest day, streaks, nights, Friday evenings, tokens, models), the live office (parallel sessions, subagents, giant contexts, quick answers) and what you do in it. A few are secret. Trophies stand on a shelf on the wall (`C` opens the list).
+- **Achievements:** 42 of them, with tiers from bronze to legend, measured from your history (busiest day, streaks, nights, Friday evenings, tokens, models), the live office (parallel sessions, subagents, giant contexts, quick answers) and what you do in it. A few are secret. Trophies stand on a shelf on the wall (`C` opens the list).
+- **Progress file:** achievements, coins, bought items, avatars and office settings are saved in `~/.config/coworking-agents/progress.json` (mode `0600`). No account: the app runs on your machine, so the progress is yours. Every achievement goes up to legend; all 42 at legend unlock **Legend of Legends**. Tiers pay coins (10 to 50, the super one 1000).
 - **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month, with the top 5 in the achievements tab.
 - **Holidays:** Christmas, New Year, Halloween, Festa Junina, Carnaval and the office's birthday decorate the room and put hats on everyone (`E` turns decor off).
 - **Office mood:** an ON AIR sign lights up when most of the office is working; with nobody working the room gets calmer.

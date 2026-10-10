@@ -222,7 +222,7 @@ sleepK.kill();
   }
   const vm = require('vm');
   const el = () => new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => '' : ['clientWidth', 'width', 'height', 'length'].includes(k) ? 0 : k === 'children' ? [] : el(), set: () => true, apply: () => el(), construct: () => el() });
-  const sandbox = { console, Map, Set, URLSearchParams, setTimeout, setInterval: () => 0, clearInterval() {}, requestAnimationFrame: () => 0, location: { search: '' }, navigator: { language: 'en' }, localStorage: { getItem: () => null, setItem() {} }, document: el(), EventSource: function () {}, CSS: { escape: s => s }, addEventListener() {} };
+  const sandbox = { console, Map, Set, URLSearchParams, setTimeout, setInterval: () => 0, clearInterval() {}, requestAnimationFrame: () => 0, location: { search: '' }, navigator: { language: 'en' }, localStorage: { getItem: () => null, setItem() {} }, document: el(), EventSource: function () {}, CSS: { escape: s => s }, addEventListener() {}, fetch: () => new Promise(() => {}), clearTimeout() {} };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   for (const [s, c] of code) vm.runInContext(c, sandbox, { filename: s });
@@ -323,6 +323,14 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: { Host: '127.0.0.1:' + port, 'X-Coworking': '1' }, body: '{"id":"B","text":"hi"}' })).code, 401, 'reply without the token');
   const busy = JSON.parse((await req(port, '/api/reply', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A","text":"hi"}' })).body);
   assert.deepStrictEqual(busy, { ok: false, reason: 'busy' }, 'a working session never receives typed text');
+  // progress: saved only through the page (custom header + local origin), unknown keys dropped
+  assert.strictEqual((await req(port, '/api/progress', { method: 'POST', headers: ck, body: '{"spent":3}' })).code, 403, 'progress without the custom header');
+  assert.strictEqual((await req(port, '/api/progress', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"spent":3}' })).code, 403, 'progress from another origin');
+  assert.strictEqual((await req(port, '/api/progress', { headers: { Host: '127.0.0.1:' + port } })).code, 401, 'progress without the token');
+  const pr = require('../src/progress');
+  { const m = pr.merge({ record: { pets: 5, holidays: ['xmas2026'] }, spent: 30, theme: 'wood' }, { record: { pets: 2, holidays: ['halloween2026'] }, spent: 10, theme: 'carpet' });
+    assert.deepStrictEqual([m.record.pets, m.record.holidays, m.spent, m.theme], [5, ['xmas2026', 'halloween2026'], 30, 'carpet'], 'progress merge: max counters, union lists, newest settings'); }
+  assert.deepStrictEqual(pr.clean({ spent: 5, evil: 'x', officeName: 'a'.repeat(99), owned: ['plant', 3] }), { spent: 5, officeName: 'a'.repeat(40), owned: ['plant'] }, 'progress keeps known keys, bounded');
   assert.ok([403, 404].includes((await req(port, '/../src/server.js', { headers: ck })).code), 'path traversal');
   assert.ok([403, 404].includes((await req(port, '/%2e%2e/package.json', { headers: ck })).code), 'encoded path traversal');
   const csp = (await req(port, '/', { headers: ck })).headers['content-security-policy'] || '';

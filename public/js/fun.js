@@ -30,7 +30,7 @@ const HATS = { xmas: 'santa', halloween: 'witch', newyear: 'party', birthday: 'p
 function drawHolidayWall(t, nWin) {
   const h = holidayToday();
   Art.setHat(h ? HATS[h] : null); // everyone dresses up for the day
-  if (h && !qs.get('date')) achAdd('holidays', h);
+  if (h && !qs.get('date')) achAdd('holidays', h + new Date().getFullYear());
   if (!h) return;
   const f = (t / 400) | 0;
   if (h === 'xmas' || h === 'newyear') {
@@ -142,7 +142,7 @@ function catErrand() {
 }
 function petCat() {
   catHeart = Date.now();
-  achRecord.pets = (achRecord.pets || 0) + 1; store.set('achRecord', achRecord);
+  achBump('pets');
   playTune('purr');
   checkAchievements();
 }
