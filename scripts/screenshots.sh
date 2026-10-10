@@ -3,6 +3,7 @@
 #   npm run screenshots
 # Requires agent-browser (https://github.com/vercel-labs/agent-browser) on PATH.
 set -euo pipefail
+export AGENT_BROWSER_SESSION="${AGENT_BROWSER_SESSION:-coworking-shots}" # its own browser session: other agents may be using the default one
 cd "$(dirname "$0")/.."
 command -v agent-browser >/dev/null || { echo "agent-browser not found"; exit 1; }
 
