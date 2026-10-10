@@ -42,7 +42,7 @@ function achFacts() {
     skillsUsed: Math.max(0, ...cred.map(c => (c.topSkills || []).length)),
     commits: achCount('commits'), pushes: achCount('pushes'), repos: achCount('repos'), branches: achCount('branches'), cleanDesk: achCount('cleanDesk'), talks: achCount('talks'),
     sprints: achCount('sprints'), neon: achCount('neon'), tabPaper: achCount('tab_paper'), tabUsage: achCount('tab_usage'), tabToday: achCount('tab_today'), tabFeed: achCount('tab_feed'), tabShop: achCount('tab_shop'),
-    spent: prog.spent, moves: achCount('moves'), terraceVisits: achCount('terraceVisits'), serverVisits: achCount('serverVisits'), lifts: achCount('lifts'), quickReplies: achCount('quickReplies'), goals: achCount('goals'), launches: achCount('launches'), themesTried: achCount('themesTried'), midnight: achCount('midnight'),
+    spent: prog.spent, moves: achCount('moves'), missionsDone: achCount('missionsDone'), arcadeBest: achCount('arcadeBest'), surprises: achCount('surprises'), outfits: achCount('outfits'), shares: achCount('shares'), terraceVisits: achCount('terraceVisits'), serverVisits: achCount('serverVisits'), lifts: achCount('lifts'), quickReplies: achCount('quickReplies'), goals: achCount('goals'), launches: achCount('launches'), themesTried: achCount('themesTried'), midnight: achCount('midnight'),
     dayHours: Math.max(0, ...vals.map(d => d.activeMs / 36e5)),
     dayTools: Math.max(0, ...vals.map(d => d.tools)),
     dayOut: Math.max(0, ...vals.map(d => d.output || 0)),
@@ -142,6 +142,11 @@ const ACH = [
   { id: 'rooftop', g: 'you', icon: '🌇', fact: 'terraceVisits', steps: [1, 10, 30, 100, 300] },
   { id: 'sysadmin', g: 'you', icon: '🖧', fact: 'serverVisits', steps: [1, 10, 30, 100, 300] },
   { id: 'liftboy', g: 'you', icon: '🛗', fact: 'lifts', steps: [1, 10, 50, 150, 500] },
+  { id: 'missionary', g: 'you', icon: '🎯', fact: 'missionsDone', steps: [1, 5, 15, 40, 100] },
+  { id: 'gamer', g: 'you', icon: '🕹', fact: 'arcadeBest', steps: [10, 25, 50, 80, 120] },
+  { id: 'lucky', g: 'you', icon: '🍀', fact: 'surprises', steps: [1, 10, 30, 100, 300] },
+  { id: 'fashion', g: 'you', icon: '🎩', fact: 'outfits', steps: [1, 5, 20, 50, 100] },
+  { id: 'sharer', g: 'you', icon: '📤', fact: 'shares', steps: [1, 5, 20, 50, 100] },
   { id: 'arranger', g: 'you', icon: '✥', fact: 'moves', steps: [1, 10, 30, 100, 300] },
   { id: 'themer', g: 'you', icon: '🖌', fact: 'themesTried', steps: [2, 5, 10, 20, 40] },
   { id: 'dj', g: 'you', icon: '📻', fact: 'radio', steps: [1, 5, 20, 50, 100] },
@@ -157,7 +162,7 @@ const ACH = [
 const TIER_COINS = [0, 10, 20, 30, 40, 50];
 const superDone = st => st.every(a => a.tier >= 5);
 function coinsEarned(st = achState()) { return st.reduce((n, a) => n + TIER_COINS.slice(1, a.tier + 1).reduce((x, y) => x + y, 0), 0) + (superDone(st) ? 1000 : 0); }
-const coins = () => Math.max(0, coinsEarned() - prog.spent);
+const coins = () => Math.max(0, coinsEarned() + (Number(prog.record.missionCoins) || 0) + (Number(prog.record.eventCoins) || 0) - prog.spent);
 
 function achState() {
   const f = achFacts();
@@ -245,7 +250,7 @@ function renderAchievements() {
   const legends = st.filter(a => a.tier >= 5).length, done = superDone(st);
   const superCard = `<div class="ach super ${done ? 'on' : ''}"><span class="ach-ico">👑</span><div><b>${esc(A.superName)}</b><small>${esc(done ? A.tiers[5] : A.locked)}</small><p>${esc(done ? A.superDone : A.superDesc)}</p><div class="ach-bar"><i style="width:${(legends / st.length * 100).toFixed(1)}%"></i></div><div class="ach-foot"><span></span><span>${legends} / ${st.length}</span></div></div></div>`;
   const wallet = `<div class="wallet"><span class="coin"></span><b>${coins().toLocaleString(lang === 'pt' ? 'pt-BR' : 'en')}</b> ${esc(A.coins)}<span class="note">${esc(A.coinsHow)}</span></div>`;
-  body.innerHTML = tabsHtml() + `${wallet}${superCard}<h3>${esc(A.aotm)} · ${esc(monthName)}</h3><p class="sub">${esc(A.aotmSub)}</p>${podium}
+  body.innerHTML = tabsHtml() + `${wallet}${missionsHtml()}${superCard}<h3>${esc(A.aotm)} · ${esc(monthName)}</h3><p class="sub">${esc(A.aotmSub)}</p>${podium}
     <h3>${esc(A.title)} · ${got}/${all}</h3><p class="sub">${esc(A.sub)}</p>
     ${['history', 'live', 'you'].map(g => `<h4 class="ach-g">${esc(A.groups[g])}</h4><div class="achs">${st.filter(a => a.g === g).sort((x, y) => (x.secret && !x.tier) - (y.secret && !y.tier) || y.tier / y.max - x.tier / x.max || y.progress - x.progress).map(card).join('')}</div>`).join('')}`;
   body.querySelectorAll('[data-face]').forEach(el => el.appendChild(Art.portrait(el.dataset.face)));

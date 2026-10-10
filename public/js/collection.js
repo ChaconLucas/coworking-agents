@@ -32,7 +32,7 @@ function renderPaper() {
   const st = achState(), legends = st.filter(a => a.tier >= 5).length;
   const story = (h, p) => `<article><h4>${esc(h)}</h4><p>${esc(p)}</p></article>`;
   const today = new Date().toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  body.innerHTML = tabsHtml() + `<div class="paper">
+  body.innerHTML = tabsHtml() + `<div class="rhead"><span></span><span><button class="btn small" data-share-card>📤 ${esc(T.share.card)}</button> <button class="btn small" data-visit-photo>📷 ${esc(T.share.visit)}</button></span></div><div class="paper">
     <header><small>${esc(today)}</small><h2>${esc(P.name)}</h2><small>${esc(P.edition(keys.length))}</small></header>
     <div class="lead"><h3>${esc(P.headline(hrs(total)))}</h3><p>${esc(P.leadText(fmtK(tools), fmtK(out), keys.length))}</p></div>
     <div class="cols">
@@ -40,6 +40,7 @@ function renderPaper() {
       ${top ? story(P.star((live && live.name) || top.title || top.id.slice(0, 8)), P.starText(hrs(top.activeMs), fmtK(top.tools))) : ''}
       ${night ? story(P.owls, P.owlsText(night)) : story(P.sleep, P.sleepText)}
       ${both ? story(P.duo, P.duoText(both)) : ''}
+      ${scoreboardHtml()}
       ${story(P.trophies, P.trophiesText(st.reduce((n, a) => n + a.tier, 0), legends, coins()))}
       ${(() => { const k = new Date().toISOString().slice(0, 10), d = replies[k]; return d && d.n ? story(P.replies, P.repliesText(fmtDur(d.total / d.n), fmtDur(d.best))) : ''; })()}
     </div>
@@ -97,6 +98,8 @@ const SHOP = [
   { id: 'turtle', price: 400, icon: '🐢' },
   { id: 'bunnypet', price: 600, icon: '🐇' },
   { id: 'bigtank', price: 900, icon: '🐠' },
+  { id: 'cap', price: 150, icon: '🧢' }, { id: 'headphones', price: 300, icon: '🎧' }, { id: 'shades', price: 250, icon: '🕶' }, { id: 'party', price: 200, icon: '🥳' },
+  { id: 'shirt_pink', price: 300, icon: '👕' }, { id: 'shirt_black', price: 300, icon: '👕' }, { id: 'shirt_gold', price: 400, icon: '👕' }, { id: 'crown', price: 1500, icon: '👑' },
 ];
 const owns = id => prog.owned.includes(id);
 function buy(id) {
@@ -113,7 +116,7 @@ function renderShop() {
       ${has ? `<small class="ok">${esc(S2.owned)}</small> <button class="btn small" data-move-item>${esc(S2.move)}</button>` : `<button class="btn small" data-buy="${it.id}" ${can ? '' : 'disabled'}><span class="coin"></span> ${it.price}</button>`}</div></div>`; }).join('')}</div>
     ${prog.owned.length ? `<p><button class="btn small" data-move-item>✥ ${esc(S2.decoTitle)}</button></p>` : ''}`;
 }
-reportEl.addEventListener('click', e => { const b = e.target.closest('[data-buy]'); if (b) buy(b.dataset.buy); if (e.target.closest('[data-move-item]')) setDecorating(true); });
+reportEl.addEventListener('click', e => { if (e.target.closest('[data-share-card]')) return shareCard(); if (e.target.closest('[data-visit-photo]')) return visitPhoto(); const b = e.target.closest('[data-buy]'); if (b) buy(b.dataset.buy); if (e.target.closest('[data-move-item]')) setDecorating(true); });
 
 // bought items, drawn in fixed places (floor items before the people, so people walk in front)
 // ---- bought items: each one has a default spot and can be moved in decorate mode ----

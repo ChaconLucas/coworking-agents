@@ -759,7 +759,7 @@ function aiIconEl(id, color) {
 
 window.Art = {
   aiIcon, aiIconEl, portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
-  PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setLookSeeds, setHat, setCtx, r, sprite, blit,
+  PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setLookSeeds, setHat, drawHat, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,
   drawCooler, drawRug, drawFloor, applyLight, LEGS_SIT,

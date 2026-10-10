@@ -79,10 +79,10 @@ function followPlayer() {
 }
 function drawPlayer(t, movers) {
   if (!playerOn || !data || trophyView) return;
-  const lk = Art.look('you:' + (avatars.__you || 0));
+  const lk = youLook();
   movers.push({ y: me.y, draw: () => {
     ctx.fillStyle = 'rgba(255,216,77,.35)'; ctx.fillRect(me.x + 1, me.y + 21, 14, 3); // a ring at your feet
-    Art.drawStanding(me.x, me.y, lk, t, me.moving);
+    Art.drawStanding(me.x, me.y, lk, t, me.moving); drawOutfit(me.x, me.y - 2);
   } });
 }
 
@@ -95,7 +95,7 @@ function nearThing() {
     const ax = (a.mode === 'desk' ? cell.chair.x : a.x) + 8, ay = (a.mode === 'desk' ? cell.chair.y : a.y) + 12;
     if (near(ax, ay)) return { label: T.walk.talk(cell.p.name), run: () => (achBump('talks'), cell.p.state === 'needs_you' || cell.p.state === 'waiting' ? openTalk(cell.p.id) : showPerson(cell.p.id)) };
   }
-  for (const g of gameHits) if (near(g.x + g.w / 2, g.y + g.h, 24)) return { label: g.title, run: () => { const m = /data-tab="(\w+)"/.exec(g.attr); if (m) openReport(m[1]); else if (/trophyroom/.test(g.attr)) setTrophyView(true); } };
+  for (const g of gameHits) if (near(g.x + g.w / 2, g.y + g.h, 24)) return { label: g.title, run: () => { const m = /data-tab="(\w+)"/.exec(g.attr); if (m) openReport(m[1]); else if (/trophyroom/.test(g.attr)) setTrophyView(true); else if (/arcade/.test(g.attr)) openArcade(); } };
   if (radioBox && near(radioBox.x + 7, radioBox.y + 20, 26)) return { label: radioOn ? T.radio.on : T.radio.off, run: () => setRadio(!radioOn) };
   if (catBox && near(cat.x + 6, cat.y + 6, 18)) return { label: T.walk.pet, run: petCat };
   if (elevatorBox && near(elevatorBox.x + 14, elevatorBox.y + 30, 22)) return { label: T.elevator.title, run: openElevator };

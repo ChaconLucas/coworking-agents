@@ -93,7 +93,9 @@ function demoUsage() {
   for (let i = 0; i < 40; i++) {
     const d = new Date(now - i * 864e5), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const first = new Date(d.getFullYear(), d.getMonth(), d.getDate(), i % 9 === 0 ? 2 : 9).getTime();
-    if (i % 11 !== 10) days[k] = { tools: 300 + (i * 97) % 900, activeMs: (3 + (i * 7) % 9) * 36e5, sessions: 4, agents: i % 3 ? ['claude'] : ['claude', 'codex'], first, last: first + 8 * 36e5, output: 4e5 };
+    if (i % 11 !== 10) { const tools = 300 + (i * 97) % 900, act = (3 + (i * 7) % 9) * 36e5;
+      days[k] = { tools, activeMs: act, sessions: 4, agents: i % 3 ? ['claude'] : ['claude', 'codex'], first, last: first + 8 * 36e5, output: 4e5, usd: 18 + (i * 13) % 40,
+        byAgent: { claude: { activeMs: act * .7, tools: Math.round(tools * .7), output: 3e5 }, codex: { activeMs: act * .3, tools: Math.round(tools * .3), output: 1e5 } } }; }
   }
   const ppl = demoSnapshot().people;
   const top = ppl.slice(0, 5).map((p, i) => ({ id: p.id, agent: p.agent, title: p.title, activeMs: (40 - i * 7) * 36e5, tools: 2400 - i * 380, output: 3e6 - i * 4e5, last: now }));

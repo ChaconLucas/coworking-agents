@@ -97,7 +97,7 @@ function drawDeskLife(p, g, t, atDesk) {
     if (ring) { r(hx - 3, hy - 3, 1, 2, '#ffd84d'); r(hx + 9, hy - 3, 1, 2, '#ffd84d'); r(hx - 4, hy, 1, 1, '#ffd84d'); r(hx + 10, hy, 1, 1, '#ffd84d'); }
   }
   // a badge on the partition with the branch (readable when the camera flies in)
-  if (p.branch && p.branch !== 'HEAD' && p.repo) {
+  if (p.branch && p.branch !== 'HEAD' && p.repo && !snapshotMode) {
     const b = String(p.branch.split('/').pop()).toUpperCase().replace(/[^A-Z0-9\-.]/g, '').slice(0, 7);
     r(px + 3, py + 19, b.length * 4 + 3, 8, PAL.ink); r(px + 4, py + 20, b.length * 4 + 1, 6, '#f4ecd8'); r(px + 4, py + 20, b.length * 4 + 1, 1, agentOf(p).color);
     pixText(px + 5, py + 21, b, '#2a1d27');

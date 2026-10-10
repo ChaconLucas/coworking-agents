@@ -31,6 +31,7 @@ function drawGameRoom(G, t, glows) {
   }
   // left: two arcades and a bookshelf on the wall
   Art.drawArcade(x + 8, y + 6, t, glows); Art.drawArcade(x + 30, y + 6, t, glows);
+  hit({ x: x + 7, y: y + 5, w: 42, h: 36 }, 'data-arcade="1"', T.arcade.title);
   drawPhotoWall(x + 58, y + 2);
   // wall centre: notice board (today's files) and the newspaper rack (the weekly paper)
   const nb = x + Math.round(w * .32);

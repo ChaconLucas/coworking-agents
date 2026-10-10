@@ -123,13 +123,14 @@ async function refresh() {
       for (const [k, a] of Object.entries(res.act || {})) {
         const d = days[k] || (days[k] = { tools: 0, activeMs: 0, sessions: 0, agents: [], first: a.first, last: a.last });
         d.tools += a.tools; d.activeMs += a.activeMs; d.sessions++;
+        const ag = (d.byAgent || (d.byAgent = {}))[kind] || (d.byAgent[kind] = { activeMs: 0, tools: 0, output: 0 }); ag.activeMs += a.activeMs; ag.tools += a.tools;
         if (!d.agents.includes(kind)) d.agents.push(kind);
         d.first = Math.min(d.first, a.first); d.last = Math.max(d.last, a.last);
         if (k.startsWith(month)) { m.activeMs += a.activeMs; m.tools += a.tools; m.last = Math.max(m.last, a.last); }
       }
       for (const [k, c] of Object.entries(res.usdByDay || {})) if (days[k]) days[k].usd = (days[k].usd || 0) + c;
       for (const [k, u] of Object.entries(res.byDay)) {
-        if (days[k]) days[k].output = (days[k].output || 0) + u.output;
+        if (days[k]) { days[k].output = (days[k].output || 0) + u.output; if (days[k].byAgent && days[k].byAgent[kind]) days[k].byAgent[kind].output += u.output; }
         if (k.startsWith(month)) m.output += u.output;
       }
       if (m.activeMs || m.tools) board.push(m);

@@ -24,7 +24,7 @@
 | ![Panel](docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
 | ![Usage](docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Achievements](docs/achievements.png) | **Achievements.** 81 of them, five tiers each, coins for every tier, the agent of the month on top. |
+| ![Achievements](docs/achievements.png) | **Achievements.** 86 of them, five tiers each, coins for every tier, the agent of the month on top. |
 | ![Paper](docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
 | ![Trophy room](docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
 | ![Christmas](docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
@@ -156,11 +156,16 @@ Click the elevator (or press Enter next to it) to ride between floors, up to the
 
 ## Achievements, coins and the shop
 
-- **81 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
+- **86 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
 - **Legend of Legends** when every achievement is at legend.
-- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain, a turtle terrarium, a bunny and a bigger aquarium. ☰ → **Decorate** lets you drag what you bought anywhere in the office (saved in your progress file).
+- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain, a turtle terrarium, a bunny, a bigger aquarium, and clothes for your character. ☰ → **Decorate** lets you drag what you bought anywhere in the office (saved in your progress file).
 - **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month; the top 5 are in the achievements tab.
 - **The weekly paper**, *The Office Times*, tells your week in headlines, all from measured data.
+- **Weekly missions:** three new challenges every week (hours, actions, days worked, commits, pushes, quick replies, pets, fast answers, long tasks), 100 coins each.
+- **Your outfit:** caps, headphones, shades, a party hat, shirts and a crown from the shop; your character wears them (pick in Customise).
+- **Bug Catcher:** click an arcade in the game room for a 30-second game; the best score is kept.
+- **Surprises:** now and then a cake, a pigeon at the window or a golden ticket shows up; click it for coins.
+- **Share:** the paper tab makes a weekly card (hours, actions, trophies, a slice of the office) and a visitor photo of the office without names, branches or the office name. It also shows this week's AI scoreboard (hours, actions, tokens per AI).
 - **Progress file:** achievements, coins, purchases, avatars and settings live in `~/.config/coworking-agents/progress.json` (mode `0600`). No account needed: the app runs on your machine, so the progress is yours.
 
 ## Make it yours

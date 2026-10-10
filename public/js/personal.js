@@ -105,6 +105,7 @@ function drawCritter(m, x, y, mode, t, flip) {
 
 // the office name on a plaque above the elevator and in the top bar
 function drawNamePlaque() {
+  if (snapshotMode) return;
   const name = (prog.officeName || '').toUpperCase().replace(/[^A-Z0-9 \-!.#+]/g, '').slice(0, 14);
   if (!name) return;
   const w = name.length * 4 + 6, x = CX - w / 2, y = H - 40;
@@ -119,7 +120,7 @@ function renderOffice() {
   const m = MASCOTS.includes(prog.mascot) ? prog.mascot : 'cat';
   body.innerHTML = tabsHtml() + `<div class="office-preview"><canvas id="office-preview"></canvas><small>${esc(O.preview)}</small></div><p class="sub">${esc(O.sub)}</p>
     <h3>${esc(O.name)}</h3><div class="office-name"><input id="office-name" maxlength="14" value="${esc(prog.officeName || '')}" placeholder="${esc(O.namePh)}"><button class="btn small" data-save-name>${esc(O.save)}</button></div>
-    <h3>${esc(O.you)}</h3><div class="office-name"><span class="you-face" id="you-face"></span><button class="btn small" data-you-look>⚄ ${esc(O.youRoll)}</button></div>
+    <h3>${esc(O.you)}</h3><div class="office-name"><span class="you-face" id="you-face"></span><button class="btn small" data-you-look>⚄ ${esc(O.youRoll)}</button></div>${outfitHtml()}
     ${row('floor', STYLE.floor)}
     ${row('wall', Object.keys(STYLE.wall), v => STYLE.wall[v][0])}
     ${row('rooms', Object.keys(STYLE.rooms), v => STYLE.rooms[v][1])}
@@ -131,7 +132,7 @@ function renderOffice() {
     ${row('plants', STYLE.plants)}
     ${row('station', STYLE.station)}
     ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}`;
-  const face = document.getElementById('you-face'); if (face) face.appendChild(Art.portrait('you:' + (avatars.__you || 0)));
+  const face = document.getElementById('you-face'); if (face) face.appendChild(youPortrait());
 }
 reportEl.addEventListener('click', e => {
   const o = e.target.closest('[data-opt]');
@@ -141,7 +142,7 @@ reportEl.addEventListener('click', e => {
     reportEl.querySelectorAll(`[data-opt="${o.dataset.opt}"]`).forEach(b => b.classList.toggle('on', b === o));
     lastLayoutKey = ''; if (data && !building && !trophyView) drawScene(performance.now(), 0); updatePreview(); return;
   }
-  if (e.target.closest('[data-you-look]')) { avatars.__you = (avatars.__you || 0) + 1; saveProgress(); achBump('avatars'); const f = document.getElementById('you-face'); if (f) { f.innerHTML = ''; f.appendChild(Art.portrait('you:' + avatars.__you)); } return; }
+  if (e.target.closest('[data-you-look]')) { avatars.__you = (avatars.__you || 0) + 1; saveProgress(); achBump('avatars'); const f = document.getElementById('you-face'); if (f) { f.innerHTML = ''; f.appendChild(youPortrait()); } return; }
   if (e.target.closest('[data-save-name]')) { const v = document.getElementById('office-name').value.trim().slice(0, 14); setProgress('officeName', v); achBump('decorate'); if (data) renderBar(); updatePreview(); }
 });
 reportEl.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'office-name') reportEl.querySelector('[data-save-name]').click(); });

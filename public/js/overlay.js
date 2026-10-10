@@ -99,6 +99,7 @@ function renderOverlay() {
     box(moodBox, 'data-mood="1"', T.mood[!working ? 'calm' : officeMood() === 'rush' ? 'rush' : 'normal']); }
   box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
   box(neonBox, 'data-neon="1"', '</>');
+  if (surprise) box(surpriseBox, 'data-surprise="1"', T.surprise.hint);
   box(elevatorBox, 'data-elevator="1"', T.elevator.title + ' · ' + T.elevator.sub);
   box(noticeBox, 'data-tab="today"', T.noticeTitle + '\n' + (boardFiles.map(f => `${f.rel} · ${f.repo}${f.n > 1 ? ' · ' + f.n + '×' : ''}`).join('\n') || T.noticeNone));
   box(tvBox, 'data-tv="1"', meetInfo.people.filter(m => !m.lead).map(m => m.title || m.label).join('\n'));
