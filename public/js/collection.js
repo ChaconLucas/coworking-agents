@@ -100,23 +100,84 @@ function renderShop() {
   const S2 = T.shop, body = reportEl.querySelector('.report-body'), c = coins();
   body.innerHTML = tabsHtml() + `<div class="wallet"><span class="coin"></span><b>${c.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en')}</b> ${esc(T.ach.coins)}<span class="note">${esc(S2.sub)}</span></div>
     <div class="shop">${SHOP.map(it => { const has = owns(it.id), can = c >= it.price; return `<div class="item ${has ? 'owned' : ''}"><span class="ach-ico">${it.icon}</span><div><b>${esc(S2.items[it.id].name)}</b><p>${esc(S2.items[it.id].desc)}</p>
-      ${has ? `<small class="ok">${esc(S2.owned)}</small>` : `<button class="btn small" data-buy="${it.id}" ${can ? '' : 'disabled'}><span class="coin"></span> ${it.price}</button>`}</div></div>`; }).join('')}</div>`;
+      ${has ? `<small class="ok">${esc(S2.owned)}</small> <button class="btn small" data-move-item>${esc(S2.move)}</button>` : `<button class="btn small" data-buy="${it.id}" ${can ? '' : 'disabled'}><span class="coin"></span> ${it.price}</button>`}</div></div>`; }).join('')}</div>
+    ${prog.owned.length ? `<p><button class="btn small" data-move-item>✥ ${esc(S2.decoTitle)}</button></p>` : ''}`;
 }
-reportEl.addEventListener('click', e => { const b = e.target.closest('[data-buy]'); if (b) buy(b.dataset.buy); });
+reportEl.addEventListener('click', e => { const b = e.target.closest('[data-buy]'); if (b) buy(b.dataset.buy); if (e.target.closest('[data-move-item]')) setDecorating(true); });
 
 // bought items, drawn in fixed places (floor items before the people, so people walk in front)
-function drawShopFloor(t, glows) {
-  if (owns('plants')) for (let y = TOP + 140; y < H - 40; y += 150) Art.drawPlant(CX - 20, y, true);
-  if (owns('lamps')) for (const lx of [RX + 4, RX + RW - 12]) { r(lx + 3, wing.ping - 4, 2, 14, PAL.ink); r(lx, wing.ping - 8, 8, 5, '#ffd84d'); glows.push({ x: lx + 4, y: wing.ping - 6, r: 22, c: '#ffd84d' }); }
-  if (owns('statue')) { const m = usageData && usageData.month && usageData.month.top && usageData.month.top[0], x = RX + RW - 26, y = wing.ping + 34;
-    r(x - 1, y + 16, 18, 8, PAL.ink); r(x, y + 17, 16, 6, '#8b9bb4'); if (m) { const lk = Art.look(m.id); Art.drawStanding(x, y - 6, { ...lk, s: '#ffd84d', S: '#d9a441', h: '#d9a441', H: '#b07d2a', c: '#ffd84d', C: '#d9a441', p: '#d9a441' }, 0, false); } glows.push({ x: x + 8, y: y + 6, r: 18, c: '#ffd84d' }); }
-  if (owns('piano')) { const x = RX + RW - 44, y = wing.copa + 20; r(x - 1, y - 1, 24, 12, PAL.ink); r(x, y, 22, 10, '#1b1622'); for (let k = 0; k < 7; k++) r(x + 1 + k * 3, y + 6, 2, 4, '#ffffff'); }
-  if (owns('fountain')) { const x = CX - 12, y = H - 70; r(x - 1, y + 8, 26, 10, PAL.ink); r(x, y + 9, 24, 8, '#8b9bb4'); r(x + 2, y + 10, 20, 5, '#4fa3d8'); r(x + 11, y, 2, 10, '#c0cbdc'); for (let i = 0; i < 4; i++) { const k = ((t / 500 + i / 4) % 1); r(x + 12 + Math.round(Math.cos(i * 1.6) * k * 8), y - 2 + Math.round(k * k * 12) - 4, 1, 1, '#9fd3ff'); } }
+// ---- bought items: each one has a default spot and can be moved in decorate mode ----
+// Positions are saved in progress.json as fractions of the office (prog.placed[id] = { fx, fy }) so an item
+// stays where you put it when the window or the floor plan changes size.
+const ITEMS = {
+  rug: { w: 76, h: 50, under: true, at: () => game ? { x: game.x + Math.round(game.w / 2) - 26, y: game.y + 40 } : { x: CX - 90, y: TOP + 60 } },
+  plants: { w: 36, h: 26, at: () => ({ x: CX - 46, y: TOP + 120 }) },
+  lamps: { w: 24, h: 18, at: () => ({ x: RX + 4, y: wing.ping - 10 }) },
+  statue: { w: 18, h: 32, at: () => ({ x: RX + RW - 26, y: wing.ping + 28 }) },
+  piano: { w: 24, h: 12, at: () => ({ x: RX + RW - 44, y: wing.copa + 20 }) },
+  fountain: { w: 26, h: 20, at: () => ({ x: CX - 12, y: H - 72 }) },
+  neon: { w: 30, h: 8, at: () => ({ x: Math.min(W - 34, RX + 150 > W - 40 ? RX + 2 : RX + 150), y: 2 }) },
+  disco: { w: 8, h: 14, at: () => ({ x: CX - 3, y: TOP - 2 }) },
+};
+function itemPos(id) {
+  const it = ITEMS[id], p = prog.placed && prog.placed[id];
+  const pos = p && Number.isFinite(p.fx) ? { x: Math.round(p.fx * W), y: Math.round(p.fy * H) } : it.at();
+  return { x: Math.max(0, Math.min(W - it.w, pos.x)), y: Math.max(0, Math.min(H - it.h, pos.y)), w: it.w, h: it.h };
 }
-function drawShopWall(t, glows) {
-  if (owns('neon')) { const on = ((t / 130) | 0) % 41 !== 0, x = RX + 150 > W - 40 ? RX + 2 : RX + 150; r(x - 1, 2, 30, 7, '#1b1d2e'); pixText(x + 1, 3, 'COFFEE', on ? '#ff6ec7' : '#5a2a48'); if (on) glows.push({ x: x + 13, y: 5, r: 20, c: '#ff6ec7' }); }
-  if (owns('disco')) { const x = CX, y = TOP + 4; r(x, TOP - 6, 1, 6, '#c0cbdc'); r(x - 3, y, 7, 7, '#c0cbdc'); for (let i = 0; i < 6; i++) r(x - 3 + (i * 2 + ((t / 150) | 0)) % 7, y + (i % 3) * 2, 1, 1, ['#ff6ec7', '#2ce8f5', '#ffd84d'][i % 3]); if (partyUntil > Date.now()) glows.push({ x, y: y + 3, r: 60, c: ['#ff6ec7', '#2ce8f5', '#ffd84d'][((t / 300) | 0) % 3] }); }
+const ITEM_DRAW = {
+  rug: (x, y) => drawPersianRug(x, y + 3, 76, 44),
+  plants: (x, y) => { Art.drawPlant(x, y + 2, true); Art.drawPlant(x + 13, y, true); Art.drawPlant(x + 26, y + 3, false); },
+  lamps: (x, y, t, glows) => { for (const lx of [x, x + 16]) { r(lx + 3, y + 4, 2, 14, PAL.ink); r(lx, y, 8, 5, '#ffd84d'); glows.push({ x: lx + 4, y: y + 2, r: 22, c: '#ffd84d' }); } },
+  statue: (x, y, t, glows) => { const m = usageData && usageData.month && usageData.month.top && usageData.month.top[0];
+    r(x - 1, y + 22, 18, 8, PAL.ink); r(x, y + 23, 16, 6, '#8b9bb4'); if (m) { const lk = Art.look(m.id); Art.drawStanding(x, y, { ...lk, s: '#ffd84d', S: '#d9a441', h: '#d9a441', H: '#b07d2a', c: '#ffd84d', C: '#d9a441', p: '#d9a441' }, 0, false); } glows.push({ x: x + 8, y: y + 12, r: 18, c: '#ffd84d' }); },
+  piano: (x, y) => { r(x - 1, y - 1, 24, 12, PAL.ink); r(x, y, 22, 10, '#1b1622'); for (let k = 0; k < 7; k++) r(x + 1 + k * 3, y + 6, 2, 4, '#ffffff'); },
+  fountain: (x, y, t) => { r(x - 1, y + 10, 26, 10, PAL.ink); r(x, y + 11, 24, 8, '#8b9bb4'); r(x + 2, y + 12, 20, 5, '#4fa3d8'); r(x + 11, y + 2, 2, 10, '#c0cbdc'); for (let i = 0; i < 4; i++) { const k = ((t / 500 + i / 4) % 1); r(x + 12 + Math.round(Math.cos(i * 1.6) * k * 8), y + Math.round(k * k * 12) - 4 + 2, 1, 1, '#9fd3ff'); } },
+  neon: (x, y, t, glows) => { const on = ((t / 130) | 0) % 41 !== 0; r(x - 1, y, 30, 8, '#1b1d2e'); pixText(x + 1, y + 1, 'COFFEE', on ? '#ff6ec7' : '#5a2a48'); if (on) glows.push({ x: x + 13, y: y + 4, r: 20, c: '#ff6ec7' }); },
+  disco: (x, y, t, glows) => { r(x + 3, y, 1, 6, '#c0cbdc'); r(x, y + 6, 7, 7, '#c0cbdc'); for (let i = 0; i < 6; i++) r(x + (i * 2 + ((t / 150) | 0)) % 7, y + 6 + (i % 3) * 2, 1, 1, ['#ff6ec7', '#2ce8f5', '#ffd84d'][i % 3]); if (partyUntil > Date.now()) glows.push({ x: x + 3, y: y + 9, r: 60, c: ['#ff6ec7', '#2ce8f5', '#ffd84d'][((t / 300) | 0) % 3] }); },
+};
+function drawItems(under, t, glows) {
+  for (const id of Object.keys(ITEMS)) {
+    if (!owns(id) || !!ITEMS[id].under !== under) continue;
+    const p = itemPos(id); ITEM_DRAW[id](p.x, p.y, t, glows || []);
+    if (decorating) { ctx.strokeStyle = dragItem && dragItem.id === id ? '#ffd84d' : 'rgba(255,216,77,.7)'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1; ctx.strokeRect(p.x - 1.5, p.y - 1.5, p.w + 3, p.h + 3); ctx.setLineDash([]); }
+  }
 }
+// kept for the callers: the rug goes under the furniture (drawn with the game room), the rest on top
+function drawShopFloor(t, glows) { drawItems(false, t, glows); }
+function drawShopWall() {}
+
+// ---- decorate mode: drag your bought items around ----
+let decorating = false, dragItem = null;
+const decoBar = document.createElement('div');
+decoBar.className = 'deco-bar'; decoBar.hidden = true;
+document.body.appendChild(decoBar);
+function setDecorating(on) {
+  decorating = on; dragItem = null; decoBar.hidden = !on;
+  if (on) { closeReport(); decoBar.innerHTML = `<b>${esc(T.shop.decoTitle)}</b><span>${esc(T.shop.decoHint)}</span><button class="btn small" data-deco-reset>${esc(T.shop.decoReset)}</button><button class="btn small" data-deco-done>${esc(T.shop.decoDone)}</button>`; achBump('decorate'); }
+  lastHits = ''; renderOverlay();
+}
+decoBar.addEventListener('click', e => {
+  if (e.target.closest('[data-deco-done]')) return setDecorating(false);
+  if (e.target.closest('[data-deco-reset]')) { prog.placed = {}; saveProgress(); }
+});
+const canvasPoint = e => { const rc = overlay.getBoundingClientRect(); return { x: (e.clientX - rc.left) / S, y: (e.clientY - rc.top) / S }; };
+overlay.addEventListener('pointerdown', e => {
+  if (!decorating) return;
+  const pt = canvasPoint(e);
+  // the topmost owned item under the pointer (floor items over the rug)
+  const ids = Object.keys(ITEMS).filter(id => owns(id)).sort((a, b) => (ITEMS[b].under ? 0 : 1) - (ITEMS[a].under ? 0 : 1));
+  for (const id of ids) { const p = itemPos(id); if (pt.x >= p.x - 2 && pt.x <= p.x + p.w + 2 && pt.y >= p.y - 2 && pt.y <= p.y + p.h + 2) { dragItem = { id, dx: pt.x - p.x, dy: pt.y - p.y }; e.preventDefault(); e.stopPropagation(); overlay.setPointerCapture(e.pointerId); return; } }
+}, true);
+overlay.addEventListener('pointermove', e => {
+  if (!dragItem) return;
+  const pt = canvasPoint(e), it = ITEMS[dragItem.id];
+  const x = Math.max(0, Math.min(W - it.w, pt.x - dragItem.dx)), y = Math.max(0, Math.min(H - it.h, pt.y - dragItem.dy));
+  prog.placed = { ...(prog.placed || {}), [dragItem.id]: { fx: +(x / W).toFixed(4), fy: +(y / H).toFixed(4) } };
+});
+overlay.addEventListener('pointerup', () => { if (dragItem) { dragItem = null; saveProgress(); achBump('moves'); } });
+// while decorating, clicks don't open agents or walk you around
+overlay.addEventListener('click', e => { if (decorating) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && decorating) setDecorating(false); });
 
 // ---- party mode (hidden): three quick clicks on the </> neon sign ----
 let partyUntil = 0, neonClicks = [];

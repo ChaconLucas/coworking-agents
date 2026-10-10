@@ -20,6 +20,7 @@ function drawGameRoom(G, t, glows) {
   // floor: dark teal carpet with a diamond pattern
   r(x, y, w, h, '#2f4f5a');
   for (let yy = 4; yy < h; yy += 8) for (let xx = (yy / 8) % 2 ? 4 : 0; xx < w; xx += 8) r(x + xx, y + yy, 2, 2, '#365b67');
+  drawItems(true, t, glows); // the rug (wherever you put it) lies under the furniture
   // walls (the top one has a face), door on the right wall to the corridor
   r(x - 2, y - 2, w + 4, 3, PAL.ink); r(x - 2, y + 1, w + 4, 8, PAL.wall); r(x - 2, y + 9, w + 4, 1, PAL.wallShade);
   r(x - 2, y, 3, h + 2, PAL.ink); r(x - 2, y + h, w + 4, 3, PAL.ink); r(x + w - 1, y, 3, h + 2, PAL.ink);
@@ -44,7 +45,6 @@ function drawGameRoom(G, t, glows) {
   // middle row: foosball, pool table, aquarium
   const playing = layout.filter(c => c.actor && c.actor.mode === 'lounge' && c.actor.spot && devSpots && devSpots.foos && devSpots.foos.some(s => s.x === c.actor.spot.x && s.y === c.actor.spot.y)).length >= 2;
   drawFoosball(x + 64, y + 52, t, playing);
-  if (owns('rug')) drawPersianRug(x + Math.round(w / 2) - 26, y + 40, 76, 50);
   if (w >= 360) drawPool(x + Math.round(w / 2) - 10, y + 50);
   if (w >= 300) drawAquarium(x + w - 46, y + 56, t, glows);
   // bottom: bean bags, the vending machine (shop), an easel (customise), the guestbook (history)

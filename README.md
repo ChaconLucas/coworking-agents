@@ -24,7 +24,7 @@
 | ![Panel](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
 | ![Usage](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** 74 of them, five tiers each, coins for every tier, the agent of the month on top. |
+| ![Achievements](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/achievements.png) | **Achievements.** 75 of them, five tiers each, coins for every tier, the agent of the month on top. |
 | ![Paper](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
 | ![Trophy room](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
 | ![Christmas](https://raw.githubusercontent.com/ChaconLucas/coworking-agents/main/docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
@@ -145,9 +145,9 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 
 ## Achievements, coins and the shop
 
-- **74 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
+- **75 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
 - **Legend of Legends** when every achievement is at legend.
-- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain.
+- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain. ☰ → **Decorate** lets you drag what you bought anywhere in the office (saved in your progress file).
 - **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month; the top 5 are in the achievements tab.
 - **The weekly paper**, *The Office Times*, tells your week in headlines, all from measured data.
 - **Progress file:** achievements, coins, purchases, avatars and settings live in `~/.config/coworking-agents/progress.json` (mode `0600`). No account needed: the app runs on your machine, so the progress is yours.

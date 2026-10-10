@@ -729,3 +729,7 @@ body.trophy-view #clashes, body.trophy-view #floors { display: none; }
 body.trophy-view .help { display: none; }
 .you-face { width: 36px; height: 40px; display: grid; place-items: center; background: #2b2336; border: 2px solid var(--edge); border-radius: 6px; }
 .you-face canvas { width: 32px; height: 36px; image-rendering: pixelated; }
+.deco-bar { position: fixed; left: 50%; top: 128px; transform: translateX(-50%); z-index: 35; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: #1b1622; color: #f4ecd8; border: 2px solid #ffd84d; border-radius: 8px; box-shadow: 4px 4px 0 #0b0a0e; font-size: 13px; }
+.deco-bar[hidden] { display: none; }
+.deco-bar b { font: 700 11px/1 var(--pix); color: #ffd84d; }
+body:has(.deco-bar:not([hidden])) #overlay { cursor: move; }
