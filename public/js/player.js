@@ -93,7 +93,7 @@ function nearThing() {
   for (const cell of layout) {
     const a = cell.actor; if (!a) continue;
     const ax = (a.mode === 'desk' ? cell.chair.x : a.x) + 8, ay = (a.mode === 'desk' ? cell.chair.y : a.y) + 12;
-    if (near(ax, ay)) return { label: T.walk.talk(cell.p.name), run: () => (cell.p.state === 'needs_you' || cell.p.state === 'waiting' ? openTalk(cell.p.id) : showPerson(cell.p.id)) };
+    if (near(ax, ay)) return { label: T.walk.talk(cell.p.name), run: () => (achBump('talks'), cell.p.state === 'needs_you' || cell.p.state === 'waiting' ? openTalk(cell.p.id) : showPerson(cell.p.id)) };
   }
   for (const g of gameHits) if (near(g.x + g.w / 2, g.y + g.h, 24)) return { label: g.title, run: () => { const m = /data-tab="(\w+)"/.exec(g.attr); if (m) openReport(m[1]); else if (/trophyroom/.test(g.attr)) setTrophyView(true); } };
   if (radioBox && near(radioBox.x + 7, radioBox.y + 20, 26)) return { label: radioOn ? T.radio.on : T.radio.off, run: () => setRadio(!radioOn) };
@@ -123,7 +123,7 @@ document.addEventListener('keydown', e => {
   if (document.querySelector('.talk:not([hidden])')) return;
   const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  if (key === 'Shift') keysDown.add('Shift');
+  if (key === 'Shift') { if (!keysDown.has('Shift') && !e.repeat) achBump('sprints'); keysDown.add('Shift'); }
   if (key.startsWith('Arrow') || (!e.metaKey && !e.ctrlKey && !e.altKey && 'wasd'.includes(key) && key.length === 1)) {
     keysDown.add(key); e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) achBump('steps');
   }

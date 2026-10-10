@@ -38,7 +38,7 @@ function drawGameRoom(G, t, glows) {
   // the golden door to the trophy room, top right
   const dx = x + w - 104;
   drawTrophyDoor(dx, y + 1, t, glows);
-  hit({ x: dx - 2, y, w: 34, h: 32 }, 'data-trophyroom="1"', T.trophy.enter);
+  hit({ x: dx - 6, y: y - 2, w: 42, h: 44 }, 'data-trophyroom="1"', T.trophy.enter);
   // water cooler between the door and the corner
   drawCooler(x + w - 52, y + 6, t);
   // middle row: foosball, pool table, aquarium
@@ -60,11 +60,27 @@ function drawPaperRack(x, y, t) {
   r(x + 2, y + 3, 8, 1, '#2a1d27'); r(x + 2, y + 5, 10, 1, '#8a7a6a'); r(x + 2, y + 12, 8, 1, '#2a1d27'); r(x + 2, y + 14, 10, 1, '#8a7a6a');
 }
 function drawTrophyDoor(x, y, t, glows) {
-  r(x - 1, y, 32, 31, PAL.ink); r(x, y + 1, 30, 30, '#b07d2a');
-  r(x + 2, y + 6, 12, 24, '#d9a441'); r(x + 16, y + 6, 12, 24, '#d9a441'); r(x + 13, y + 16, 1, 3, '#8a6420'); r(x + 16, y + 16, 1, 3, '#8a6420');
-  r(x + 2, y + 2, 26, 3, '#2b2336'); pixText(x + 4, y + 2, 'TROPHY', '#ffd84d');
-  const s = ((t / 160) | 0) % 9; r(x + 4 + s * 3, y + 8 + (s % 3) * 6, 1, 1, '#ffffff');
-  glows.push({ x: x + 15, y: y + 16, r: 26, c: '#ffd84d' });
+  // a marble portal: two columns, an arch with a gold cup on the keystone, golden doors, light spilling out
+  const ink = PAL.ink;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(x + 15, y + 36, 0, x + 15, y + 36, 34); g.addColorStop(0, 'rgba(255,216,77,.35)'); g.addColorStop(1, 'rgba(255,216,77,0)'); ctx.fillStyle = g; ctx.fillRect(x - 20, y, 70, 60);
+  ctx.restore();
+  // arch
+  r(x - 4, y + 4, 38, 4, ink); r(x - 2, y + 1, 34, 4, ink); r(x + 4, y - 1, 22, 3, ink);
+  r(x - 3, y + 5, 36, 3, '#efe9dd'); r(x - 1, y + 2, 32, 3, '#efe9dd'); r(x + 5, y, 20, 2, '#efe9dd');
+  r(x - 3, y + 7, 36, 1, '#d9a441');
+  // keystone with a gold cup
+  r(x + 11, y - 3, 8, 8, ink); r(x + 12, y - 2, 6, 6, '#d9a441'); r(x + 13, y - 1, 4, 2, '#ffd84d'); r(x + 14, y + 1, 2, 1, '#ffd84d'); r(x + 13, y + 2, 4, 1, '#b07d2a');
+  // columns
+  for (const cx of [x - 5, x + 31]) { r(cx, y + 8, 4, 26, ink); r(cx + 1, y + 8, 2, 26, '#efe9dd'); r(cx - 1, y + 8, 6, 2, '#d9a441'); r(cx - 1, y + 32, 6, 2, '#d9a441'); }
+  // doors, slightly ajar: warm light through the gap
+  r(x - 1, y + 8, 32, 26, ink); r(x, y + 9, 14, 25, '#d9a441'); r(x + 16, y + 9, 14, 25, '#d9a441');
+  r(x + 14, y + 9, 2, 25, '#fff3c0'); r(x + 2, y + 11, 10, 9, '#e8b850'); r(x + 18, y + 11, 10, 9, '#e8b850'); r(x + 2, y + 22, 10, 10, '#e8b850'); r(x + 18, y + 22, 10, 10, '#e8b850');
+  r(x + 12, y + 20, 1, 3, '#8a6420'); r(x + 17, y + 20, 1, 3, '#8a6420');
+  // red carpet into the game room
+  r(x + 6, y + 34, 18, 8, '#a3283a'); r(x + 6, y + 34, 1, 8, '#d9a441'); r(x + 23, y + 34, 1, 8, '#d9a441');
+  const s = ((t / 160) | 0) % 11; r(x + 3 + s * 2, y + 12 + (s % 3) * 6, 1, 1, '#ffffff');
+  glows.push({ x: x + 15, y: y + 20, r: 30, c: '#ffd84d' });
 }
 function drawVending(x, y, t, glows) {
   r(x - 1, y - 1, 22, 38, PAL.ink); r(x, y, 20, 36, '#3b5dc9'); r(x + 2, y + 2, 12, 24, '#1b1622');

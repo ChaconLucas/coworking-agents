@@ -55,7 +55,7 @@ function drawUsageBoard(x, y, t) {
   if (!ids.length) pixText(x + 40, y + 10, '--', '#2a2f45');
 }
 // hour of the sky (?hour= overrides it for screenshots), with minutes
-const skyHour = () => qs.get('hour') ? Number(qs.get('hour')) : new Date().getHours() + new Date().getMinutes() / 60;
+const skyHour = () => styleHour(qs.get('hour') ? Number(qs.get('hour')) : new Date().getHours() + new Date().getMinutes() / 60);
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
@@ -71,7 +71,7 @@ function drawWall(t, sky) {
     else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, Date.now() - neonFlash < 400 ? (((Date.now() / 60) | 0) % 2 ? t : 120 * 47) : t, wallGlows); neonBox = { x: wx + 7, y: 8, w: 34, h: 18 }; Art.drawPoster(wx - 16, 14, 0); Art.drawPoster(wx + 46, 14, 2); }
     else if (i === 4 && nWin >= 7) drawTrophyShelf(wx - 8, 9, 64, t);
     else if (i === 5) { if (nWin >= 7) drawAgentOfMonth(wx, 10, t, wallGlows); else Art.drawPoster(wx + 14, 12, 1); }
-    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawSkyExtras(wx, 9, 48, 30, sky, t, i, skyHour()); drawSeasonWindow(wx, 9, 48, 30, t); drawWeather(wx, 9, 48, 30, t); drawGlassDrops(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
+    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawSkyExtras(wx, 9, 48, 30, sky, t, i, skyHour()); drawWindowView(wx, 9, 48, 30, sky, i); drawSeasonWindow(wx, 9, 48, 30, t); drawWeather(wx, 9, 48, 30, t); drawGlassDrops(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
   }
   // the ON AIR sign takes the gap between the last window and the whiteboard, when there is one
   { const lastEnd = 16 + (nWin - 1) * 74 + 48, gap = RX - 14 - lastEnd; moodBox = null; if (gap >= 32) drawMoodSign(lastEnd + ((gap - 24) / 2 | 0), 16, t, wallGlows); }
@@ -159,7 +159,7 @@ function drawRoomWork(R, t, k) {
   if (k < 1) for (let i = 0; i < 3; i++) { const h = hash('rs' + i + f); r(R.x + R.w - 2 + (h % 4), R.y + (h >>> 5) % Math.max(1, R.h), 1, 3, '#feae34'); }
 }
 function drawRoomShell(R, t) {
-  const h = hash(R.name), hue = ['#6b5a7a', '#5a6b7a', '#5a7a6b', '#7a6b5a', '#7a5a62', '#5f6f8a', '#6f8a5f'][h % 7];
+  const h = hash(R.name), hue = roomHues()[h % 7];
   r(R.x, R.y, R.w, R.h, hue);
   for (let yy = 2; yy < R.h; yy += 3) for (let xx = (yy % 6) ? 1 : 3; xx < R.w; xx += 4) r(R.x + xx, R.y + yy, 1, 1, shade(hue, .9));
   // walls: the top one has a face (gives height), sides and bottom are thin, door in the bottom middle
@@ -381,7 +381,7 @@ function drawRobot(t) {
 function drawScene(t, dt) {
   const now = Date.now();
   const hr = new Date().getHours() + new Date().getMinutes() / 60;
-  const sky = Art.skyFor(qs.get('hour') ? Number(qs.get('hour')) : hr);
+  const sky = Art.skyFor(styleHour(qs.get('hour') ? Number(qs.get('hour')) : hr));
   updateActors(dt, now);
   updateCat(dt, t);
   updateRobot(dt);
@@ -415,6 +415,7 @@ function drawScene(t, dt) {
   for (const R of rooms) drawRoom(R, t);
   drawGameRoom(game, t, glows);
   drawHolidayFloor(t, glows);
+  drawExtraPlants();
   drawShopFloor(t, glows);
   const cs = clashSet();
   sites = [];
@@ -449,7 +450,7 @@ function drawScene(t, dt) {
     const devTop = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 30;
     if (devTop < H) lights.push({ x: CX / 2, y: devTop + 20, r: CX / 2 });
   }
-  moodShade(); seasonTint();
+  moodShade(); seasonTint(); lightTint();
   Art.applyLight(W, H, sky, lights, glows, lightsOn);
   partyLights(t);
   // the LED panel is self-lit: drawn again over the dark, so it shines when the lights are off

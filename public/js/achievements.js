@@ -12,7 +12,7 @@ function achBump(k, n = 1) { achRecord[k] = (achRecord[k] || 0) + n; achSave(); 
 function achAdd(k, v) { const a = Array.isArray(achRecord[k]) ? achRecord[k] : (achRecord[k] = []); if (!a.includes(v)) { a.push(v); achSave(); } }
 const achCount = k => Array.isArray(achRecord[k]) ? achRecord[k].length : (achRecord[k] || 0);
 // opening the office counts a visit per day; 3am visits are noted (a secret)
-{ const d = new Date(); achAdd('openDays', d.toISOString().slice(0, 10)); if (d.getHours() === 3) achBump('nightShift'); }
+{ const d = new Date(); achAdd('openDays', d.toISOString().slice(0, 10)); if (d.getHours() === 3) achBump('nightShift'); if (d.getHours() === 0) achBump('midnight'); }
 
 // facts from history: the busiest day, streaks, nights, weekends, totals
 function achFacts() {
@@ -30,7 +30,19 @@ function achFacts() {
   const byAgent = (u && u.byAgent) || {}, sum = f => Object.values(byAgent).reduce((n, g) => n + (f(g) || 0), 0);
   const models = new Set(Object.values(byAgent).flatMap(g => Object.keys(g.byModel || {})));
   const cred = Object.values((data && data.credentials) || {});
+  const allHours = vals.reduce((n, d) => n + d.activeMs, 0) / 36e5, allTools = keys.reduce((n, k) => n + (days[k].tools || 0), 0);
+  const weekOf = k => { const d = new Date(k + 'T12:00:00'); const j = new Date(d.getFullYear(), 0, 1); return d.getFullYear() + '-' + Math.floor((d - j) / 6048e5); };
+  const top = u && u.month && u.month.top && u.month.top[0];
   return {
+    allHours, allTools,
+    claudeDays: keys.filter(k => work(k) && (days[k].agents || []).includes('claude')).length,
+    codexDays: keys.filter(k => work(k) && (days[k].agents || []).includes('codex')).length,
+    weeks: new Set(keys.filter(work).map(weekOf)).size, months: new Set(keys.filter(work).map(k => k.slice(0, 7))).size,
+    monthStar: top ? top.activeMs / 36e5 : 0,
+    skillsUsed: Math.max(0, ...cred.map(c => (c.topSkills || []).length)),
+    commits: achCount('commits'), pushes: achCount('pushes'), repos: achCount('repos'), branches: achCount('branches'), cleanDesk: achCount('cleanDesk'), talks: achCount('talks'),
+    sprints: achCount('sprints'), neon: achCount('neon'), tabPaper: achCount('tab_paper'), tabUsage: achCount('tab_usage'), tabToday: achCount('tab_today'), tabFeed: achCount('tab_feed'), tabShop: achCount('tab_shop'),
+    spent: prog.spent, themesTried: achCount('themesTried'), midnight: achCount('midnight'),
     dayHours: Math.max(0, ...vals.map(d => d.activeMs / 36e5)),
     dayTools: Math.max(0, ...vals.map(d => d.tools)),
     dayOut: Math.max(0, ...vals.map(d => d.output || 0)),
@@ -77,6 +89,20 @@ const ACH = [
   { id: 'collector', g: 'history', icon: '🧩', fact: 'models', steps: [2, 4, 6, 10, 15] },
   { id: 'swiss', g: 'history', icon: '🔧', fact: 'skills', steps: [5, 20, 50, 100, 200] },
   { id: 'wired', g: 'history', icon: '🔌', fact: 'mcps', steps: [1, 3, 8, 15, 30] },
+  { id: 'hours', g: 'history', icon: '⌛', fact: 'allHours', steps: [10, 50, 200, 500, 1000] },
+  { id: 'actions', g: 'history', icon: '⚒', fact: 'allTools', steps: [1000, 10000, 50000, 100000, 500000] },
+  { id: 'claudefan', g: 'history', icon: '✳', fact: 'claudeDays', steps: [5, 20, 60, 150, 300] },
+  { id: 'codexfan', g: 'history', icon: '◎', fact: 'codexDays', steps: [1, 5, 20, 60, 150] },
+  { id: 'weekly', g: 'history', icon: '📅', fact: 'weeks', steps: [2, 4, 12, 26, 52] },
+  { id: 'monthly', g: 'history', icon: '🗓', fact: 'months', steps: [1, 2, 3, 6, 12] },
+  { id: 'monthstar', g: 'history', icon: '🌟', fact: 'monthStar', steps: [10, 40, 100, 200, 400] },
+  { id: 'skillful', g: 'history', icon: '✦', fact: 'skillsUsed', steps: [3, 10, 25, 50, 100] },
+  { id: 'committer', g: 'live', icon: '✔', fact: 'commits', steps: [1, 10, 50, 200, 500] },
+  { id: 'shipper', g: 'live', icon: '🚀', fact: 'pushes', steps: [1, 10, 50, 150, 500] },
+  { id: 'hopper', g: 'live', icon: '📁', fact: 'repos', steps: [2, 5, 10, 20, 40] },
+  { id: 'brancher', g: 'live', icon: '🌿', fact: 'branches', steps: [3, 10, 25, 50, 100] },
+  { id: 'tidy', g: 'live', icon: '🧽', fact: 'cleanDesk', steps: [1, 5, 20, 60, 150] },
+  { id: 'socialite', g: 'live', icon: '💬', fact: 'talks', steps: [1, 10, 50, 200, 500] },
   { id: 'orchestra', g: 'live', icon: '♫', fact: 'parallel', steps: [3, 5, 8, 12, 20] },
   { id: 'polyglot', g: 'live', icon: '◆', fact: 'aiKinds', steps: [2, 3, 4, 5, 6] },
   { id: 'boss', g: 'live', icon: '⚑', fact: 'team', steps: [2, 4, 8, 12, 20] },
@@ -102,11 +128,21 @@ const ACH = [
   { id: 'explorer', g: 'you', icon: '👣', fact: 'steps', steps: [10, 100, 1000, 5000, 20000] },
   { id: 'visitor', g: 'you', icon: '🏆', fact: 'trophyVisits', steps: [1, 10, 30, 100, 300] },
   { id: 'decorator', g: 'you', icon: '🎨', fact: 'decorate', steps: [1, 5, 15, 40, 100] },
+  { id: 'runner', g: 'you', icon: '💨', fact: 'sprints', steps: [1, 10, 50, 200, 500] },
+  { id: 'neonfan', g: 'you', icon: '🔆', fact: 'neon', steps: [10, 50, 200, 500, 1000] },
+  { id: 'reader', g: 'you', icon: '📰', fact: 'tabPaper', steps: [1, 10, 30, 100, 300] },
+  { id: 'analyst', g: 'you', icon: '📊', fact: 'tabUsage', steps: [1, 10, 50, 150, 500] },
+  { id: 'reporter', g: 'you', icon: '🗒', fact: 'tabToday', steps: [1, 10, 50, 150, 500] },
+  { id: 'historian', g: 'you', icon: '📜', fact: 'tabFeed', steps: [1, 10, 30, 100, 300] },
+  { id: 'windowshop', g: 'you', icon: '🪟', fact: 'tabShop', steps: [1, 10, 30, 100, 300] },
+  { id: 'spender', g: 'you', icon: '💸', fact: 'spent', steps: [200, 1000, 3000, 6000, 10000] },
+  { id: 'themer', g: 'you', icon: '🖌', fact: 'themesTried', steps: [2, 5, 10, 20, 40] },
   { id: 'dj', g: 'you', icon: '📻', fact: 'radio', steps: [1, 5, 20, 50, 100] },
   { id: 'cat', g: 'you', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200, 1000] },
   { id: 'catwatch', g: 'live', icon: '🐈', fact: 'catVisits', steps: [1, 10, 50, 150, 500] },
   { id: 'nightshift', g: 'you', icon: '🌙', fact: 'nightShift', steps: [1, 3, 7, 15, 30], secret: true },
   { id: 'dancer', g: 'you', icon: '🪩', fact: 'parties', steps: [1, 3, 10, 25, 50], secret: true },
+  { id: 'midnightoil', g: 'you', icon: '🕛', fact: 'midnight', steps: [1, 3, 7, 15, 30], secret: true },
   { id: 'konami', g: 'you', icon: '🕹', fact: 'konami', steps: [1, 3, 10, 25, 50], secret: true },
 ];
 
@@ -128,6 +164,7 @@ function achState() {
 // live facts: how many sessions at once, how many different AIs at once, and emptying a long queue
 let achQueueWas = 0;
 const achWait = new Map(); // id → when it started asking
+const achGit = new Map(); let achClean = false; // checkout → last git state (commits and pushes are the transitions)
 function checkAchievements() {
   if (!data || replayAt) return;
   const live = data.people.filter(p => !p.leaving);
@@ -143,6 +180,16 @@ function checkAchievements() {
     if (asking && !w) achWait.set(p.id, data.now - ((p.doing && p.doing.for) || 0));
     if (!asking && w) { const took = data.now - w; noteReply(took); if (took < 30000) achBump('fast'); else if (took > 30 * 60000) achBump('patience'); achWait.delete(p.id); }
   }
+  const trees = new Map();
+  for (const p of live) if (p.git && p.repo) trees.set(p.repo.worktree || p.repo.name, p.git);
+  for (const [k, g] of trees) {
+    const was = achGit.get(k);
+    if (was && was.dirty > 0 && g.dirty === 0) achBump('commits');
+    if (was && was.ahead > 0 && g.ahead === 0) achBump('pushes');
+    achGit.set(k, { dirty: g.dirty, ahead: g.ahead });
+  }
+  for (const p of live) if (p.repo) { achAdd('repos', p.repo.name); if (p.branch && p.branch !== 'HEAD') achAdd('branches', p.repo.name + ':' + p.branch); }
+  { const clean = trees.size >= 3 && [...trees.values()].every(g => g.dirty === 0); if (clean && !achClean) achBump('cleanDesk'); achClean = clean; }
   for (const c of data.fileClashes || []) achAdd('clashes', c.file + '|' + c.who.slice().sort().join(','));
   const need = live.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
   if (achQueueWas >= 2 && need === 0) achBump('zeroQueue');

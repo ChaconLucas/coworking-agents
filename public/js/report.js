@@ -38,9 +38,9 @@ document.body.appendChild(reportEl);
 reportEl.addEventListener('click', e => { if (e.target === reportEl || e.target.closest('.report-x')) closeReport(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !reportEl.hidden) { e.stopPropagation(); closeReport(); } }, true);
 let reportTab = 'usage', todayData = null;
-function openReport(tab) { reportTab = tab || 'usage'; reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
+function openReport(tab) { reportTab = tab || 'usage'; achBump('tab_' + reportTab); reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
 async function loadToday() { try { todayData = await fetch('api/report').then(r => r.json()); } catch {} if (!reportEl.hidden) renderReport(); }
-reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; if (reportTab === 'today') loadToday(); renderReport(); } });
+reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; achBump('tab_' + reportTab); if (reportTab === 'today') loadToday(); renderReport(); } });
 function tabsHtml() { return `<div class="rtabs">${[['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['office', T.office.tab], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
 // activity feed: newest first, grouped by hour
 function renderFeed() {

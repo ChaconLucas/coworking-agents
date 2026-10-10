@@ -9,7 +9,7 @@ const path = require('path');
 
 const FILE = () => path.join(os.homedir(), '.config', 'coworking-agents', 'progress.json');
 const MAX = 128 * 1024;
-const KEYS = { record: 'object', levels: 'object', avatars: 'object', owned: 'array', placed: 'object', spent: 'number', officeName: 'string', theme: 'string', mascot: 'string', super: 'number' };
+const KEYS = { record: 'object', levels: 'object', avatars: 'object', owned: 'array', placed: 'object', spent: 'number', officeName: 'string', theme: 'string', mascot: 'string', super: 'number', style: 'object' };
 
 // keep only known keys of the right type; strings are short, objects are flat-ish and bounded by MAX
 function clean(input) {

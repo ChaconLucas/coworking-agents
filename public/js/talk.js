@@ -52,7 +52,7 @@ function drawTalk() {
   const p = data && data.people.find(x => x.id === talkFor);
   if (!p) return closeTalk();
   const t = performance.now(), f = (t / 150) | 0, W = 200, H = 96;
-  const hr = new Date().getHours() + new Date().getMinutes() / 60, sky = Art.skyFor(qs.get('hour') ? Number(qs.get('hour')) : hr);
+  const hr = new Date().getHours() + new Date().getMinutes() / 60, sky = Art.skyFor(styleHour(qs.get('hour') ? Number(qs.get('hour')) : hr));
   const prev = ctx; ctx = talkCtx; Art.setCtx(talkCtx);
   try {
     r(0, 0, W, H, '#2a2333');

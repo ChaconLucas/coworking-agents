@@ -86,6 +86,7 @@ const STATIONS = {
 let radioTimer = 0, radioStep = 0, radioNext = 0, rainNode = null;
 const midi = n => 440 * Math.pow(2, (n - 69) / 12);
 function radioStation() {
+  const pick = opt('station'); if (pick !== 'auto') return { lofi: 'claude', upbeat: 'codex', retro: 'other' }[pick];
   if (!data) return 'claude';
   const n = {};
   for (const p of data.people) if (!p.leaving && !['idle', 'asleep'].includes(p.state)) n[p.agent] = (n[p.agent] || 0) + 1;

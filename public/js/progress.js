@@ -3,7 +3,7 @@
 // Saved by the server in ~/.config/coworking-agents/progress.json (your machine, your file), mirrored in the
 // browser so the page works before the first answer. Counters merge by max, lists by union: nothing is lost
 // when two tabs or an old browser copy meet.
-const prog = { record: {}, levels: null, avatars: {}, owned: [], placed: {}, spent: 0, officeName: '', theme: '', mascot: 'cat', super: 0 };
+const prog = { record: {}, levels: null, avatars: {}, owned: [], placed: {}, spent: 0, officeName: '', theme: '', mascot: 'cat', super: 0, style: {} };
 {
   const m = store.get('progress', null);
   if (m && typeof m === 'object') mergeProgress(m);
@@ -24,6 +24,7 @@ function mergeProgress(src) {
   prog.spent = Math.max(prog.spent, Number(src.spent) || 0);
   prog.super = Math.max(prog.super, Number(src.super) || 0);
   for (const k of ['officeName', 'theme', 'mascot']) if (typeof src[k] === 'string' && src[k]) prog[k] = src[k];
+  if (src.style && typeof src.style === 'object' && !Array.isArray(src.style)) Object.assign(prog.style, src.style);
 }
 let progTimer = 0;
 function saveProgress() {
