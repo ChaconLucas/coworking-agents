@@ -103,6 +103,7 @@ function renderOverlay() {
   if (clockBox && data) { // first activity today of every conversation (from the daily report), earliest first
     const ins = clockIns().slice(0, 12);
     box(clockBox, 'data-clock="1"', T.clockIn + '\n' + (ins.map(x => `${new Date(x.first).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' })}  ${x.name || x.title || x.id.slice(0, 8)}`).join('\n') || T.clockNone)); }
+  tags.push(playerTag());
   { const th = idleThought(); if (th) tags.push(`<span class="thought" style="left:${(th.c.actor.x + 8) * S}px;top:${(th.c.actor.y - 6) * S}px">${esc(th.text)}</span>`); }
   if (hallBox) parts.push(`<div class="desk-hit" data-hall="1" title="${esc(T.panel.hall)}" style="left:${hallBox.x * S}px;top:${hallBox.y * S}px;width:${hallBox.w * S}px;height:${hallBox.h * S}px"></div>`);
   const h = parts.join(''), g = tags.join('');

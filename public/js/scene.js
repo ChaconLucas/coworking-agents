@@ -385,6 +385,7 @@ function drawScene(t, dt) {
   updateActors(dt, now);
   updateCat(dt, t);
   updateRobot(dt);
+  updatePlayer(dt);
   const lights = [], glows = [];
   applyTheme();
   drawThemedFloor(W, H, TOP);
@@ -434,6 +435,7 @@ function drawScene(t, dt) {
   movers.push({ y: cat.y, draw: () => drawMascot(cat.x, cat.y, cat.mode, t, cat.flip) });
   movers.push(...extraWalkers(t));
   drawPets(t, movers);
+  drawPlayer(t, movers);
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
   drawCatExtras(t);

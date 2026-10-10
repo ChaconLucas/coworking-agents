@@ -42,7 +42,7 @@ function renderBar() {
   box.hidden = !data.clashes.length && !(data.fileClashes || []).length;
   const empty = document.getElementById('empty');
   empty.innerHTML = T.empty; empty.hidden = data.people.length > 0;
-  for (const [id, on, label] of [['btn-notify', !!notifyOn, T.notify], ['btn-sound', soundOn, T.sound], ['btn-radio', radioOn, T.radio.label]]) {
+  for (const [id, on, label] of [['btn-notify', !!notifyOn, T.notify], ['btn-sound', soundOn, T.sound], ['btn-radio', radioOn, T.radio.label], ['btn-walk', playerOn, T.walk.label]]) {
     const b = document.getElementById(id);
     b.setAttribute('aria-pressed', on); b.title = `${label.replace(/^\S+\s/, '')}: ${on ? T.on : T.off}`; b.querySelector('.sr').textContent = b.title;
   }
@@ -51,7 +51,7 @@ function renderBar() {
   { const rb = document.getElementById('btn-replay'); rb.title = T.replay.title; rb.querySelector('.sr').textContent = T.replay.title; rb.setAttribute('aria-pressed', !replayEl.hidden); }
   renderFocus();
   // short visible labels in the ☰ menu (the long explanation stays in the tooltip)
-  for (const [id, k] of [['btn-notify', 'notify'], ['btn-sound', 'sound'], ['btn-focus', 'focus'], ['btn-replay', 'replay'], ['btn-search', 'search'], ['btn-radio', 'radio'], ['btn-photo', 'photo'], ['btn-office', 'office']]) {
+  for (const [id, k] of [['btn-notify', 'notify'], ['btn-sound', 'sound'], ['btn-focus', 'focus'], ['btn-replay', 'replay'], ['btn-search', 'search'], ['btn-radio', 'radio'], ['btn-photo', 'photo'], ['btn-office', 'office'], ['btn-walk', 'walk']]) {
     const b = document.getElementById(id); let ml = b.querySelector('.ml');
     if (!ml) { ml = document.createElement('span'); ml.className = 'ml'; b.insertBefore(ml, b.querySelector('.focus-left')); }
     ml.textContent = T.menuItems[k];
@@ -160,6 +160,7 @@ document.getElementById('btn-notify').onclick = async () => {
 document.getElementById('btn-sound').onclick = () => { soundOn = !soundOn; store.set('sound', soundOn); if (soundOn) beep(false); renderBar(); };
 document.getElementById('btn-search').onclick = () => openSearch();
 document.getElementById('btn-radio').onclick = () => setRadio(!radioOn);
+document.getElementById('btn-walk').onclick = () => setPlayer(!playerOn);
 document.getElementById('btn-photo').onclick = () => { setMenu(false); groupPhoto(); };
 document.getElementById('btn-office').onclick = () => { setMenu(false); openReport('office'); };
 document.getElementById('btn-replay').onclick = () => toggleReplay(replayEl.hidden);
