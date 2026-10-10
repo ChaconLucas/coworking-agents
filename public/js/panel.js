@@ -117,6 +117,7 @@ function renderPanel() {
 
 overlay.addEventListener('click', e => {
   if (e.target.closest('[data-usage]')) return openReport();
+  if (e.target.closest('[data-weather]')) return enableWeather(true);
   if (e.target.closest('[data-switch]')) { lightsOn = !lightsOn; store.set('lights', lightsOn); lastHits = ''; renderOverlay(); return; } // wall light switch
   const cb = e.target.closest('[data-compact]');
   if (cb) return compactAgent(cb.dataset.compact, cb);

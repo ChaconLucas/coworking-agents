@@ -1,6 +1,6 @@
 'use strict';
 // ---------------- scene ----------------
-let wallGlows = [], usageBox = null;
+let wallGlows = [], usageBox = null, windowBoxes = [];
 // usage meters as a wall display, like a clock in the office: one gauge per limit window + today's tokens
 function usageGauges() {
   const out = [], L = (data && data.limits) || {};
@@ -58,6 +58,7 @@ function drawWall(t, sky) {
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
   r(0, 0, W, 3, PAL.wallTrim); r(0, 3, W, 1, PAL.ink2);
   r(0, TOP - 8, W, 2, PAL.wallShade); r(0, TOP - 6, W, 5, PAL.base); r(0, TOP - 6, W, 1, '#8f553f'); r(0, TOP - 1, W, 1, PAL.ink);
+  windowBoxes = [];
   const nWin = Math.max(1, Math.floor((CX - 30) / 74));
   // the third window slot becomes the dev corner of the wall: neon </> and two posters
   for (let i = 0; i < nWin; i++) {
@@ -66,7 +67,7 @@ function drawWall(t, sky) {
     else if (i === 2) continue; // covered by the usage screen
     else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, t, wallGlows); Art.drawPoster(wx - 4, 28 - 8, 0); Art.drawPoster(wx + 34, 28 - 8, 2); }
     else if (i === 5) Art.drawPoster(wx + 14, 12, 1);
-    else Art.drawWindow(wx, 9, 48, 30, sky, t, i);
+    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawWeather(wx, 9, 48, 30, t); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
   }
   boardBox = { x: RX - 14, y: 8, w: 56, h: 30 };
   Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);

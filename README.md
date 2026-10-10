@@ -135,6 +135,7 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 
 - **Compact:** when a Claude session's context passes 75% and it finished its turn, a **Compact** button shows over it; it sends `/compact` to that session's terminal tab (macOS).
 - **Alerts:** a toast and a system notification when a rate limit crosses 80% / 95% or a context passes 85%; distinct chiptunes for requests, done, arrivals and departures.
+- **Real weather (opt-in):** click a window; the browser asks for your location and, if you allow it, fetches the current weather from Open-Meteo directly (coordinates rounded to ~1 km). Off by default; nothing goes through the server.
 - **Same file:** a red banner when two sessions edit the same file, not just the same repository.
 - **New certificates** are hung on the partition with a little animation.
 
