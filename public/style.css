@@ -546,3 +546,5 @@ main:has(#office.cam) { overflow: visible; }
 .talk-scroll, .report-body { margin: 9px; border-radius: 4px; }
 .talk-x, .report-x { top: 16px; right: 18px; }
 .talk-box, .report-box { outline-offset: -6px; }
+.talk-x, .report-x, .panel .close { padding: 0 !important; font-size: 0 !important; color: #b9a88a; }
+.talk-x svg, .report-x svg, .panel .close svg { display: block; }

@@ -5,7 +5,7 @@
 const talkEl = document.createElement('div');
 talkEl.className = 'talk'; talkEl.hidden = true;
 talkEl.innerHTML = `<div class="talk-box" role="dialog" aria-modal="true">
-  <button class="talk-x" aria-label="×">×</button>
+  <button class="talk-x" aria-label="Close"><svg viewBox="0 0 10 10" width="12" height="12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 1h2v1h1v1h2V2h1V1h2v2H8v1H7v2h1v1h1v2H7V8H6V7H4v1H3v1H1V7h1V6h1V4H2V3H1z"/></svg></button>
   <div class="talk-scroll">
   <div class="talk-stage"><canvas class="talk-cv" width="200" height="96"></canvas><div class="talk-say"><p></p></div></div>
   <div class="talk-info"></div>

@@ -33,7 +33,7 @@ function renderUsagePill() {
 
 const reportEl = document.createElement('div');
 reportEl.className = 'report'; reportEl.hidden = true;
-reportEl.innerHTML = '<div class="report-box" role="dialog" aria-modal="true"><button class="report-x" aria-label="×">×</button><div class="report-body"></div></div>';
+reportEl.innerHTML = '<div class="report-box" role="dialog" aria-modal="true"><button class="report-x" aria-label="Close"><svg viewBox="0 0 10 10" width="12" height="12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 1h2v1h1v1h2V2h1V1h2v2H8v1H7v2h1v1h1v2H7V8H6V7H4v1H3v1H1V7h1V6h1V4H2V3H1z"/></svg></button><div class="report-body"></div></div>';
 document.body.appendChild(reportEl);
 reportEl.addEventListener('click', e => { if (e.target === reportEl || e.target.closest('.report-x')) closeReport(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !reportEl.hidden) { e.stopPropagation(); closeReport(); } }, true);
