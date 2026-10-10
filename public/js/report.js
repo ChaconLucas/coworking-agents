@@ -49,7 +49,7 @@ function renderReport() {
     const totals = g ? `<div class="big"><div><b>${tok(g.total.output)}</b><small>${esc(U.out)}</small></div><div><b>${tok(g.total.input + g.total.cacheWrite)}</b><small>${esc(U.in)}</small></div><div><b>${tok(g.total.cacheRead)}</b><small>${esc(U.cache)}</small></div></div>
       <p class="note">${Number(g.sessions) || 0} ${esc(U.conversations)}</p>
       <ul class="bars">${Object.entries(g.byModel).sort((x, y) => y[1].output - x[1].output).slice(0, 6).map(([m, v], i, arr) => `<li><code title="${esc(m)}">${esc(m)}</code><span class="tbar"><i style="width:${(v.output / arr[0][1].output * 100).toFixed(1)}%;background:${a.color}"></i></span><span class="t">${tok(v.output)}</span></li>`).join('')}</ul>` : `<p class="note">${esc(u && u.scanning ? U.scanning : U.none)}</p>`;
-    return `<div class="rcard"><h4 style="color:${a.color}">${esc(a.label)}</h4><h3>${esc(U.allTime)}</h3>${totals}<h3>${esc(U.limits)}</h3>${lim}</div>`;
+    return `<div class="rcard"><h4 style="color:${a.color}">${esc(a.label)}</h4>${totals}</div>`;
   };
   // last 14 days, output tokens per day stacked by AI
   const days = [];
@@ -59,8 +59,17 @@ function renderReport() {
   const chart = `<div class="chart">${days.map(k => `<div class="col" title="${k}: ${Object.keys(AGENT).map(id => `${AGENT[id].label} ${tok(val(id, k))}`).join(' · ')}">${Object.keys(AGENT).map(id => `<i style="height:${(val(id, k) / max * 100).toFixed(2)}%;background:${AGENT[id].color}"></i>`).join('')}</div>`).join('')}</div>
     <div class="axis">${days.map((k, i) => `<span>${i % 2 ? '' : k.slice(8) + '/' + k.slice(5, 7)}</span>`).join('')}</div>
     <div class="legend">${Object.keys(AGENT).map(id => `<span><i style="background:${AGENT[id].color}"></i>${esc(AGENT[id].label)}</span>`).join('')}</div>`;
+  // limits first: one big tile per window, the most urgent thing on the page
+  const limTile = (id, label, w) => {
+    if (!w) return '';
+    const pct = Math.max(0, Math.min(100, w.usedPercent)), c = pct > 85 ? '#e43b44' : pct > 60 ? '#feae34' : '#63c74d';
+    return `<div class="ltile" style="--c:${c}"><div class="ltop"><span style="color:${AGENT[id].color}">${esc(AGENT[id].label)}</span><small>${esc(label)}</small></div><b>${Math.round(pct)}%</b><div class="lbar"><i style="width:${pct}%"></i></div><small>${esc(U.resets)} ${esc(untilText(w.resetsAt))}</small></div>`;
+  };
+  const tiles = Object.keys(AGENT).flatMap(id => { const l = L[id]; return l ? [limTile(id, U.fiveHour, l.primary), limTile(id, U.week, l.secondary)] : []; }).join('');
+  const total = id => u && u.byAgent && u.byAgent[id] ? u.byAgent[id].total : null;
   body.innerHTML = `<h2>${esc(U.title)}</h2><p class="sub">${esc(U.reportSub)}${u && u.scannedAt ? ' · ' + esc(U.updated) + ' ' + esc(ago(Date.now() - u.scannedAt)) : ''}</p>
-    <h3>${esc(U.last14)}</h3>${chart}
-    <div class="rgrid" style="margin-top:14px">${Object.keys(AGENT).map(card).join('')}</div>
+    <h3>${esc(U.limits)}</h3><div class="ltiles">${tiles || `<p class="note">${esc(U.none)}</p>`}</div>
+    <h3>${esc(U.last14)}</h3><div class="chart-wrap"><span class="ymax">${tok(max)}</span>${chart}</div>
+    <h3>${esc(U.allTime)}</h3><div class="rgrid">${Object.keys(AGENT).map(card).join('')}</div>
     <p class="note" style="margin-top:14px">${esc(U.note)} ${esc(U.noCost)}</p>`;
 }

@@ -81,6 +81,7 @@ async function focus(person) {
     const ok = await run('open', ['-a', 'Codex']);
     return ok === null ? { ok: false, reason: 'codex' } : { ok: true, app: 'Codex', exact: false };
   }
+  if (person.entrypoint === 'claude-desktop') { const ok = await run('open', ['-a', 'Claude']); return ok === null ? { ok: false, reason: 'desktop' } : { ok: true, app: 'Claude', exact: false }; }
   if (!person.pid) return { ok: false, reason: 'nopid' };
   const tty = await run('ps', ['-o', 'tty=', '-p', String(person.pid)]);
   if (!tty || !/^ttys?\d+$/.test(tty)) return { ok: false, reason: 'notty' };
@@ -141,6 +142,7 @@ end run`,
 
 async function sendText(person, text) {
   if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
+  if (person.entrypoint === 'claude-desktop') return { ok: false, reason: 'desktop' };
   if (!person.pid || person.agent !== 'claude') return { ok: false, reason: 'unsupported' };
   text = String(text || '').replace(/\r/g, '').trim();
   if (!text || text.length > 4000) return { ok: false, reason: 'text' };

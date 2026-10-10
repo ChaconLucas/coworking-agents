@@ -24,14 +24,17 @@ function openTalk(id) {
   const say = urgent ? helpText(p) : p.lastReply ? `“${p.lastReply}”` : T.help.done(p.title || '');
   talkEl.querySelector('.talk-say p').textContent = say;
   talkEl.querySelector('.talk-info').innerHTML = `<b>${esc(p.name)}</b><span>${esc(p.repo ? p.repo.name : '')}${p.branch && p.branch !== 'HEAD' ? ' · ' + esc(p.branch) : ''}</span>
-    <small>⌛ ${esc(urgent ? T.help.waitingYou : T.states.idle)} · ${esc(ago(data.now - (p.since || p.lastActivity)))}</small>${p.lastPrompt ? `<em>${esc(T.panel.lastPrompt)}: “${esc(p.lastPrompt)}”</em>` : ''}
+    <small>⌛ ${esc(urgent ? T.help.waitingYou : T.states.idle)} · ${esc(ago(data.now - (p.since || p.lastActivity)))}</small>${p.compactedAt && p.compactedAt > (p.lastPromptAt || 0) ? `<em>${esc(T.talk.compacted)} · ${esc(ago(data.now - p.compactedAt))}</em>` : p.lastPrompt ? `<em>${esc(T.panel.lastPrompt)}: “${esc(p.lastPrompt)}”</em>` : ''}
     ${!urgent && p.lastReplyLong && p.lastReplyLong.length > (p.lastReply || '').length ? `<div class="talk-full"><small>${esc(T.panel.lastReply)}</small><div>${esc(p.lastReplyLong)}</div></div>` : ''}`;
   const goto = esc(p.agent === 'codex' && !p.pid ? T.panel.gotoCodex : T.panel.goto);
   talkEl.querySelector('.talk-reply').innerHTML = urgent
-    ? `<p class="note">${esc(T.talk.approveThere)}</p><div class="talk-btns"><button class="btn" data-talk="goto">›_ ${goto}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>`
+    ? (p.doing && p.doing.options && p.doing.options.length && !p.doing.multi && p.doing.qcount === 1 && p.entrypoint !== 'claude-desktop' && p.pid
+      ? `<div class="opts">${p.doing.options.map((o, i) => `<button class="opt" data-choice="${i + 1}"><b>${i + 1}</b><span>${esc(o.label)}${o.description ? `<small>${esc(o.description)}</small>` : ''}</span></button>`).join('')}</div>
+         <div class="talk-btns"><button class="hb" data-talk="goto">›_ ${goto}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div><p class="note talk-msg">${esc(T.talk.pickHint)}</p>`
+      : `<p class="note">${esc(T.talk.approveThere)}</p><div class="talk-btns"><button class="btn" data-talk="goto">›_ ${goto}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>`)
     : `<p class="note talk-why">${esc(T.talk.yourTurnWhy)}</p><textarea rows="3" maxlength="4000" placeholder="${esc(T.talk.placeholder)}"></textarea>
-       <div class="talk-btns">${p.agent === 'claude' && p.pid ? `<button class="btn" data-talk="send">➤ ${esc(T.talk.send)}</button>` : ''}<button class="hb" data-talk="copygo">${esc(T.talk.copyGo)}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>
-       <p class="note talk-msg">${esc(p.agent === 'claude' && p.pid ? T.talk.sendHint : T.talk.pasteHint)}</p>`;
+       <div class="talk-btns">${p.agent === 'claude' && p.pid && p.entrypoint !== 'claude-desktop' ? `<button class="btn" data-talk="send">➤ ${esc(T.talk.send)}</button>` : ''}<button class="hb" data-talk="copygo">${esc(T.talk.copyGo)}</button><button class="hb" data-talk="see">${esc(T.help.see)}</button></div>
+       <p class="note talk-msg">${esc(p.entrypoint === 'claude-desktop' ? T.talk.desktopHint : p.agent === 'claude' && p.pid ? T.talk.sendHint : T.talk.pasteHint)}</p>`;
   talkEl.hidden = false; document.body.classList.add('talk-open');
   const ta = talkEl.querySelector('textarea');
   if (ta) setTimeout(() => ta.focus(), 30);
@@ -70,6 +73,16 @@ function drawTalk() {
 
 talkEl.addEventListener('click', async e => {
   if (e.target === talkEl || e.target.closest('.talk-x')) return closeTalk();
+  const opt = e.target.closest('[data-choice]');
+  if (opt && talkFor) {
+    const msg = talkEl.querySelector('.talk-msg'), R = T.talk.reasons;
+    talkEl.querySelectorAll('.opt').forEach(x => { x.disabled = true; });
+    let out = { ok: false, reason: 'unknown' };
+    try { out = await fetch('api/answer', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id: talkFor, choice: Number(opt.dataset.choice) }) }).then(r => r.json()); } catch {}
+    if (out.ok) { opt.classList.add('picked'); if (msg) msg.textContent = T.talk.sent(out.app); setTimeout(closeTalk, 1200); }
+    else { talkEl.querySelectorAll('.opt').forEach(x => { x.disabled = false; }); if (msg) msg.textContent = typeof R[out.reason] === 'function' ? R[out.reason](out.app || 'Terminal') : (R[out.reason] || R.unknown); }
+    return;
+  }
   const b = e.target.closest('[data-talk]');
   if (!b || !talkFor) return;
   const id = talkFor;

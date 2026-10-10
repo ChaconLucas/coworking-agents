@@ -58,6 +58,10 @@ session(sleepG.pid, 'G', 'idle', [
   { type: 'system', subtype: 'turn_duration', timestamp: iso(now - 60000) },
   { type: 'user', timestamp: iso(now - 500), message: { content: 'new question' } },
 ]);
+// I: asking you something while the registry already says idle → still "needs you"
+const sleepI = spawn('sleep', ['30']);
+session(sleepI.pid, 'I', 'idle', [{ type: 'user', timestamp: iso(now - 60000), message: { content: 'go' } }, use('qI', 'AskUserQuestion', { questions: [{ question: 'Pode?', options: [{ label: 'Sim' }, { label: 'Não' }] }] }, now - 40000)]);
+fs.utimesSync(path.join(claude, 'projects', 'p', 'I.jsonl'), new Date(now - 40000), new Date(now - 40000));
 // D: a dead process doesn't show up
 session(999999, 'D', 'busy', []);
 
@@ -105,7 +109,7 @@ const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H'].filter(id => id !== 'B' || by('B')).sort(), 'only live sessions');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'I'].filter(id => id !== 'B' || by('B')).sort(), 'only live sessions');
 // Codex
 assert.strictEqual(by('X1').agent, 'codex');
 assert.strictEqual(by('X1').title, 'Codex conversation');
@@ -128,6 +132,8 @@ assert.ok(by('A').today && by('A').today.tools >= 2, 'today stats count tools');
 assert.strictEqual(by('G').lastPrompt, 'new question', 'last prompt comes from the transcript');
 assert.strictEqual(by('A').repo.name, 'repo');
 assert.strictEqual(by('C').state, 'needs_you');
+assert.strictEqual(by('I').state, 'needs_you', 'a pending question beats the registry saying idle');
+assert.deepStrictEqual(by('I').doing.options.map(o => o.label), ['Sim', 'Não'], 'question options reach the screen');
 assert.strictEqual(by('G').status, 'busy', 'a new message in the transcript beats the lagging registry');
 assert.strictEqual(by('E').state, 'waiting', 'stalled Bash with no shell spawned = waiting for approval, even in auto mode');
 assert.strictEqual(by('F').state, 'waiting', 'default mode: stalled Bash with no shell = waiting for approval');
@@ -243,6 +249,11 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: ck, body: '{"id":"A"}' })).code, 403, 'focus without the custom header');
   assert.strictEqual((await req(port, '/api/focus', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"A"}' })).code, 403, 'focus from another origin');
   assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: ck, body: '{"id":"B","text":"hi"}' })).code, 403, 'reply without the custom header');
+  assert.strictEqual((await req(port, '/api/answer', { method: 'POST', headers: ck, body: '{"id":"I","choice":1}' })).code, 403, 'answer without the custom header');
+  const badChoice = JSON.parse((await req(port, '/api/answer', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"I","choice":7}' })).body);
+  assert.strictEqual(badChoice.reason, 'text', 'an option number out of range is refused');
+  const notAsking = JSON.parse((await req(port, '/api/answer', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A","choice":1}' })).body);
+  assert.strictEqual(notAsking.reason, 'busy', 'a session not asking anything never gets an answer typed');
   assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: 'https://evil.example' }, body: '{"id":"B","text":"hi"}' })).code, 403, 'reply from another origin');
   assert.strictEqual((await req(port, '/api/reply', { method: 'POST', headers: { Host: '127.0.0.1:' + port, 'X-Coworking': '1' }, body: '{"id":"B","text":"hi"}' })).code, 401, 'reply without the token');
   const busy = JSON.parse((await req(port, '/api/reply', { method: 'POST', headers: { ...ck, 'X-Coworking': '1' }, body: '{"id":"A","text":"hi"}' })).body);
@@ -261,7 +272,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, '')).reason, 'text', 'empty text is refused');
   }
 
-  sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill();
+  sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
   fs.rmSync(root, { recursive: true, force: true });
   console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
 })().catch(e => { console.error(e); process.exit(1); });

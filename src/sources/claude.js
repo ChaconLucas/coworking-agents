@@ -55,7 +55,8 @@ function absorb(st, d) {
   if (prompt) {
     event(st, ts, 'thinking');
     const c = d.message.content, text = typeof c === 'string' ? c : Array.isArray(c) ? c.filter(x => x.type === 'text').map(x => x.text).join(' ') : '';
-    if (text && !text.startsWith('<') && !/^\[Request interrupted/.test(text)) { st.lastPrompt = short(text, 220); st.lastPromptAt = ts; st.turnText = ''; }
+    if (d.isCompactSummary) { st.compactedAt = ts; st.turnText = ''; } // the summary of a /compact is not something you asked
+    else if (text && !text.startsWith('<') && !/^\[Request interrupted/.test(text)) { st.lastPrompt = short(text, 220); st.lastPromptAt = ts; st.turnText = ''; }
   }
   if (d.type === 'assistant' || prompt) st.turnOpen = true;
   const m = d.message;
@@ -77,7 +78,12 @@ function absorb(st, d) {
       const name = c.name || '?', input = c.input || {};
       const item = { id: c.id, name, kind: activityOf(name), what: summarize(name, input), ts: ts || Date.now() };
       // what the session is asking, for the "needs you" notice
-      if (name === 'AskUserQuestion') item.ask = short(((input.questions || [])[0] || {}).question || '', 140);
+      if (name === 'AskUserQuestion') {
+        const qs = input.questions || [], q = qs[0] || {};
+        item.ask = short(q.question || '', 140);
+        item.options = (q.options || []).slice(0, 9).map(o => ({ label: short(o.label, 60), description: short(o.description, 140) }));
+        item.multi = !!q.multiSelect; item.qcount = qs.length;
+      }
       if (name === 'ExitPlanMode') item.ask = 'plan';
       track(st, item, input.file_path || input.notebook_path);
       if (name === 'Skill' && input.skill) st.skills[input.skill] = (st.skills[input.skill] || 0) + 1;
@@ -141,6 +147,9 @@ function statusOf(s, st, now) {
   const reg = s.status === 'busy';
   if (!st) return reg ? 'busy' : 'idle';
   const fresh = now - st.mtime < 4000;
+  // a tool still pending in an open turn = Claude is waiting on you (question/permission) or running it;
+  // the registry says "idle" while it waits for your answer, so the transcript wins
+  if (st.turnOpen && st.pending.size) return 'busy';
   if (st.turnOpen) return reg || now - st.mtime < 15000 ? 'busy' : 'idle';
   return reg && fresh ? 'busy' : 'idle';
 }
@@ -157,7 +166,7 @@ function sessions(now) {
     const st = tp ? read(tp) : null;
     out.push({
       agent: 'claude', id: s.sessionId, name: s.name || 'claude-' + s.pid, pid: s.pid,
-      kind: s.kind, version: s.version, status: statusOf(s, st, now),
+      kind: s.kind, entrypoint: s.entrypoint || '', version: s.version, status: statusOf(s, st, now),
       since: s.statusUpdatedAt || s.updatedAt || s.startedAt, startedAt: s.startedAt,
       cwd: s.cwd, st, subagents: tp ? subagentsOf(tp, now) : [],
     });

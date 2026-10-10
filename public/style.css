@@ -465,3 +465,27 @@ main:has(#office.cam) { overflow: visible; }
 .usage-hit:hover { outline: 2px solid #2ce8f5 !important; }
 .gauge-lbl { position: absolute; display: flex; justify-content: space-between; align-items: center; padding: 0 3px; font: 700 7px/1 var(--pix); color: #fff; text-shadow: 1px 1px 0 #0e1220; pointer-events: none; }
 .gauge-lbl em { font-style: normal; opacity: .9; }
+
+.opts { display: grid; gap: 8px; }
+.opt { display: flex; align-items: flex-start; gap: 10px; text-align: left; background: #221d29; color: #ece7df; border: 2px solid #3a3045; border-radius: 6px; padding: 10px 12px; cursor: pointer; }
+.opt:hover { border-color: #d97757; background: #2a2333; }
+.opt b { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 4px; background: #d97757; color: #fff; font: 700 11px/1 var(--pix); }
+.opt span { font-size: 13px; line-height: 1.35; }
+.opt small { display: block; color: #8b9bb4; font-size: 12px; margin-top: 3px; }
+.opt.picked { border-color: #63c74d; }
+.opt:disabled { opacity: .6; cursor: progress; }
+
+.ltiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.ltile { background: #221d29; border: 1px solid #2f2838; border-left: 4px solid var(--c); border-radius: 8px; padding: 12px 14px; }
+.ltile .ltop { display: flex; justify-content: space-between; font: 700 9px/1 var(--pix); letter-spacing: .04em; }
+.ltile .ltop small { color: #8b9bb4; font: 11px/1 system-ui, sans-serif; }
+.ltile > b { display: block; font: 700 26px/1.1 var(--pix); color: var(--c); margin: 10px 0 8px; }
+.ltile .lbar { height: 8px; background: #1a1620; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.ltile .lbar i { display: block; height: 100%; background: var(--c); }
+.ltile > small { color: #8b9bb4; font-size: 11px; }
+.chart-wrap { position: relative; padding-left: 0; }
+.chart-wrap .ymax { position: absolute; top: -2px; left: 0; font-size: 10px; color: #6e6577; }
+.chart { height: 120px; gap: 6px; background: repeating-linear-gradient(0deg, transparent 0 29px, #2a2333 29px 30px); }
+.chart .col i:last-child { border-radius: 3px 3px 0 0; }
+.rcard .bars li { grid-template-columns: 130px 1fr 52px; }
+.rcard .bars .tbar { height: 6px; }

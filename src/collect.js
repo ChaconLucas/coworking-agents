@@ -102,12 +102,13 @@ function person(s, now) {
   const pend = st ? newest(st.pending) : null;
   const edits = st ? [...st.edits.values()].filter(e => now - e.at < EDIT_WINDOW_MS) : [];
   return {
-    agent: s.agent, id: s.id, name: s.name, pid: s.pid, kind: s.kind, version: s.version,
+    agent: s.agent, id: s.id, name: s.name, pid: s.pid, kind: s.kind, entrypoint: s.entrypoint || '', version: s.version,
+    compactedAt: st ? st.compactedAt || 0 : 0,
     status: s.status, state: stateOf(s.status, st, now, s.pid), since: s.since, startedAt: s.startedAt,
     title: st ? st.title : '', cwd, branch: st ? st.branch : '',
     repo: repo ? { name: repo.name, path: repo.repo, worktree: repo.worktree, isWorktree: repo.isWorktree } : null,
     model: st ? st.model : '', ctx: st ? st.ctx : 0, ctxMax: st ? st.ctxMax : 0, turns: st ? st.turns : 0,
-    doing: pend ? { tool: pend.name, what: pend.what, kind: pend.kind, for: now - pend.ts, ask: pend.ask || '' } : null,
+    doing: pend ? { tool: pend.name, what: pend.what, kind: pend.kind, for: now - pend.ts, ask: pend.ask || '', options: pend.options || null, multi: !!pend.multi, qcount: pend.qcount || 0 } : null,
     timeline: st ? segments(st.events, now - 3600 * 1000, now, true) : [],
     files: st ? [...st.files.entries()].filter(([, at]) => now - at < EDIT_WINDOW_MS).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([f, at]) => ({ ...relFile(f), at })) : [],
     permissionMode: st ? st.permissionMode || '' : '',
@@ -176,7 +177,7 @@ function snapshot({ privacy = false } = {}) {
     p.subagents = p.subagents.map(a => ({ ...a, description: '', doing: '' }));
     p.files = p.files.map(f => ({ ...f, rel: '' }));
     p.lastPrompt = ''; p.lastReply = ''; p.lastReplyLong = '';
-    if (p.doing) p.doing.ask = '';
+    if (p.doing) { p.doing.ask = ''; p.doing.options = null; }
   }
   const hn = os.hostname().replace(/\.local$/, '');
   return { now, host: privacy || /^[\d.:]+$/.test(hn) ? '' : hn, agents, people, clashes, fileClashes, limits, credentials: privacy ? {} : credentials };

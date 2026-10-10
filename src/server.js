@@ -119,6 +119,28 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return;
     }
     if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : usage()));
+    if (url.pathname === '/api/answer' && req.method === 'POST') {
+      // pick an option of the agent's question: only a single-question, single-choice ask, and only a valid number
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 2e3) req.destroy(); });
+      req.on('end', async () => {
+        try {
+          let msg = {};
+          try { msg = JSON.parse(body); } catch {}
+          const person = demo ? null : real().people.find(p => p.id === String(msg.id || ''));
+          const d = person && person.doing, n = Number(msg.choice);
+          const out = !person ? { ok: false, reason: demo ? 'demo' : 'gone' }
+            : person.state !== 'needs_you' || !d || !d.options || !d.options.length ? { ok: false, reason: 'busy' }
+            : d.multi || d.qcount !== 1 ? { ok: false, reason: 'complex' }
+            : !Number.isInteger(n) || n < 1 || n > d.options.length ? { ok: false, reason: 'text' }
+            : await sendText(person, String(n));
+          send(res, 200, 'application/json', JSON.stringify(out));
+        } catch { if (!res.headersSent) send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
+      });
+      return;
+    }
     if (url.pathname === '/api/report') return send(res, 200, 'application/json', JSON.stringify(demo ? demoReport() : report({ privacy })));
     if (url.pathname === '/api/state') return send(res, 200, 'application/json', safeSnapshot());
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
