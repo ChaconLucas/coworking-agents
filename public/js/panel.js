@@ -135,6 +135,9 @@ overlay.addEventListener('click', e => {
   if (e.target.closest('[data-usage]')) return openReport();
   if (e.target.closest('[data-weather]')) return enableWeather(true);
   if (e.target.closest('[data-ach]')) return openReport('ach');
+  if (e.target.closest('[data-trophyroom]')) return setTrophyView(true);
+  if (e.target.closest('[data-leave-trophies]')) return setTrophyView(false);
+  { const tb = e.target.closest('[data-tab]'); if (tb) return openReport(tb.dataset.tab); }
   if (e.target.closest('[data-neon]')) return neonClick();
   if (e.target.closest('[data-clock]')) { const ins = clockIns(); return toast(`<b>${esc(T.clockIn)}</b>${ins.map(x => `${esc(new Date(x.first).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' }))} · ${esc(x.name || x.title || x.id.slice(0, 8))}`).join('<br>') || esc(T.clockNone)}`, 'ok'); }
   if (e.target.closest('[data-radio]')) { setRadio(!radioOn); lastHits = ''; renderOverlay(); return; }

@@ -293,33 +293,6 @@ function drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed) {
   cell.interns = [];
 }
 
-// fills the floor left empty under the rooms: arcade, bookshelves, an architecture board, plants
-function drawDevCorner(t, glows) {
-  const top = rooms.reduce((m, R) => Math.max(m, R.y + R.h), TOP) + 18;
-  if (H - top < 50) { devSpots = null; return; }
-  const y = top + Math.min(20, (H - top - 46) / 2);
-  let x = 16;
-  const items = [
-    w => { Art.drawArcade(x, y, t, glows); return 26; },
-    w => { Art.drawDiagramBoard(x, y + 2); return 40; },
-    w => { const playing = !!devSpots && !!devSpots.foos && layout.filter(c => c.actor && c.actor.mode === 'lounge' && c.actor.spot && devSpots.foos.some(s => s.x === c.actor.spot.x && s.y === c.actor.spot.y)).length >= 2; drawFoosball(x + 12, y + 6, t, playing); spotsAt.foos = [{ x: x - 2, y: y + 4, zone: 'lounge', pose: 'stand' }, { x: x + 54, y: y + 4, zone: 'lounge', pose: 'stand', flip: true }]; return 82; },
-    w => { drawCooler(x + 14, y + 2, t); spotsAt.cooler = [{ x: x - 2, y: y + 8, zone: 'lounge', pose: 'stand' }, { x: x + 26, y: y + 8, zone: 'lounge', pose: 'stand', flip: true }]; return 52; },
-    w => { drawAquarium(x, y + 4, t, glows); return 42; },
-    w => { drawTrophyCase(x, y, t, glows); return 60; },
-    w => { drawNoticeBoard(x, y); return 54; },
-    w => { drawPool(x, y + 2); return 68; },
-    w => { Art.drawPlant(x, y + 12, true); return 26; },
-    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
-    w => { Art.drawBeanBag(x, y + 16, '#3b5dc9'); return 30; },
-    w => { Art.drawArcade(x, y, t, glows); return 30; },
-    w => { Art.drawPlant(x, y + 12, true); return 26; },
-    w => { Art.drawBookshelf(x, y + 4, 44, 26); return 52; },
-  ];
-  const spotsAt = {}; noticeBox = null; caseBox = null;
-  for (const draw of items) { if (x > CX - 40 - 40) break; x += draw(); }
-  devSpots = spotsAt;
-}
-
 let napBox = null;
 const certSeen = new Map(); // person -> certificate key -> when it appeared (0 = was there on load)
 function drawWing(t, lights, glows, pingPlaying, meeting) {
@@ -439,7 +412,7 @@ function drawScene(t, dt) {
   drawWing(t, lights, glows, arrived('ping').length >= 2, meet.length > 0);
   drawMeeting(t, meet);
   for (const R of rooms) drawRoom(R, t);
-  drawDevCorner(t, glows);
+  drawGameRoom(game, t, glows);
   drawHolidayFloor(t, glows);
   drawShopFloor(t, glows);
   const cs = clashSet();

@@ -27,7 +27,7 @@ function loop(t) {
     if (f !== lastFrame) {
       const dt = lastT ? Math.min(.25, (t - lastT) / 1000) : 0;
       lastT = t; lastFrame = f;
-      if (building) { if (f % 3 === 0) drawThumbs(t, dt * 3); } else drawScene(t, dt);
+      if (trophyView) drawTrophyRoom(t); else if (building) { if (f % 3 === 0) drawThumbs(t, dt * 3); } else drawScene(t, dt);
     }
   }
 }

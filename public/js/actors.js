@@ -51,6 +51,7 @@ function exitPath(pt, cell) {
     const R = cell.room;
     return [{ x: pt.x, y: cell.aisle }, { x: R.doorX + 9, y: cell.aisle }, { x: R.doorX + 9, y: R.y + R.h + 6 }];
   }
+  if (gameBox && pt.x < CX && pt.y >= gameBox.y && pt.y <= gameBox.y + gameBox.h) return [{ x: pt.x, y: gameBox.doorY }, { x: gameBox.x + gameBox.w + 4, y: gameBox.doorY }];
   if (pt.y >= wing.meet && pt.y < wing.nap) return [{ x: pt.x, y: wing.meet + 40 }, { x: RX + 2, y: wing.meet + 40 }];
   return [{ x: pt.x, y: pt.y + 22 }];
 }

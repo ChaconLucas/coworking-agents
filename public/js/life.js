@@ -21,7 +21,7 @@ const celebrating = id => { const at = celebrate.get(id); return at && Date.now(
 function celebrateJump(id, t) { const k = celebrating(id); return k ? -Math.abs(Math.round(Math.sin(k / 120) * 4)) : 0; }
 
 // ---- extra spots for idle agents: foosball and the water cooler (in the dev corner, when there's room) ----
-let devSpots = null; // set by drawDevCorner each frame
+let devSpots = null; // foosball and water cooler spots, set by drawGameRoom each frame
 function lifeAssign(lounge, assign) {
   // lounge = idle agents not yet placed; coffee first for whoever just finished a long task
   const rest = [];
@@ -200,21 +200,7 @@ function drawNoticeBoard(x, y) {
 }
 let noticeBox = null;
 
-// ---- trophy room corner: legend-tier achievements on pedestals ----
-function drawTrophyCase(x, y, t, glows) {
-  const legends = achState().filter(a => a.tier >= 5);
-  r(x - 1, y - 1, 52, 32, PAL.ink); r(x, y, 50, 30, '#2b2336'); r(x, y, 50, 2, '#d9a441');
-  const n = Math.min(4, legends.length);
-  for (let i = 0; i < 4; i++) {
-    const cx = x + 4 + i * 12;
-    r(cx, y + 22, 9, 6, '#4a3d5a'); r(cx, y + 22, 9, 1, '#6b5a7a');
-    if (i < n) { const c = TIER_COLOR[5]; r(cx + 2, y + 12, 5, 5, c); r(cx + 1, y + 12, 1, 2, c); r(cx + 7, y + 12, 1, 2, c); r(cx + 4, y + 17, 1, 3, c); r(cx + 2, y + 20, 5, 2, '#c050a0'); if (((t / 200) | 0) % 7 === i) r(cx + 6, y + 10, 1, 1, '#ffffff'); }
-  }
-  if (prog.super) { r(x + 21, y + 3, 8, 5, '#ffd84d'); r(x + 21, y + 2, 2, 1, '#ffd84d'); r(x + 24, y + 1, 2, 2, '#ffd84d'); r(x + 27, y + 2, 2, 1, '#ffd84d'); }
-  if (legends.length) glows.push({ x: x + 25, y: y + 15, r: 26, c: '#ff6ec7' });
-  caseBox = { x: x - 1, y: y - 1, w: 52, h: 32 };
-}
-let caseBox = null;
+
 
 // the punch clock reads the daily report (refreshed with the notice board): who started working today, and when
 const clockIns = () => (boardRows || []).filter(x => x.first).sort((a, b) => a.first - b.first);

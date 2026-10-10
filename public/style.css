@@ -713,3 +713,5 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 .opt.swatch i { width: 14px; height: 14px; border: 1px solid var(--edge); border-radius: 3px; }
 .office-name { display: flex; gap: 8px; }
 .office-name input { flex: 1; max-width: 260px; padding: 8px 10px; border: 2px solid var(--line); border-radius: 6px; background: #1b1622; color: var(--ink); font: 600 13px/1 system-ui, sans-serif; }
+.trophy-bar { position: absolute; left: 10px; top: 10px; display: flex; gap: 8px; z-index: 3; }
+body.trophy-view #clashes, body.trophy-view #floors { display: none; }

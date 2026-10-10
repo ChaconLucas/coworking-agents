@@ -52,7 +52,7 @@ function achFacts() {
     fast: achCount('fast'), patience: achCount('patience'), compacts: achCount('compacts'), focusDone: achCount('focusDone'),
     replay: achCount('replay'), avatars: achCount('avatars'), lights: achCount('lights'), weatherDays: achCount('weatherDays'),
     holidays: achCount('holidays'), lang: achCount('lang'), openDays: achCount('openDays'), catVisits: achCount('catVisits'),
-    radio: achCount('radio'), decorate: achCount('decorate'), purchases: achCount('purchases'), photos: achCount('photos'), parties: achCount('parties'), celebrations: achCount('celebrations'), nightShift: achCount('nightShift'), konami: achCount('konami'),
+    radio: achCount('radio'), trophyVisits: achCount('trophyVisits'), decorate: achCount('decorate'), purchases: achCount('purchases'), photos: achCount('photos'), parties: achCount('parties'), celebrations: achCount('celebrations'), nightShift: achCount('nightShift'), konami: achCount('konami'),
   };
 }
 
@@ -99,6 +99,7 @@ const ACH = [
   { id: 'delivery', g: 'live', icon: '🎊', fact: 'celebrations', steps: [1, 10, 50, 200, 500] },
   { id: 'shopper', g: 'you', icon: '🛍', fact: 'purchases', steps: [1, 2, 4, 6, 8] },
   { id: 'photographer', g: 'you', icon: '📸', fact: 'photos', steps: [1, 5, 20, 50, 100] },
+  { id: 'visitor', g: 'you', icon: '🏆', fact: 'trophyVisits', steps: [1, 10, 30, 100, 300] },
   { id: 'decorator', g: 'you', icon: '🎨', fact: 'decorate', steps: [1, 5, 15, 40, 100] },
   { id: 'dj', g: 'you', icon: '📻', fact: 'radio', steps: [1, 5, 20, 50, 100] },
   { id: 'cat', g: 'you', icon: '♥', fact: 'pets', steps: [1, 10, 50, 200, 1000] },
