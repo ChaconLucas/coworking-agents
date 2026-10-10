@@ -20,7 +20,7 @@ const I18N = {
       edit: 'editando', read: 'lendo', terminal: 'no terminal', web: 'na web', delegate: 'delegando',
       skill: 'usando skill', mcp: 'usando MCP', other: 'trabalhando', thinking: 'pensando',
       needs_you: 'tem uma pergunta para você', waiting: 'rodando há um tempo ou esperando permissão',
-      idle: 'terminou — sua vez', asleep: 'parada há muito tempo', ask: 'perguntando',
+      idle: 'terminou — sua vez', leaving: 'indo embora', asleep: 'parada há muito tempo', ask: 'perguntando',
     },
     for: s => `há ${s}`,
     panel: {
@@ -70,7 +70,7 @@ const I18N = {
       edit: 'editing', read: 'reading', terminal: 'in the terminal', web: 'on the web', delegate: 'delegating',
       skill: 'using a skill', mcp: 'using MCP', other: 'working', thinking: 'thinking',
       needs_you: 'has a question for you', waiting: 'running for a while or waiting for permission',
-      idle: 'done — your turn', asleep: 'idle for a long time', ask: 'asking',
+      idle: 'done — your turn', leaving: 'leaving', asleep: 'idle for a long time', ask: 'asking',
     },
     for: s => `for ${s}`,
     panel: {

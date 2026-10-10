@@ -9,6 +9,7 @@ function plan(now) {
   const zoneFor = cell => {
     const p = cell.p, asking = p.state === 'needs_you' || p.state === 'waiting';
     // anyone with subagents takes the whole team to the meeting room (unless they're asking you something)
+    if (p.leaving) return 'leave';
     const z = asking ? 'desk' : (p.subagents && p.subagents.length) || p.state === 'delegate' ? 'meet' : ZONE_OF[p.state] || 'desk';
     let w = want.get(cell.p.id);
     if (!w) { w = { zone: z, since: 0, settled: z }; want.set(cell.p.id, w); }
@@ -16,7 +17,7 @@ function plan(now) {
     if (z === 'desk' || now - w.since >= DWELL_MS) w.settled = w.zone;
     return w.settled;
   };
-  const byZone = { lounge: [], nap: [], meet: [], desk: [] };
+  const byZone = { lounge: [], nap: [], meet: [], desk: [], leave: [] };
   for (const c of layout) byZone[zoneFor(c)].push(c);
   const lounge = byZone.lounge, free = [];
   if (lounge.length >= 2) { assign.set(lounge[0].p.id, spots.ping[0]); assign.set(lounge[1].p.id, spots.ping[1]); free.push(...lounge.slice(2)); }
@@ -25,6 +26,7 @@ function plan(now) {
   free.forEach((c, i) => assign.set(c.p.id, seats[i] || null));
   byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 3] || spots.meetStand[i - 6] || null));
   byZone.nap.forEach((c, i) => assign.set(c.p.id, spots.nap[i] || null));
+  byZone.leave.forEach(c => assign.set(c.p.id, { x: CX - 8, y: H + 30, zone: 'gone', pose: 'stand' }));
   return assign;
 }
 
@@ -75,7 +77,13 @@ function updateActors(dt, now) {
       }
       actors.set(cell.p.id, a);
     }
-    if (a.key !== t.key) { a.path = route({ x: a.x, y: a.y }, t, cell); a.key = t.key; a.next = t; a.mode = 'walk'; }
+    if (a.key !== t.key) {
+      a.path = route({ x: a.x, y: a.y }, t, cell); a.key = t.key; a.next = t; a.mode = 'walk';
+      if (t.mode === 'gone') { // pack up, leave the room by its door and walk down the corridor until off screen
+        const out = exitPath({ x: a.x, y: a.y }, a.x < CX ? cell : null), last = out[out.length - 1];
+        a.carry = true; a.path = [...out, { x: CX - 8, y: last.y }, { x: CX - 8, y: H + 30 }];
+      }
+    }
     if (a.mode === 'walk') {
       let step = (a.carry ? SPEED * .7 : a.next.mode === 'desk' ? SPEED * 2 : SPEED) * dt;
       if (a.waitUntil && Date.now() < a.waitUntil) step = Math.min(step, 4 * dt);
@@ -84,7 +92,7 @@ function updateActors(dt, now) {
         if (d <= step) { a.x = w.x; a.y = w.y; step -= d; a.path.shift(); }
         else { a.x += dx / d * step; a.y += dy / d * step; if (Math.abs(dx) > .5) a.flip = dx < 0; step = 0; }
       }
-      if (!a.path.length) { a.mode = a.next.mode; a.spot = a.next.spot; a.carry = false; }
+      if (!a.path.length) { a.mode = a.next.mode; a.spot = a.next.spot; a.carry = a.mode === 'gone' && a.carry; }
     }
     cell.actor = a;
   }

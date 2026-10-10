@@ -34,6 +34,17 @@ window.addEventListener('resize', () => { if (data) { lastLayoutKey = ''; render
 setInterval(() => { if (data) renderOverlay(); }, 500);
 
 // ---------------- data ----------------
+// someone who closed their session stays a few seconds as a "leaving" ghost: they pack up and walk
+// out, then their desk is demolished, and only then the room shrinks
+const LEAVE_MS = 7000;
+let lastPeople = new Map();
+const leavers = new Map();
+function keepLeavers(d) {
+  const now = Date.now(), ids = new Set(d.people.map(p => p.id));
+  for (const [id, p] of lastPeople) if (!ids.has(id) && !p.leaving && !leavers.has(id)) leavers.set(id, { ...p, state: 'leaving', leaving: now, doing: null, subagents: [] });
+  for (const [id, g] of leavers) { if (ids.has(id) || now - g.leaving > LEAVE_MS) leavers.delete(id); else d.people.push(g); }
+  lastPeople = new Map(d.people.filter(p => !p.leaving).map(p => [p.id, p]));
+}
 const offline = document.getElementById('offline');
 function connect() {
   const es = new EventSource('events');
@@ -41,6 +52,7 @@ function connect() {
     offline.hidden = true;
     const d = JSON.parse(e.data);
     if (d.error) return;
+    keepLeavers(d);
     data = d;
     notifyChanges();
     renderAll();

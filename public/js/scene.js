@@ -79,6 +79,19 @@ function drawDesk(d, t, clashing, lights, glows, sky) {
   const { x, y } = d, p = d.cell ? d.cell.p : d.p, f = (t / 140) | 0, seed = hash(p ? p.id : 'empty' + x + y) % 997;
   // a newcomer's desk is built first: it rises from the floor over the first second
   const born = p && arrivals.get(p.id), build = born ? Math.min(1, (Date.now() - born) / 1100) : 1;
+  // leaving: once they've walked off, the desk sinks into dust (demolition) and is gone
+  if (p && p.leaving) {
+    const away = d.cell && d.cell.actor && d.cell.actor.mode !== 'desk';
+    const k = away ? Math.min(1, Math.max(0, (Date.now() - p.leaving - 2600) / 1400)) : 0;
+    if (k >= 1) return;
+    if (k > 0) {
+      ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(0, Math.round(k * 12));
+      drawDeskBody(d, t, false, lights, glows, sky, p, f, seed);
+      ctx.restore();
+      drawConstruction(x, y, 1 - k, t);
+      return;
+    }
+  }
   if (build < 1) {
     ctx.save(); ctx.globalAlpha = .25 + build * .75; ctx.translate(0, Math.round((1 - build) * 10));
     drawDeskBody(d, t, clashing, lights, glows, sky, p, f, seed);
@@ -294,7 +307,7 @@ function drawScene(t, dt) {
   const movers = [];
   for (const c of layout) {
     const a = c.actor;
-    if (!a || a.mode === 'desk' || a.mode === 'meet') continue;
+    if (!a || a.mode === 'desk' || a.mode === 'meet' || a.mode === 'gone') continue;
     const lk = look(c.p.id);
     if (a.mode === 'walk') movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, true); if (a.carry) drawCarriedBox(a.x, a.y); } });
     else if (a.mode === 'nap') movers.push({ y: a.y, draw: () => Art.drawLying(a.x, a.y, lk, t) });

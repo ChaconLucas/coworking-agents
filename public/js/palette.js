@@ -40,6 +40,7 @@ function clashSet() {
 function counts() {
   const c = { work: 0, need: 0, turn: 0, sleep: 0 };
   for (const p of data.people) {
+    if (p.leaving) continue;
     if (p.state === 'needs_you' || p.state === 'waiting') c.need++;
     else if (p.state === 'idle') c.turn++;
     else if (p.state === 'asleep') c.sleep++;
