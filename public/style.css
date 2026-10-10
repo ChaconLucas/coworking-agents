@@ -603,3 +603,6 @@ body.replaying #office { filter: sepia(.35) saturate(.85); }
 
 .rcard .cost { margin: 6px 0 2px; font-size: 13px; color: var(--muted, #9a9187); }
 .rcard .cost b { color: #ffd84d; font: 700 12px/1.3 var(--pix); }
+.rhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rhead .sub { margin: 0; }
+.btn.small { font: 700 10px/1 var(--pix); padding: 8px 10px; border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 6px; }

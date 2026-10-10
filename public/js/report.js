@@ -47,13 +47,30 @@ function renderToday() {
   const hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
   if (!r) { body.innerHTML = tabsHtml() + `<p class="note">${esc(D.loading)}</p>`; return; }
   const t = r.totals, max = Math.max(1, ...r.rows.map(x => x.activeMs));
-  body.innerHTML = tabsHtml() + `<p class="sub">${esc(D.sub)}</p>
+  body.innerHTML = tabsHtml() + `<div class="rhead"><p class="sub">${esc(D.sub)}</p><button class="btn small" data-copy-md>${esc(D.copyMd)}</button></div>
     <div class="ltiles">${[[hrs(t.activeMs), D.active], [t.sessions, D.sessions], [t.tools, D.tools], [t.files, D.files], [fmtK(t.outTokens), D.tokens]].map(([v, l]) => `<div class="ltile" style="--c:#2ce8f5"><div class="ltop"><span>${esc(l)}</span></div><b>${esc(String(v))}</b></div>`).join('')}</div>
     <h3>${esc(D.who)}</h3>
     <ul class="bars today-list">${r.rows.map(x => `<li><code title="${esc(x.title)}"><i class="ailogo" data-ai="${esc(x.agent)}"></i>${esc(x.name || x.title || x.id.slice(0, 8))}</code><span class="tbar"><i style="width:${(x.activeMs / max * 100).toFixed(1)}%;background:${(AGENT[x.agent] || {}).color || '#888'}"></i></span><span class="t">${esc(hrs(x.activeMs))} · ${Number(x.tools) || 0} ${esc(D.toolsShort)} · ${fmtK(x.outTokens)}</span></li>`).join('')}</ul>
     ${r.topFiles.length ? `<h3>${esc(D.filesTop)}</h3><ul class="list">${r.topFiles.map(f => `<li><span class="k">✎</span><code>${esc(f.rel)}</code><span class="t">${esc(f.repo)}${f.n > 1 ? ' · ' + f.n + '×' : ''}</span></li>`).join('')}</ul>` : ''}`;
   body.querySelectorAll('.ailogo[data-ai]').forEach(el => { const id = el.dataset.ai; el.appendChild(Art.aiIconEl(id, (AGENT[id] || {}).color || '#888')); });
 }
+// today's report as Markdown, ready to paste into a standup
+function todayMarkdown(r) {
+  const D = T.today, hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
+  const day = new Date(r.now || Date.now()).toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en', { weekday: 'long', day: 'numeric', month: 'long' });
+  const t = r.totals, lines = [`## ${D.title} · ${day}`, '', `**${hrs(t.activeMs)}** ${D.active} · **${t.sessions}** ${D.sessions} · **${t.tools}** ${D.tools} · **${t.files}** ${D.files} · **${fmtK(t.outTokens)}** ${D.tokens}`, '', `### ${D.who}`];
+  for (const x of r.rows) lines.push(`- **${x.name || x.title || x.id.slice(0, 8)}** (${(AGENT[x.agent] || {}).label || x.agent}${x.repo ? ', ' + x.repo : ''})${x.title && x.name ? ` — ${x.title}` : ''}: ${hrs(x.activeMs)}, ${Number(x.tools) || 0} ${D.toolsShort}`);
+  if (r.topFiles.length) { lines.push('', `### ${D.filesTop}`); for (const f of r.topFiles) lines.push(`- \`${f.rel}\` (${f.repo}${f.n > 1 ? ', ' + f.n + '×' : ''})`); }
+  return lines.join('\n') + '\n';
+}
+reportEl.addEventListener('click', async e => {
+  const b = e.target.closest('[data-copy-md]');
+  if (!b || !todayData) return;
+  let ok = false;
+  try { await navigator.clipboard.writeText(todayMarkdown(todayData)); ok = true; } catch {}
+  b.textContent = ok ? T.today.copied : T.today.copyFail;
+  setTimeout(() => { b.textContent = T.today.copyMd; }, 2000);
+});
 function closeReport() { reportEl.hidden = true; }
 
 function renderReport() {
