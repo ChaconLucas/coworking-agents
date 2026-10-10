@@ -150,7 +150,7 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 | Go to terminal | exact tab (Terminal, iTerm2) | window (needs `xdotool` or `wmctrl`) | window |
 | Reply / answer / compact from the office | ✓ | copy and go | copy and go |
 
-Linux and Windows support is written against their process tools but has not been tested on real machines yet; reports welcome. See the [roadmap](ROADMAP.md) for what's waiting on testing and what's next.
+Linux and Windows support is written against their process tools but has not been tested on real machines yet; reports welcome. See the [roadmap](https://github.com/ChaconLucas/coworking-agents/blob/main/ROADMAP.md) for what's waiting on testing and what's next.
 
 ## Privacy and security
 
