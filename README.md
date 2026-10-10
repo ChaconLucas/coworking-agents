@@ -24,7 +24,7 @@
 | ![Panel](docs/panel.png) | **Agent panel.** Now, last request and reply, last-hour timeline, today's numbers, tokens, context, files, subagents, certificates. |
 | ![Usage](docs/usage.png) | **Usage report.** Tokens per day for 14 days, all-time totals per AI and per model, rate-limit windows with reset times. |
 | ![Work site](docs/work-site.png) | **Arrivals and departures.** A new session gets its room boarded up and built (planks, dust, caution tape); a closed one walks out and its desk is demolished. |
-| ![Achievements](docs/achievements.png) | **Achievements.** 78 of them, five tiers each, coins for every tier, the agent of the month on top. |
+| ![Achievements](docs/achievements.png) | **Achievements.** 81 of them, five tiers each, coins for every tier, the agent of the month on top. |
 | ![Paper](docs/paper.png) | **The Office Times.** Your week in headlines, written from measured history. |
 | ![Trophy room](docs/trophy-room.png) | **Trophy room.** Glass cabinets with lit shelves, legend trophies in a glass case under spotlights, a crown under a dome for Legend of Legends. Click a trophy for its card. |
 | ![Christmas](docs/christmas.png) | **Holidays.** Lights, snow and Santa hats at Christmas; pumpkins, bats and witch hats at Halloween; flags at Festa Junina. |
@@ -148,11 +148,17 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 
 ![The trophy room](docs/trophy-room.png)
 
+## The elevator, the rooftop and the server room
+
+Click the elevator (or press Enter next to it) to ride between floors, up to the **rooftop**, where agents whose turn ended relax on lounge chairs under the real sky with the city lights below, and down to the **server room**, where every open session is a rack whose LEDs blink with its real state and whose bar shows its output today. Click someone on the rooftop or a rack to open that session.
+
+![The server room](docs/servers.png)
+
 ## Achievements, coins and the shop
 
-- **78 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
+- **81 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.
 - **Legend of Legends** when every achievement is at legend.
-- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain. ☰ → **Decorate** lets you drag what you bought anywhere in the office (saved in your progress file).
+- **Coins:** each tier pays 10 to 50 coins (the super achievement 1000). Spend them in the **shop** on decor that appears in the office: corridor plants, a rug, a COFFEE neon, floor lamps, a disco ball, a golden statue of the agent of the month, a piano, a fountain, a turtle terrarium, a bunny and a bigger aquarium. ☰ → **Decorate** lets you drag what you bought anywhere in the office (saved in your progress file).
 - **Agent of the month:** a framed portrait on the wall of the conversation with the most active time this month; the top 5 are in the achievements tab.
 - **The weekly paper**, *The Office Times*, tells your week in headlines, all from measured data.
 - **Progress file:** achievements, coins, purchases, avatars and settings live in `~/.config/coworking-agents/progress.json` (mode `0600`). No account needed: the app runs on your machine, so the progress is yours.
@@ -171,7 +177,8 @@ A marble portal leads to the **trophy room**, its own screen: legends with wings
 - **Holidays:** Christmas, New Year, Halloween, Festa Junina, Carnaval and the office's birthday decorate the room and put hats on everyone (`E` turns decor off).
 - **Pets:** the mascot visits whoever has waited on you the longest and likes being petted; a dog joins at 8 achievements at gold, a parrot at 16.
 - **Certificates** for the skills and MCP servers each session used hang on its partition.
-- **Office photo:** ☰ → Office photo saves the scene as a PNG. And something happens if you click the `</>` neon three times.
+- **Office photo:** ☰ → Office photo saves the scene as a PNG, and the last four hang as framed photos on the game room wall.
+- **Weather indoors:** umbrellas by the elevator when it rains outside (real weather on), coats on the rack in winter. And something happens if you click the `</>` neon three times.
 - **Languages:** English and Brazilian Portuguese.
 
 <p align="center"><img src="docs/mobile.png" alt="The office on a phone" width="300"></p>

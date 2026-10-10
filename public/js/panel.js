@@ -137,6 +137,8 @@ overlay.addEventListener('click', e => {
   if (e.target.closest('[data-ach]')) return openReport('ach');
   if (e.target.closest('[data-trophyroom]')) return setTrophyView(true);
   if (e.target.closest('[data-leave-trophies]')) return setTrophyView(false);
+  if (e.target.closest('[data-elevator]')) return openElevator();
+  { const vp = e.target.closest('[data-view-person]'); if (vp) { setView(null); return showPerson(vp.dataset.viewPerson); } }
   { const tr = e.target.closest('[data-trophy]'); if (tr) { const a = achState().find(x => x.id === tr.dataset.trophy); if (a) return showTrophy(a); } }
   if (e.target.closest('[data-tv]')) { const lead = meetInfo.people.find(m => m.lead), p = lead && data.people.find(x => x.name === lead.label); if (p) return showPerson(p.id); return; }
   if (e.target.closest('[data-mood]')) return toast(`<b>ON AIR</b>${esc(e.target.closest('[data-mood]').title)}`, 'ok');

@@ -98,6 +98,7 @@ function nearThing() {
   for (const g of gameHits) if (near(g.x + g.w / 2, g.y + g.h, 24)) return { label: g.title, run: () => { const m = /data-tab="(\w+)"/.exec(g.attr); if (m) openReport(m[1]); else if (/trophyroom/.test(g.attr)) setTrophyView(true); } };
   if (radioBox && near(radioBox.x + 7, radioBox.y + 20, 26)) return { label: radioOn ? T.radio.on : T.radio.off, run: () => setRadio(!radioOn) };
   if (catBox && near(cat.x + 6, cat.y + 6, 18)) return { label: T.walk.pet, run: petCat };
+  if (elevatorBox && near(elevatorBox.x + 14, elevatorBox.y + 30, 22)) return { label: T.elevator.title, run: openElevator };
   if (clockBox && near(clockBox.x + 5, clockBox.y + 14, 24)) return { label: T.clockIn, run: () => document.querySelector('[data-clock]') && document.querySelector('[data-clock]').click() };
   return null;
 }

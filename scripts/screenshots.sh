@@ -38,6 +38,7 @@ shot 12 "lang=en&hour=21&date=05-05" docs/camera.png "showPerson(data.people[2].
 shot 12 "lang=en&hour=21&date=05-05" docs/achievements.png "openReport('ach')"
 shot 12 "lang=en&hour=21&date=05-05" docs/trophy-room.png "setTrophyView(true)"
 shot 10 "lang=en&hour=11&date=05-05" docs/game-room.png "document.querySelectorAll('.help').forEach(h => h.remove()); scrollTo(0, document.body.scrollHeight)"
+shot 12 "lang=en&hour=11&date=05-05" docs/servers.png "setView('servers')"
 shot 12 "lang=en&hour=11&date=05-05" docs/customise.png "openReport('office')"
 shot 12 "lang=en&hour=11&date=05-05" docs/paper.png "openReport('paper')"
 shot 10 "lang=en&hour=21&date=12-20" docs/christmas.png

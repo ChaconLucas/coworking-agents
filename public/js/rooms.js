@@ -31,6 +31,7 @@ function drawGameRoom(G, t, glows) {
   }
   // left: two arcades and a bookshelf on the wall
   Art.drawArcade(x + 8, y + 6, t, glows); Art.drawArcade(x + 30, y + 6, t, glows);
+  drawPhotoWall(x + 58, y + 2);
   // wall centre: notice board (today's files) and the newspaper rack (the weekly paper)
   const nb = x + Math.round(w * .32);
   drawNoticeBoard(nb, y + 2);
@@ -102,14 +103,16 @@ function drawGuestbook(x, y) {
 }
 
 // ---- trophy room: its own screen; the best trophies on a lit dais in the middle, the rest on the walls ----
-let trophyView = false, trophyHits = [];
-function setTrophyView(on) {
-  trophyView = on;
-  document.body.classList.toggle('trophy-view', on);
-  if (on) { achBump('trophyVisits'); camera(null); selected = null; renderPanel(); scrollTo(0, 0); }
+// other screens (trophy room, terrace, server room) share one mechanism: trophyView = "not the office"
+let trophyView = false, trophyHits = [], viewName = null;
+function setView(name) {
+  trophyView = !!name; viewName = name || null;
+  document.body.classList.toggle('trophy-view', !!name);
+  if (name) { achBump({ trophy: 'trophyVisits', terrace: 'terraceVisits', servers: 'serverVisits' }[name] || 'views'); camera(null); selected = null; renderPanel(); scrollTo(0, 0); }
   placePlayerTag();
   lastHits = ''; lastLayoutKey = ''; renderAll();
 }
+const setTrophyView = on => setView(on ? 'trophy' : null);
 const TROPHY_W = 640, TROPHY_H = 400;
 function drawTrophyCup(x, y, size, tier, t, i, locked) {
   const c = locked ? '#2b2636' : TIER_COLOR[tier], d = locked ? '#221e2c' : Art.shade(TIER_COLOR[tier], .7), lt = locked ? '#2b2636' : Art.shade(TIER_COLOR[tier], 1.25), k = size;

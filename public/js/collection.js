@@ -48,7 +48,7 @@ function renderPaper() {
 
 // ---- pets unlocked by achievements: a dog at 8 achievements at gold or better, a parrot at 16 ----
 const goldCount = () => achState().filter(a => a.tier >= 3).length;
-const dog = { x: 0, y: 0, tx: 0, ty: 0, until: 0, ready: false };
+const dog = { x: 0, y: 0, tx: 0, ty: 0, until: 0, ready: false }, bunny = { x: 0, y: 0, tx: 0, ty: 0, until: 0, ready: false };
 function drawPets(t, movers) {
   const g = goldCount();
   if (g >= 8 && prog.mascot !== 'dog') {
@@ -60,6 +60,13 @@ function drawPets(t, movers) {
     movers.push({ y: dog.y, draw: () => drawDog(dog.x, dog.y, t, dog.flip, moving) });
   }
   if (g >= 16) drawParrot(RX + RW - 30, TOP - 26, t);
+  if (owns('bunnypet') && prog.mascot !== 'bunny') {
+    if (!bunny.ready) Object.assign(bunny, { x: RX + 60, y: TOP + 100, tx: RX + 60, ty: TOP + 100, ready: true });
+    const dx = bunny.tx - bunny.x, dy = bunny.ty - bunny.y, d = Math.hypot(dx, dy);
+    if (d > 1) { const hop = ((t / 200) | 0) % 2; bunny.x += dx / d * (hop ? 1.4 : 0); bunny.y += dy / d * (hop ? 1.4 : 0); bunny.flip = dx < 0; }
+    else if (Date.now() > bunny.until) { bunny.tx = RX + 10 + Math.random() * (RW - 30); bunny.ty = wing.ping - 20 + Math.random() * 16; bunny.until = Date.now() + 3000 + Math.random() * 5000; }
+    movers.push({ y: bunny.y, draw: () => drawCritter('bunny', bunny.x, bunny.y, d > 1 ? 'walk' : 'sit', t, bunny.flip) });
+  }
 }
 function drawDog(x, y, t, flip, moving) {
   const f = moving ? ((t / 120) | 0) % 2 : 0, c = '#c98f5a', d = '#8a5a3a';
@@ -87,6 +94,9 @@ const SHOP = [
   { id: 'statue', price: 800, icon: '🗽' },
   { id: 'piano', price: 1200, icon: '🎹' },
   { id: 'fountain', price: 2000, icon: '⛲' },
+  { id: 'turtle', price: 400, icon: '🐢' },
+  { id: 'bunnypet', price: 600, icon: '🐇' },
+  { id: 'bigtank', price: 900, icon: '🐠' },
 ];
 const owns = id => prog.owned.includes(id);
 function buy(id) {
@@ -118,6 +128,7 @@ const ITEMS = {
   fountain: { w: 26, h: 20, at: () => ({ x: CX - 12, y: H - 72 }) },
   neon: { w: 30, h: 8, at: () => ({ x: Math.min(W - 34, RX + 150 > W - 40 ? RX + 2 : RX + 150), y: 2 }) },
   disco: { w: 8, h: 14, at: () => ({ x: CX - 3, y: TOP - 2 }) },
+  turtle: { w: 24, h: 16, at: () => ({ x: RX + 110, y: wing.copa + 30 }) },
 };
 function itemPos(id) {
   const it = ITEMS[id], p = prog.placed && prog.placed[id];
@@ -125,6 +136,9 @@ function itemPos(id) {
   return { x: Math.max(0, Math.min(W - it.w, pos.x)), y: Math.max(0, Math.min(H - it.h, pos.y)), w: it.w, h: it.h };
 }
 const ITEM_DRAW = {
+  turtle: (x, y, t) => { r(x - 1, y - 1, 26, 18, PAL.ink); r(x, y, 24, 16, '#bfe3f0'); r(x, y + 11, 24, 5, '#c9a86b'); r(x + 3, y + 8, 1, 4, '#3a8f46'); r(x + 19, y + 7, 1, 5, '#3a8f46');
+    const tx = x + 6 + Math.round((Math.sin(t / 3000) + 1) * 4); r(tx, y + 8, 8, 4, '#3a6a2a'); r(tx + 1, y + 7, 6, 1, '#5a8a3a'); r(tx + 8, y + 9, 2, 2, '#7aa04a'); r(tx + 1, y + 12, 1, 1, '#7aa04a'); r(tx + 6, y + 12, 1, 1, '#7aa04a');
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x + 2, y + 1, 2, 9); },
   rug: (x, y) => drawPersianRug(x, y + 3, 76, 44),
   plants: (x, y) => { Art.drawPlant(x, y + 2, true); Art.drawPlant(x + 13, y, true); Art.drawPlant(x + 26, y + 3, false); },
   lamps: (x, y, t, glows) => { for (const lx of [x, x + 16]) { r(lx + 3, y + 4, 2, 14, PAL.ink); r(lx, y, 8, 5, '#ffd84d'); glows.push({ x: lx + 4, y: y + 2, r: 22, c: '#ffd84d' }); } },
@@ -199,7 +213,7 @@ const partyBounce = (id, t) => partying() ? -Math.abs(Math.round(Math.sin(t / 11
 // ---- group photo: the office canvas as a PNG ----
 function groupPhoto() {
   const cv = document.getElementById('cv');
-  achBump('photos');
+  achBump('photos'); savePhotoThumb();
   cv.toBlob(b => {
     if (!b) return;
     const a = document.createElement('a'), d = new Date();

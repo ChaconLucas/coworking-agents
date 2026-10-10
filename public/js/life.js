@@ -50,7 +50,8 @@ function drawCooler(x, y, t) {
 function drawAquarium(x, y, t, glows) {
   r(x - 1, y - 1, 32, 22, PAL.ink); r(x, y, 30, 20, '#1e6fa8'); r(x, y, 30, 3, '#4fa3d8'); r(x, y + 16, 30, 4, '#c9a86b');
   for (let k = 0; k < 3; k++) r(x + 4 + k * 9, y + 10, 1, 6, '#2f8f46'), r(x + 5 + k * 9, y + 12, 1, 4, '#3a8f46');
-  const owned = typeof prog !== 'undefined' ? achCount('fishFed') : 0;
+  const owned = owns('bigtank') ? 3 : 0;
+  if (owns('bigtank')) { r(x + 20, y + 10, 6, 6, '#8b9bb4'); r(x + 20, y + 8, 2, 2, '#8b9bb4'); r(x + 24, y + 8, 2, 2, '#8b9bb4'); r(x + 22, y + 13, 2, 3, '#1e6fa8'); }
   for (let i = 0; i < 3 + Math.min(3, owned); i++) { const fx = x + 2 + Math.round((Math.sin(t / (900 + i * 170) + i) + 1) * 12), fy = y + 4 + (i * 3) % 10, dir = Math.cos(t / (900 + i * 170) + i) > 0; r(fx, fy, 3, 2, ['#feae34', '#ff6ec7', '#ffd84d', '#ffffff', '#e43b44', '#63c74d'][i]); r(dir ? fx - 1 : fx + 3, fy, 1, 2, '#f77622'); }
   if (((t / 400) | 0) % 5 === 0) r(x + 22, y + 3 + ((t / 100) | 0) % 10, 1, 1, '#ffffffaa');
   r(x + 2, y + 21, 26, 6, '#6b4a33'); r(x + 2, y + 21, 26, 1, '#8f6a4a');
@@ -128,8 +129,10 @@ function drawElevator(t) {
   r(cx - 1, cy - 1, 10, 13, PAL.ink); r(cx, cy, 8, 11, '#8b9bb4'); r(cx + 1, cy + 1, 6, 4, '#0c1410'); r(cx + 2, cy + 2, 1, 1, '#62ff7a'); r(cx + 4, cy + 2, 2, 1, '#62ff7a');
   r(cx + 2, cy + 7, 4, 3, '#f4ecd8');
   clockBox = { x: cx - 1, y: cy - 1, w: 10, h: 13 };
+  elevatorBox = { x: x - 2, y: y - 4, w: 28, h: 30 };
+  drawIndoorWeather(x - 16, y + 4);
 }
-let clockBox = null;
+let clockBox = null, elevatorBox = null;
 
 // ---- night janitor and the Friday pizza: walkers added to the frame ----
 function extraWalkers(t) {

@@ -28,11 +28,12 @@ function renderOverlay() {
   const parts = [], tags = [];
   if (trophyView) { // the trophy room: a tooltip per trophy, a way back, the full list
     const A = T.ach;
-    for (const h of trophyHits) {
+    for (const h of viewName === 'trophy' ? [] : viewHits) parts.push(`<button class="wall-switch" ${h.id ? `data-view-person="${esc(h.id)}"` : ''} title="${esc(h.title)}" style="left:${h.x * S}px;top:${h.y * S}px;width:${h.w * S}px;height:${h.h * S}px"></button>`);
+    for (const h of viewName === 'trophy' ? trophyHits : []) {
       const title = h.a ? (h.a.secret && !h.a.tier ? `??? · ${A.secret}` : `${A.list[h.a.id].name} · ${A.tiers[h.a.tier]}\n${A.list[h.a.id].desc(h.a.next || h.a.steps[h.a.max - 1])}${h.a.next ? `\n${fmtStep(h.a, h.a.value)} / ${fmtStep(h.a, h.a.next)}` : ''}`) : h.title;
       parts.push(`<button class="wall-switch" ${h.a ? `data-trophy="${esc(h.a.id)}"` : ''} title="${esc(title)}" style="left:${h.x * S}px;top:${h.y * S}px;width:${h.w * S}px;height:${h.h * S}px"></button>`);
     }
-    tags.push(`<div class="trophy-bar"><button class="btn small" data-leave-trophies>← ${esc(T.trophy.back)}</button><button class="btn small" data-tab="ach">${esc(T.trophy.list)}</button></div>`);
+    tags.push(`<div class="trophy-bar"><button class="btn small" data-leave-trophies>← ${esc(T.trophy.back)}</button>${viewName === 'trophy' ? `<button class="btn small" data-tab="ach">${esc(T.trophy.list)}</button>` : ''}<button class="btn small" data-elevator>⇅ ${esc(T.elevator.title)}</button></div>`);
     const h = parts.join(''), g = tags.join('');
     if (h !== lastHits) { hitsLayer.innerHTML = h; lastHits = h; }
     if (g !== lastTags) { tagsLayer.innerHTML = g; lastTags = g; }
@@ -98,6 +99,7 @@ function renderOverlay() {
     box(moodBox, 'data-mood="1"', T.mood[!working ? 'calm' : officeMood() === 'rush' ? 'rush' : 'normal']); }
   box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
   box(neonBox, 'data-neon="1"', '</>');
+  box(elevatorBox, 'data-elevator="1"', T.elevator.title + ' · ' + T.elevator.sub);
   box(noticeBox, 'data-tab="today"', T.noticeTitle + '\n' + (boardFiles.map(f => `${f.rel} · ${f.repo}${f.n > 1 ? ' · ' + f.n + '×' : ''}`).join('\n') || T.noticeNone));
   box(tvBox, 'data-tv="1"', meetInfo.people.filter(m => !m.lead).map(m => m.title || m.label).join('\n'));
   if (clockBox && data) { // first activity today of every conversation (from the daily report), earliest first
