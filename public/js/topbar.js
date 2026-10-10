@@ -19,10 +19,22 @@ function renderBar() {
     tile(c.sleep, T.asleep, KIND_COLOR.asleep, c.sleep ? '' : 'zero'),
   ].join('');
   // busy bar: how the office is split right now (working stripes move)
-  const tot = Math.max(1, c.work + c.need + c.turn + c.sleep), seg = (n, cls, label) => n ? `<i class="${cls}" style="flex:${n}" title="${n} ${esc(label)}"></i>` : '';
+  // busy bar: one lane per AI — its mark, then its agents split by state
   const busy = document.getElementById('busy');
-  busy.innerHTML = seg(c.work, 'b-work', T.working) + seg(c.need, 'b-need', T.needYou) + seg(c.turn, 'b-turn', T.yourTurn) + seg(c.sleep, 'b-sleep', T.asleep);
-  busy.setAttribute('aria-label', `${Math.round(c.work / tot * 100)}% ${T.working}`);
+  const lanes = new Map();
+  for (const p of data.people) {
+    if (p.leaving) continue;
+    const l = lanes.get(p.agent) || { work: 0, need: 0, turn: 0, sleep: 0, n: 0 };
+    const st = p.state === 'needs_you' || p.state === 'waiting' ? 'need' : p.state === 'idle' ? 'turn' : p.state === 'asleep' ? 'sleep' : 'work';
+    l[st]++; l.n++; lanes.set(p.agent, l);
+  }
+  const seg = (n, cls, label) => n ? `<i class="${cls}" style="flex:${n}" title="${n} ${esc(label)}"></i>` : '';
+  const html = [...lanes.entries()].map(([id, l]) => `<span class="lane" style="flex:${l.n}" data-ai="${esc(id)}" title="${esc((AGENT[id] || {}).label || id)}: ${l.work} ${esc(T.working)} · ${l.need} ${esc(T.needYou)} · ${l.turn} ${esc(T.yourTurn)} · ${l.sleep} ${esc(T.asleep)}"><span class="ico"></span><span class="nm">${esc(((AGENT[id] || {}).label || id).split(' ')[0])}</span><span class="segs">${seg(l.work, 'b-work', T.working)}${seg(l.need, 'b-need', T.needYou)}${seg(l.turn, 'b-turn', T.yourTurn)}${seg(l.sleep, 'b-sleep', T.asleep)}</span><b>${l.n}</b></span>`).join('');
+  if (busy.dataset.html !== html) {
+    busy.dataset.html = html; busy.innerHTML = html;
+    busy.querySelectorAll('.lane').forEach(el => { const id = el.dataset.ai, a = AGENT[id] || { color: '#8a8f98' }; el.querySelector('.ico').appendChild(Art.aiIcon(id, a.color)); });
+  }
+  busy.setAttribute('aria-label', `${c.work} ${T.working}, ${c.need} ${T.needYou}, ${c.turn} ${T.yourTurn}, ${c.sleep} ${T.asleep}`);
   document.title = (c.need ? `(${c.need}) ` : '') + 'coworking-agents';
   const box = document.getElementById('clashes');
   const names = id => (data.people.find(p => p.id === id) || {}).name || id.slice(0, 6);

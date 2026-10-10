@@ -700,8 +700,27 @@ function drawDiagramBoard(x, y) {
   r(x + 4, y + 22, 2, 8, PAL.ink); r(x + 24, y + 22, 2, 8, PAL.ink);
 }
 
+// 11x11 pixel mark per AI (generic shapes in the AI's colour, not the official logos)
+const aiIconCache = new Map();
+function aiIcon(id, color) {
+  const k = id + color;
+  if (aiIconCache.has(k)) return aiIconCache.get(k);
+  const cv = document.createElement('canvas'); cv.width = 11; cv.height = 11;
+  const c = cv.getContext('2d'), P = (x, y, w = 1, h = 1, col = color) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  if (id === 'claude') { // spark: eight rays
+    P(5, 0, 1, 11); P(0, 5, 11, 1); P(2, 2); P(3, 3); P(8, 2); P(7, 3); P(2, 8); P(3, 7); P(8, 8); P(7, 7); P(4, 4, 3, 3, '#fff3'); P(5, 5, 1, 1, '#fff');
+  } else if (id === 'codex') { // hexagon knot
+    P(3, 0, 5, 1); P(1, 1, 2, 1); P(8, 1, 2, 1); P(0, 2, 1, 7); P(10, 2, 1, 7); P(1, 9, 2, 1); P(8, 9, 2, 1); P(3, 10, 5, 1); P(4, 3, 3, 1); P(3, 4, 1, 3); P(7, 4, 1, 3); P(4, 7, 3, 1);
+  } else { // others: a diamond
+    for (let i = 0; i < 6; i++) { P(5 - i, i, i * 2 + 1, 1); P(5 - i, 10 - i, i * 2 + 1, 1); }
+    P(4, 4, 3, 3, '#0006');
+  }
+  aiIconCache.set(k, cv);
+  return cv;
+}
+
 window.Art = {
-  portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
+  aiIcon, portrait, drawArcade, drawDiagramBoard, drawNeon, drawPoster, drawServerRack, drawDuck, drawSideMonitor, drawStickies, drawBeanSack, drawPizza, drawCupStack,
   PAL, SKIN, HAIR, SHIRT, SCREEN_GLOW, hash, shade, look, setCtx, r, sprite, blit,
   drawSeatedBack, drawFront, drawStanding, drawSleeping, drawChairBack, drawChairBase, drawCat, bubble, drawScreen,
   drawPlant, drawCertificate, drawLamp, drawWhiteboard, drawCork, drawClock, skyFor, drawWindow, drawSofa, drawCoffeeMachine,

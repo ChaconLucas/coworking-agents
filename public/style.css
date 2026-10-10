@@ -489,3 +489,21 @@ main:has(#office.cam) { overflow: visible; }
 .chart .col i:last-child { border-radius: 3px 3px 0 0; }
 .rcard .bars li { grid-template-columns: 130px 1fr 52px; }
 .rcard .bars .tbar { height: 6px; }
+
+/* ---- busy bar v2: a lane per AI with its mark ---- */
+.busy { height: 16px !important; gap: 6px; padding: 2px 6px; background: rgba(12,10,16,.92) !important; border-bottom: 2px solid var(--edge); }
+.busy .lane { display: flex; align-items: center; gap: 5px; min-width: 70px; }
+.busy .lane .ico canvas { display: block; width: 11px; height: 11px; image-rendering: pixelated; }
+.busy .lane .segs { flex: 1; display: flex; height: 8px; border-radius: 2px; overflow: hidden; background: #221d29; box-shadow: inset 0 0 0 1px #2f2838; }
+.busy .lane .segs i { display: block; min-width: 4px; }
+.busy .lane b { font: 700 8px/1 var(--pix); color: #d9cdb0; }
+.bar { padding-top: 22px !important; }
+
+/* busy bar v3: taller lanes, readable */
+.busy { height: 28px !important; gap: 8px; padding: 3px 10px; align-items: center; }
+.busy .lane { gap: 7px; min-width: 150px; padding: 2px 8px 2px 4px; background: #1a1620; border: 1px solid #2f2838; border-radius: 6px; height: 22px; }
+.busy .lane .ico canvas { width: 22px; height: 22px; }
+.busy .lane .nm { font: 700 9px/1 var(--pix); color: #ece7df; letter-spacing: .04em; }
+.busy .lane .segs { height: 10px; border-radius: 3px; }
+.busy .lane b { font-size: 10px; color: #fff; min-width: 14px; text-align: right; }
+.bar { padding-top: 38px !important; min-height: 128px; }
