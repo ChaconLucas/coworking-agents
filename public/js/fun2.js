@@ -91,21 +91,30 @@ function openArcade() {
 function drawArcadeTitle() {
   const c = arcadeEl.querySelector('.arcade-cv'); if (!c) return;
   const g = c.getContext('2d'); arcadeBg(g, performance.now());
-  g.fillStyle = '#ffd84d'; g.font = 'bold 18px monospace'; g.textAlign = 'center'; g.fillText('BUG CATCHER', AW / 2, 62);
-  g.fillStyle = '#c0cbdc'; g.font = '10px monospace'; g.fillText(T.arcade.press, AW / 2, 86); g.textAlign = 'left';
+  gText(g, AW / 2, 46, 'BUG CATCHER', '#ffd84d', 3, true);
+  gText(g, AW / 2, 78, lang === 'pt' ? 'ESPACO OU ENTER' : 'SPACE OR ENTER', '#c0cbdc', 1, true);
   drawBug(g, AW / 2 - 30, 100, false, 0); drawBug(g, AW / 2 - 4, 104, true, 1); drawBug(g, AW / 2 + 22, 100, false, 0);
+}
+// crisp text: the office's pixel font, scaled by whole pixels
+function gText(g, x, y, str, c, k = 1, center = false) {
+  const txt = String(str).toUpperCase(); if (center) x -= Math.round(txt.length * 4 * k / 2);
+  g.fillStyle = c; let cx = Math.round(x);
+  for (const ch of txt) { const gl = PIXFONT[ch]; if (gl) for (let i = 0; i < 15; i++) if (gl[i] === '1') g.fillRect(cx + (i % 3) * k, Math.round(y) + ((i / 3) | 0) * k, k, k); cx += 4 * k; }
 }
 function arcadeBg(g, now) {
   g.fillStyle = '#141826'; g.fillRect(0, 0, AW, AH);
-  g.fillStyle = '#1c2236'; for (let y = 0; y < AH; y += 8) { const sh = (y * 13) % 70; g.fillRect(6 + sh % 20, (y + now / 60) % AH, 30 + sh, 2); }   // code scrolling behind
+  g.fillStyle = '#1c2236'; for (let y = 0; y < AH; y += 8) { const sh = (y * 13) % 70; g.fillRect(6 + sh % 20, Math.round((y + now / 60) % AH), 30 + sh, 2); }   // code scrolling behind
   g.fillStyle = '#2a2f45'; g.fillRect(0, AH - 8, AW, 8);
 }
 function drawBug(g, x, y, gold, f) {
-  const body = gold ? '#ffd84d' : '#63c74d', dark = gold ? '#b07d2a' : '#2f7a3b';
-  g.fillStyle = '#1b1622'; for (const dx of [-2, 9]) for (const dy of [2, 5]) g.fillRect(x + dx + (f && dx < 0 ? -1 : 0), y + dy + (f ? 1 : 0), 3, 1);
-  g.fillStyle = dark; g.fillRect(x, y, 10, 8); g.fillStyle = body; g.fillRect(x + 1, y + 1, 8, 6); g.fillStyle = dark; g.fillRect(x + 4, y + 1, 2, 6);
-  g.fillStyle = '#1b1622'; g.fillRect(x + 2, y - 2, 6, 3); g.fillRect(x + 2, y - 4, 1, 2); g.fillRect(x + 7, y - 4, 1, 2);
-  if (gold) { g.fillStyle = '#ffffff'; g.fillRect(x + 2, y + 2, 1, 1); }
+  x = Math.round(x); y = Math.round(y);
+  const body = gold ? '#ffd84d' : '#63c74d', dark = gold ? '#b07d2a' : '#2f7a3b', leg = '#c0cbdc';
+  g.fillStyle = leg; for (const [dx, dy] of [[-3, 3], [-3, 6], [11, 3], [11, 6]]) g.fillRect(x + dx + (f ? (dx < 0 ? -1 : 1) : 0), y + dy + (f ? 1 : 0), 4, 1); // legs wiggle
+  g.fillStyle = '#0b0a0e'; g.fillRect(x - 1, y - 1, 13, 11);
+  g.fillStyle = dark; g.fillRect(x, y, 11, 9); g.fillStyle = body; g.fillRect(x + 1, y + 1, 4, 7); g.fillRect(x + 6, y + 1, 4, 7); // shell, split down the middle
+  g.fillStyle = '#ffffff'; g.fillRect(x + 2, y + 2, 1, 2); g.fillRect(x + 7, y + 2, 1, 2);
+  g.fillStyle = '#3a4058'; g.fillRect(x + 2, y - 4, 7, 4); g.fillStyle = '#ffffff'; g.fillRect(x + 3, y - 3, 1, 1); g.fillRect(x + 7, y - 3, 1, 1); // head and eyes
+  g.fillStyle = leg; g.fillRect(x + 2, y - 7, 1, 3); g.fillRect(x + 8, y - 7, 1, 3); // antennae
 }
 function startArcade() {
   const cv2 = arcadeEl.querySelector('.arcade-cv'); if (!cv2) return;
@@ -129,7 +138,7 @@ function tickArcade(now) {
     } else if (b.y > AH - 8) { b.miss = true; G.lives--; G.combo = 0; }
   }
   G.bugs = G.bugs.filter(b => !b.hit && !b.miss);
-  for (const s of G.sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 80 * dt; s.life -= dt; g.fillStyle = s.c; if (s.txt) { g.font = 'bold 9px monospace'; g.fillText(s.txt, s.x, s.y); } else g.fillRect(s.x, s.y, 2, 2); }
+  for (const s of G.sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 80 * dt; s.life -= dt; if (s.txt) gText(g, s.x, s.y - 6, s.txt, s.c); else { g.fillStyle = s.c; g.fillRect(Math.round(s.x), Math.round(s.y), 2, 2); } }
   G.sparks = G.sparks.filter(s => s.life > 0);
   // the laptop paddle
   const px = Math.round(G.x), py = AH - 18;
@@ -137,14 +146,14 @@ function tickArcade(now) {
   g.fillStyle = '#8b9bb4'; g.fillRect(px, py + 2, 28, 4); g.fillStyle = '#d97757'; g.fillRect(px + 11, py - 4, 6, 2);
   // HUD: hearts, score, combo
   for (let i = 0; i < 3; i++) { g.fillStyle = i < G.lives ? '#e43b44' : '#3a3448'; g.fillRect(6 + i * 10, 6, 3, 2); g.fillRect(10 + i * 10, 6, 3, 2); g.fillRect(6 + i * 10, 8, 7, 2); g.fillRect(7 + i * 10, 10, 5, 1); g.fillRect(8 + i * 10, 11, 3, 1); }
-  g.fillStyle = '#ffffff'; g.font = 'bold 10px monospace'; g.textAlign = 'right'; g.fillText(String(G.score), AW - 6, 14); g.textAlign = 'left';
-  if (G.combo >= 5) { g.fillStyle = '#ff6ec7'; g.font = 'bold 9px monospace'; g.fillText('COMBO x2', AW / 2 - 22, 14); }
+  gText(g, AW - 6 - String(G.score).length * 8, 5, G.score, '#ffffff', 2);
+  if (G.combo >= 5) gText(g, AW / 2, 6, 'COMBO X2', '#ff6ec7', 1, true);
   const sc = arcadeEl.querySelector('#arcade-score'); if (sc) sc.textContent = `${T.arcade.score}: ${G.score}`;
   if (G.lives <= 0) {
     const best = Number(store.get('arcadeBest', 0)) || 0;
     if (G.score > best) { store.set('arcadeBest', G.score); toast(`<b>${esc(T.arcade.record)}</b>${G.score}`, 'ok'); const be = arcadeEl.querySelector('#arcade-best'); if (be) be.textContent = G.score; }
     achRecord.arcadeBest = Math.max(achRecord.arcadeBest || 0, G.score); achBump('arcadeGames');
-    g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(0, 56, AW, 46); g.fillStyle = '#ffd84d'; g.font = 'bold 14px monospace'; g.textAlign = 'center'; g.fillText(T.arcade.over, AW / 2, 76); g.fillStyle = '#ffffff'; g.font = '10px monospace'; g.fillText(`${T.arcade.score}: ${G.score}`, AW / 2, 92); g.textAlign = 'left';
+    g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(0, 56, AW, 46); gText(g, AW / 2, 64, 'GAME OVER', '#ffd84d', 2, true); gText(g, AW / 2, 84, `${G.score}`, '#ffffff', 2, true);
     game2 = null; return;
   }
   requestAnimationFrame(tickArcade);
