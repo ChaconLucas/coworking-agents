@@ -36,7 +36,7 @@ function updateInfo() { return latest && newer(latest, CURRENT) ? { current: CUR
 // release notes: the CHANGELOG.md shipped in the package ("## x.y.z — date" headings, "- " items)
 function notes() {
   let txt = ''; try { txt = require('fs').readFileSync(require('path').join(__dirname, '..', 'CHANGELOG.md'), 'utf8'); } catch {}
-  return txt.split(/^## /m).slice(1, 6).map(b => { const [h, ...rest] = b.split('\n'); const [v, date] = h.split(/\s+—\s+/); return { v: v.trim(), date: (date || '').trim(), items: rest.filter(l => l.startsWith('- ')).map(l => l.slice(2).trim()).slice(0, 12) }; });
+  return txt.split(/^## /m).slice(1).map(b => { const [h, ...rest] = b.split('\n'); const [v, date] = h.split(/\s+—\s+/); return { v: v.trim(), date: (date || '').trim(), items: rest.filter(l => l.startsWith('- ')).map(l => l.slice(2).trim()).slice(0, 12) }; });
 }
 function versionInfo() { return { current: CURRENT, latest, checkedAt, newer: !!(latest && newer(latest, CURRENT)), notes: notes() }; }
 

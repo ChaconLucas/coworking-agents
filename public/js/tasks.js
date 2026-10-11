@@ -199,15 +199,29 @@ function checkVersionNotice() {
   const later = Number(store.get('verLater', 0)) || 0;
   if (Date.now() > later && !notices.some(n => n.key === 'ver:' + v.latest)) pushNotice('ver:' + v.latest, 'ok', T.notices.update(v.latest), T.ver.note, { ver: v.latest });
 }
-function renderVersion() {
-  const V = T.ver, v = verData || {}, body = reportEl.querySelector('.report-body');
-  if (v.newer && !adminPreview) { store.set('verSeen', v.latest); drawAdmin(); }
-  const cmd = (label, c) => `<p>${esc(label)} <code>${esc(c)}</code> <button class="btn small" data-vcopy="${esc(c)}">${esc(V.copy)}</button></p>`;
-  body.innerHTML = tabsHtml() + `<p class="sub">${esc(V.sub)}</p>
-    <div class="tbig"><div><b>${esc(v.current || '?')}</b><small>${esc(V.installed)}</small></div><div><b>${esc(v.latest || '?')}</b><small>${esc(V.latest)}</small></div><div><b>${v.checkedAt ? esc(ago(Date.now() - v.checkedAt)) : esc(V.never)}</b><small>${esc(V.checked)}</small></div></div>
-    ${v.newer ? cmd(V.npx, 'npx coworking-agents@latest') + cmd(V.global, 'npm install -g coworking-agents@latest') + `<p class="note">${esc(V.plugin)}</p><p class="note">${esc(V.note)}</p><p><button class="btn small" data-vlater>${esc(V.later)}</button></p>` : `<p class="ok">${esc(V.upToDate)}</p>`}
-    <h3>${esc(V.news)}</h3>${(v.notes || []).map(n => `<h4>${esc(n.v)} <small class="note">${esc(n.date)}</small></h4><ul>${n.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}`;
+let verPick = '';
+function lucasPortrait() {
+  const c = document.createElement('canvas'); c.width = 16; c.height = 17; const g = c.getContext('2d');
+  g.drawImage(Art.sprite(LUCAS_BODY, LUCAS_COL, 'lucas-b'), 0, 10); g.drawImage(Art.sprite(LUCAS_HEAD, LUCAS_COL, 'lucas-h'), 0, 0);
+  g.fillStyle = '#8a5e3a'; g.fillRect(5, 1, 3, 1); return c;
 }
+function renderVersion() {
+  const V = T.ver, v = verData || {}, body = reportEl.querySelector('.report-body'), notes = v.notes || [];
+  if (v.newer && !adminPreview) { store.set('verSeen', v.latest); drawAdmin(); }
+  const pick = notes.find(n => n.v === verPick) || notes.find(n => n.v === v.latest) || notes.find(n => n.v === v.current) || notes[0];
+  const top = notes.find(n => n.v === (v.newer ? v.latest : v.current));
+  const say = !v.checkedAt && !v.current ? V.unavailable : v.newer ? (top ? V.sayNew(v.latest) : V.sayNewNoNotes(v.latest)) : V.sayCur(v.current || '?');
+  const cmd = (label, c) => `<p>${esc(label)} <code>${esc(c)}</code> <button class="btn small" data-vcopy="${esc(c)}">${esc(V.copy)}</button></p>`;
+  const checked = v.checkedAt ? esc(ago(Date.now() - v.checkedAt)) : esc(v.error ? V.unavailable : V.never);
+  body.innerHTML = tabsHtml() + `<div class="vhero"><span data-vface></span><div class="vsay"><b>${esc(V.admin)}</b>${esc(say)}${top ? `<ul>${top.items.slice(0, 3).map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}</div></div>
+    <div class="tbig"><div><b>${esc(v.current || '?')}</b><small>${esc(V.installed)}</small></div><div><b>${esc(v.latest || '—')}</b><small>${esc(V.latest)}</small></div><div><b>${checked}</b><small>${esc(V.checked)}</small></div></div>
+    ${v.newer ? (v.install === 'global' ? cmd(V.global, 'npm install -g coworking-agents@latest') : v.install === 'plugin' ? `<p>${esc(V.plugin)}</p>` : cmd(V.npx, 'npx coworking-agents@latest')) + `<p class="note">${esc(V.note)}</p><p><button class="btn small" data-vlater>${esc(V.later)}</button></p>` : v.latest ? `<p class="ok">${esc(V.upToDate)}</p>` : `<p class="note">${esc(V.unavailable)}</p>`}
+    <h3>${esc(V.map)}</h3><div class="vmap">${notes.slice().reverse().map((n, i) => `${i ? '<i></i>' : ''}<button data-vpick="${esc(n.v)}" class="${n === pick ? 'on' : ''} ${n.v === v.current ? 'cur' : ''} ${v.newer && n.v === v.latest ? 'next' : ''}" title="${esc(n.date)}">${esc(n.v)}</button>`).join('')}</div>
+    ${pick ? `<div class="vnotes"><h4>${esc(pick.v)} <small class="note">${esc(pick.date)}</small></h4><ul>${pick.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : ''}`;
+  const face = body.querySelector('[data-vface]'); if (face) face.appendChild(lucasPortrait());
+  const m = body.querySelector('.vmap'); if (m) m.scrollLeft = m.scrollWidth;
+}
+reportEl.addEventListener('click', e => { if (reportTab !== 'version') return; const b = e.target.closest('[data-vpick]'); if (b) { verPick = b.dataset.vpick; renderVersion(); } });
 reportEl.addEventListener('click', e => {
   if (reportTab !== 'version') return;
   const c = e.target.closest('[data-vcopy]'); if (c) { navigator.clipboard && navigator.clipboard.writeText(c.dataset.vcopy); c.textContent = T.ver.copied; return; }
