@@ -128,13 +128,20 @@ function recommend(desc = '', agent = 'claude', task = null) {
   else if (ECO.test(desc) && desc.length < 400 && files <= 2) { p = 'eco'; why.push('eco'); }
   else why.push('default');
   if (task && (task.attempts >= 2 || task.state === 'failed') && p !== 'deep') { p = ORDER[ORDER.indexOf(p) + 1]; why.push('attempts'); }
+  // signals while the task runs: loops and repeated failures ask for more, a run far above the median for less
+  if (task && task.warn && ['loop', 'retry'].includes(task.warn.why) && p !== 'deep' && !why.includes('attempts')) { p = ORDER[ORDER.indexOf(p) + 1]; why.push('signal-' + task.warn.why); }
+  if (task && task.warn && task.warn.why === 'high' && p !== 'eco') { p = ORDER[ORDER.indexOf(p) - 1]; why.push('signal-high'); }
   // history: similar finished tasks (2+ shared words); success = done with passing tests
   const w = words(desc), similar = tasks.filter(t => t !== task && ['done', 'failed'].includes(t.state) && [...words(t.desc)].filter(x => w.has(x)).length >= 2);
   const by = Object.fromEntries(ORDER.map(k => [k, stats(similar.filter(t => t.profile === k))]));
   if (by[p].n >= 2 && by[p].success < .5 && p !== 'deep') { p = ORDER[ORDER.indexOf(p) + 1]; why.push('history-up'); }
   else { const lower = ORDER.slice(0, ORDER.indexOf(p)).reverse().find(k => by[k].n >= 2 && by[k].success >= .8 && by[k].attempts <= 1.3); if (lower) { p = lower; why.push('history-down'); } }
   const a = AGENTS.includes(agent) ? agent : 'claude';
-  return { profile: p, ...PROFILES[p][a], why, history: by, similar: similar.length };
+  const missing = [];
+  if (String(desc).trim().length < 20) missing.push('desc');
+  if (!similar.length) missing.push('history');
+  if (a === 'codex' && !options('codex').def) missing.push('codexModel');
+  return { profile: p, ...PROFILES[p][a], why, history: by, similar: similar.length, missing };
 }
 
 // ---- create / control ----

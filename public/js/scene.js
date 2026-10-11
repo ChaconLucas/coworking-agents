@@ -1,6 +1,6 @@
 'use strict';
 // ---------------- scene ----------------
-let wallGlows = [], usageBox = null, windowBoxes = [], neonBox = null;
+let wallGlows = [], usageBox = null, windowBoxes = [], neonBox = null, releaseBox = null, historyBox = null, costBox = null, noticesBox = null;
 // usage meters as a wall display, like a clock in the office: one gauge per limit window + today's tokens
 function usageGauges() {
   const out = [], L = (data && data.limits) || {};
@@ -61,22 +61,24 @@ function drawWall(t, sky) {
   for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
   r(0, 0, W, 3, PAL.wallTrim); r(0, 3, W, 1, PAL.ink2);
   r(0, TOP - 8, W, 2, PAL.wallShade); r(0, TOP - 6, W, 5, PAL.base); r(0, TOP - 6, W, 1, '#8f553f'); r(0, TOP - 1, W, 1, PAL.ink);
-  windowBoxes = [];
+  windowBoxes = []; releaseBox = historyBox = costBox = noticesBox = null;
+  let extra = 0; // window slots after the agent of the month become the costs screen and the notice board
   const nWin = Math.max(1, Math.floor((CX - 30) / 74));
   // the third window slot becomes the dev corner of the wall: neon </> and two posters
   for (let i = 0; i < nWin; i++) {
     const wx = 16 + i * 74;
     if (i === 1) drawUsageBoard(wx - 6, 7, t);
     else if (i === 2) continue; // covered by the usage screen
-    else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, Date.now() - neonFlash < 400 ? (((Date.now() / 60) | 0) % 2 ? t : 120 * 47) : t, wallGlows); neonBox = { x: wx + 7, y: 8, w: 34, h: 18 }; Art.drawPoster(wx - 16, 14, 0); Art.drawPoster(wx + 46, 14, 2); }
+    else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, Date.now() - neonFlash < 400 ? (((Date.now() / 60) | 0) % 2 ? t : 120 * 47) : t, wallGlows); neonBox = { x: wx + 7, y: 8, w: 34, h: 18 }; Art.drawPoster(wx - 16, 14, 0); Art.drawPoster(wx + 46, 14, 2); releaseBox = { x: wx - 17, y: 13, w: 22, h: 28 }; historyBox = { x: wx + 45, y: 13, w: 22, h: 28 }; if (typeof drawReleaseBadge === 'function') drawReleaseBadge(wx - 16, 14, t); }
     else if (i === 4 && nWin >= 7) drawTrophyShelf(wx - 8, 9, 64, t);
     else if (i === 5) { if (nWin >= 7) drawAgentOfMonth(wx, 10, t, wallGlows); else Art.drawPoster(wx + 14, 12, 1); }
+    else if (i >= 6 && extra < 2 && typeof drawCostScreen === 'function') { if (extra++ === 0) { drawCostScreen(wx, 9, 48, 30, t); costBox = { x: wx - 1, y: 8, w: 50, h: 32 }; } else { drawNoticeCork(wx, 9, 48, 30, t); noticesBox = { x: wx - 1, y: 8, w: 50, h: 32 }; } }
     else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawSkyExtras(wx, 9, 48, 30, sky, t, i, skyHour()); drawWindowView(wx, 9, 48, 30, sky, i); drawSeasonWindow(wx, 9, 48, 30, t); drawWeather(wx, 9, 48, 30, t); drawGlassDrops(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
   }
   // the ON AIR sign takes the gap between the last window and the whiteboard, when there is one
   { const lastEnd = 16 + (nWin - 1) * 74 + 48, gap = RX - 14 - lastEnd; moodBox = null; if (gap >= 32) drawMoodSign(lastEnd + ((gap - 24) / 2 | 0), 16, t, wallGlows); }
   boardBox = { x: RX - 14, y: 8, w: 56, h: 30 };
-  Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);
+  if (typeof drawTaskBoard === 'function') drawTaskBoard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, t); else Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);
   Art.drawClock(RX + 58, 20);
   hallBox = { x: RX + 74, y: 7, w: 72, h: 32 };
   Art.drawCork(hallBox.x, hallBox.y, hallBox.w, hallBox.h, data ? Object.values(data.credentials || {}).flatMap(c => c.topSkills || []).sort((a, b) => b.count - a.count) : []);

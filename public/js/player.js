@@ -96,6 +96,7 @@ function nearThing() {
     if (near(ax, ay)) return { label: T.walk.talk(cell.p.name), run: () => (achBump('talks'), cell.p.state === 'needs_you' || cell.p.state === 'waiting' ? openTalk(cell.p.id) : showPerson(cell.p.id)) };
   }
   for (const g of gameHits) if (near(g.x + g.w / 2, g.y + g.h, 24)) return { label: g.title, run: () => { const m = /data-tab="(\w+)"/.exec(g.attr); if (m) openReport(m[1]); else if (/trophyroom/.test(g.attr)) setTrophyView(true); else if (/arcade/.test(g.attr)) openArcade(); } };
+  if (typeof officeTips === 'function') { const o = officeTips(); for (const [b, tab, label] of [[boardBox, 'tasks', o.tasks], [costBox, 'usage', o.costs], [noticesBox, 'notices', o.notices], [historyBox, 'feed', o.history], [releaseBox, 'version', o.releases]]) if (b && near(b.x + b.w / 2, b.y + b.h + 14, 26)) return { label: label.split('\n')[0], run: () => openReport(tab) }; }
   if (radioBox && near(radioBox.x + 7, radioBox.y + 20, 26)) return { label: radioOn ? T.radio.on : T.radio.off, run: () => setRadio(!radioOn) };
   if (catBox && near(cat.x + 6, cat.y + 6, 18)) return { label: T.walk.pet, run: petCat };
   if (elevatorBox && near(elevatorBox.x + 14, elevatorBox.y + 30, 22)) return { label: T.elevator.title, run: openElevator };

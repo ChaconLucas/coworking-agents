@@ -43,7 +43,7 @@ function parse(txt) {
 }
 function notes() {
   let txt = ''; try { txt = require('fs').readFileSync(require('path').join(__dirname, '..', 'CHANGELOG.md'), 'utf8'); } catch {}
-  const local = parse(txt), extra = remoteNotes ? remoteNotes.list.filter(n => !local.some(l => l.v === n.v)) : [];
+  const local = parse(txt).filter(n => /^\d+\.\d+\.\d+$/.test(n.v)), extra = remoteNotes ? remoteNotes.list.filter(n => !local.some(l => l.v === n.v)) : [];
   return [...extra, ...local];
 }
 // how this copy was installed, so the page shows the right update command

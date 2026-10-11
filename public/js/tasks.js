@@ -77,15 +77,13 @@ const recCache = new Map();
 function taskCardHtml(p) {
   const X = TT(), t = taskOfPerson(p.id);
   if (!t) {
-    const key = p.id, rec = recCache.get(key);
-    if (!rec && !taskData.privacy) { recCache.set(key, 'loading'); api('api/tasks', { op: 'recommend', desc: [p.title, p.lastPrompt].filter(Boolean).join('\n'), agent: p.agent }).then(r => { recCache.set(key, r.ok ? r.rec : null); if (selected === p.id) renderPanel(); }); }
     return `<section class="card tcard"><small>${esc(X.monitored)}</small><p class="note">${esc(X.monitoredWhy)}</p>
-      ${rec && rec !== 'loading' ? `<p>💡 ${esc(X.recFor(X.profiles[rec.profile], rec.model || X.cliDefault, rec.effort))}<br><small class="note">${esc(rec.why.map(w => X.recWhy[w] || w).join(' · '))} — ${esc(X.notApplied)}</small></p>` : ''}
+      ${recCardHtml(null, p)}
       ${['claude', 'codex'].includes(p.agent) && p.cwd ? `<p><button class="btn small" data-pnew="${esc(p.id)}">＋ ${esc(X.asTask)}</button></p>` : ''}</section>`;
   }
   return `<section class="card tcard managed"><small>${esc(X.managed)} · <a href="#" data-popen="${esc(t.id)}">${esc(X.openTask)}</a></small>
     <p><b>${esc(t.title)}</b> · ${esc(X.states[t.state])}${t.state === 'blocked' ? ' · ' + esc(X.reasons[t.reason] || '') : ''}</p>
-    ${cfgHtml(t)}<div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out</small></div><div><b>${esc(X.attempts(t.attempts))}</b><small>${esc(X.src)}</small></div></div>
+    ${recCardHtml(t)}<div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out</small></div><div><b>${esc(X.attempts(t.attempts))}</b><small>${esc(X.src)}</small></div></div>
     ${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}</p>` : ''}${ctlHtml(t, 'p')}</section>`;
 }
 async function applyCfg(t, act, extra = {}) {
@@ -178,7 +176,7 @@ function renderTaskDetail(body) {
     <p class="note">${esc(t.agent)}${t.role ? ' · ' + esc(X.roles[t.role] || t.role) : ''}${t.lean ? ' · ' + esc(X.leanOn) : ''} · ${esc(t.cwd)}${t.sessionId ? ' · ' + esc(t.sessionId.slice(0, 8)) : ''} · ${esc(X.attempts(t.attempts))}${t.subagents ? ' · ' + esc(X.subagents(t.subagents)) : ''}</p>
     <div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out ${esc(X.tokens)}</small></div><div><b>${fmtK(t.tokens.input + t.tokens.cacheWrite)}</b><small>in</small></div><div><b>${fmtK(t.tokens.cacheRead)}</b><small>cache</small></div></div>
     ${models.length ? `<p class="note">${models.map(([m, v]) => `${esc(m)}: ${v.unpriced ? '?' : esc(fmtUSD(v.usd))}`).join(' · ')} — ${esc(t.agent === 'claude' ? X.srcClaude : X.srcCodex)}</p>` : ''}
-    ${cfgHtml(t)}${ctlHtml(t, 't')}
+    ${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}
     <label class="tchk"><input type="checkbox" data-tcfg="lean" ${t.lean ? 'checked' : ''}> ${esc(X.lean)}</label>
     ${t.result ? `<pre class="tresult">${esc(t.result)}</pre>` : ''}
     ${t.tests ? `<p class="${t.tests.code === 0 ? 'ok' : 'warn'}">${esc(X.tests(t.tests.code))}</p>` : ''}
@@ -274,6 +272,92 @@ function updateBell() {
   updateBell();
 }
 
+
+// ---- office objects for the panels: task board (whiteboard), costs screen, notice board, history and releases posters ----
+const tcount = st => taskData.tasks.filter(t => t.state === st).length;
+function taskBoardTip() { const O = T.officeObj; return O.tasks(tcount('pending'), tcount('running'), tcount('blocked'), tcount('done')); }
+function officeTips() {
+  const O = T.officeObj, days = (usageData && usageData.days) || {}, k = new Date().toISOString().slice(0, 10);
+  const week = Object.entries(days).filter(([d]) => new Date(d + 'T12:00').getTime() >= Date.now() - 7 * 864e5).reduce((n, [, d]) => n + (d.usd || 0), 0);
+  const v = verData || {};
+  return { tasks: taskBoardTip(), costs: O.costs(fmtUSD((days[k] && days[k].usd) || 0), fmtUSD(week)), notices: O.notices(unreadNotices()), history: O.history, releases: O.releases(v.current || '?', v.newer ? v.latest : '') };
+}
+function drawTaskBoard(x, y, w, h, t) { // whiteboard with four columns of sticky notes, one per task
+  r(x - 1, y - 1, w + 2, h + 2, PAL.ink); r(x, y, w, h, '#f4f4f8'); r(x, y + h - 2, w, 2, '#c0cbdc');
+  r(x + 2, y + h, w - 4, 2, PAL.aluDark); r(x + 6, y + h, 4, 1, PAL.red); r(x + 12, y + h, 4, 1, PAL.blue);
+  const cols = [['pending', '#c0cbdc'], ['running', '#7ab8ff'], ['blocked', '#ffd84d'], ['done', '#9fe3a0']], cw = Math.floor((w - 4) / 4);
+  cols.forEach(([st, c], i) => {
+    const cx = x + 2 + i * cw; r(cx, y + 2, cw - 2, 1, c === '#c0cbdc' ? '#8b9bb4' : c); if (i) r(cx - 1, y + 2, 1, h - 6, '#dde3ee');
+    const n = Math.min(8, tcount(st));
+    for (let k = 0; k < n; k++) { const sx = cx + (k % 2) * 6, sy = y + 5 + ((k / 2) | 0) * 5; r(sx, sy, 5, 4, c); r(sx + 1, sy + 1, 3, 1, '#8a7a6a'); }
+    if (st === 'running' && n && ((t / 400) | 0) % 2) r(cx + 1, y + 5, 1, 1, '#ffffff');
+  });
+  if (!taskData.tasks.length) { r(x + w / 2 - 3, y + h / 2 - 1, 6, 2, '#c0cbdc'); r(x + w / 2 - 1, y + h / 2 - 3, 2, 6, '#c0cbdc'); }
+}
+function drawCostScreen(x, y, w, h, t) { // wall screen: estimated spend of the last 7 days and today
+  r(x - 1, y - 1, w + 2, h + 2, PAL.ink); r(x, y, w, h, '#0c1410'); r(x + 1, y + 1, w - 2, 1, '#18261d');
+  const days = (usageData && usageData.days) || {}, vals = [];
+  for (let i = 6; i >= 0; i--) { const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10); vals.push((days[d] && days[d].usd) || 0); }
+  const max = Math.max(1e-9, ...vals);
+  vals.forEach((v, i) => { const bh = Math.max(1, Math.round((h - 13) * v / max)); r(x + 3 + i * 6, y + h - 3 - bh, 4, bh, i === 6 ? '#3ddc84' : '#1f7a48'); });
+  const today = vals[6], label = '$' + (today >= 100 ? Math.round(today) : today >= 10 ? today.toFixed(0) : today.toFixed(1));
+  pixText(x + w - 3 - label.length * 4, y + 3, label, '#3ddc84');
+  if (((t / 500) | 0) % 2) r(x + 3, y + 3, 2, 2, '#3ddc84');
+}
+function drawNoticeCork(x, y, w, h, t) { // cork board: one paper per unread notice, the bell pinned in the corner
+  r(x - 1, y - 1, w + 2, h + 2, '#6b4a33'); r(x, y, w, h, '#c98f5a');
+  for (let k = 0; k < 24; k++) { const hh = Art.hash('nc' + k); r(x + hh % w, y + (hh >>> 8) % h, 1, 1, '#b97c48'); }
+  r(x + 3, y + 3, 7, 6, '#feae34'); r(x + 5, y + 2, 3, 1, '#feae34'); r(x + 5, y + 9, 3, 1, PAL.ink);
+  const un = notices.filter(n => !n.read).slice(0, 6);
+  un.forEach((n, i) => { const px = x + 13 + (i % 3) * 11, py = y + 3 + ((i / 3) | 0) * 13; r(px, py, 9, 10, n.kind === 'warn' ? '#ffd0d0' : '#ffffff'); r(px + 3, py - 1, 3, 2, n.kind === 'warn' ? '#e43b44' : '#3b5dc9'); r(px + 1, py + 3, 6, 1, '#8a7a6a'); r(px + 1, py + 6, 4, 1, '#8a7a6a'); });
+  if (!un.length) { r(x + 16, y + 10, 20, 12, '#f4ecd8'); r(x + 18, y + 14, 14, 1, '#c0b090'); r(x + 18, y + 17, 10, 1, '#c0b090'); }
+  else if (((t / 450) | 0) % 2) r(x + 9, y + 2, 2, 2, '#e43b44');
+}
+function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a newer version is out
+  const v = verData || {}; if (!v.newer) return;
+  const on = ((t / 400) | 0) % 2; r(x + 14, y - 3, 7, 7, PAL.ink); r(x + 15, y - 2, 5, 5, on ? '#feae34' : '#e43b44');
+}
+// the same panels in the ☰ menu
+{
+  const menu = document.getElementById('tools-menu');
+  if (menu) for (const [tab, icon] of [['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+    const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
+    b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
+    b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); openReport(tab); });
+  }
+}
+function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); }
+setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);
+
+// ---- the recommendation card: current, recommended and pending config, the reason, Apply; refreshed as the task moves ----
+const recOf = new Map();
+function recCardHtml(t, p) {
+  const X = T.tasks, key = t ? t.id + ':' + t.updated + ':' + t.profile + ':' + t.effort : 'p:' + p.id + ':' + (p.title || '') + (p.lastPrompt || '');
+  const hit = recOf.get(t ? t.id : 'p:' + p.id);
+  if ((!hit || hit.key !== key) && !(hit && hit.loading === key) && !taskData.privacy) {
+    recOf.set(t ? t.id : 'p:' + p.id, { ...(hit || {}), loading: key });
+    api('api/tasks', t ? { op: 'recommend', id: t.id } : { op: 'recommend', desc: [p.title, p.lastPrompt].filter(Boolean).join('\n'), agent: p.agent })
+      .then(r => { recOf.set(t ? t.id : 'p:' + p.id, { key, rec: r.ok ? r.rec : null }); if (t && reportTab === 'tasks' && taskSel === t.id && !reportEl.hidden) renderTasks(); if (selected && data) renderPanel(); });
+  }
+  const rec = hit && hit.rec, cur = t ? `${mname(t, t.running && t.state === 'running' ? t.running.model : t.model)} · ${t.running && t.state === 'running' ? t.running.effort : t.effort}` : `${p.model || X.unknownModel} · ${X.unknownEffort}`;
+  const pend = t && t.state === 'running' && t.running && (t.running.model !== t.model || t.running.effort !== t.effort) ? `${mname(t, t.model)} · ${t.effort}` : '';
+  const same = rec && t && rec.model === t.model && rec.effort === t.effort;
+  const missing = rec ? (rec.missing || []).map(m => X.missing[m] || m) : [];
+  return `<div class="reccard"><div class="rc-row"><span>${esc(X.rcCurrent)}</span><b>${esc(cur)}</b></div>
+    ${pend ? `<div class="rc-row"><span>${esc(X.pendingCfg)}</span><b class="warn">${esc(pend)}</b></div>` : ''}
+    <div class="rc-row"><span>${esc(X.rcRecommended)}</span><b>${rec ? esc(`${(t ? mname(t, rec.model) : rec.model || X.cliDefault)} · ${rec.effort}`) + ` <small>(${esc(X.profiles[rec.profile])})</small>` : esc(taskData.privacy ? X.rcPrivate : X.rcLoading)}</b></div>
+    ${rec ? `<p class="rc-why">${esc(rec.why.map(w => X.recWhy[w] || w).join(' · '))}${rec.similar ? ' · ' + esc(X.similar(rec.similar)) : ''}</p>` : ''}
+    ${missing.length ? `<p class="rc-miss">${esc(X.rcMissing)}: ${esc(missing.join('; '))}</p>` : ''}
+    ${t ? (rec && !same ? `<button class="btn small" data-rcapply="${esc(t.id)}">💡 ${esc(T.notices.apply)}: ${esc(mname(t, rec.model))} · ${esc(rec.effort)}</button>${t.state === 'running' ? ` <small class="note">${esc(X.next)}</small>` : ''}` : rec ? `<p class="ok">✓ ${esc(X.rcAlready)}</p>` : '') : `<p class="note">🔒 ${esc(X.rcExternal)}</p>`}</div>`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-rcapply]'); if (!b) return;
+  const hit = recOf.get(b.dataset.rcapply), rec = hit && hit.rec; if (!rec) return;
+  b.disabled = true;
+  await api('api/tasks', { op: 'config', id: b.dataset.rcapply, profile: rec.profile, model: rec.model, effort: rec.effort, why: 'rec:' + rec.why.join('+') });
+  await pollTasks(); if (taskSel === b.dataset.rcapply) loadTask(taskSel);
+});
+
 // ---- releases board ----
 let verData = null;
 // ?admin=new | seen | party previews the admin without a real release (nothing is saved as seen)
@@ -300,6 +384,7 @@ function lucasPortrait() {
 function renderVersion() {
   const V = T.ver, v = verData || {}, body = reportEl.querySelector('.report-body'), notes = v.notes || [];
   if (v.newer && !adminPreview) { store.set('verSeen', v.latest); drawAdmin(); }
+
   const pick = notes.find(n => n.v === verPick) || notes.find(n => n.v === v.latest) || notes.find(n => n.v === v.current) || notes[0];
   const top = notes.find(n => n.v === (v.newer ? v.latest : v.current));
   const say = !v.checkedAt && !v.current ? V.unavailable : v.newer ? (top ? V.sayNew(v.latest) : V.sayNewNoNotes(v.latest)) : V.sayCur(v.current || '?');

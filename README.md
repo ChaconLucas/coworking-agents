@@ -196,7 +196,7 @@ Tasks live in `~/.config/coworking-agents/tasks/`. In private mode names, folder
 
 ## Notices, releases and the office admin
 
-The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. It keeps working with the tab in the background and recovers what was already pending when you open the office. **Releases** shows the installed version, the newest on npm (or *unavailable*), when it checked, a clickable map of every release and the notes of the newer one, with the update command for how you installed it. Lucas, the office admin, appears behind the top-bar counter only when there's version news: he waves the sign until you've seen it, keeps holding it until you update, then celebrates.
+The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. It keeps working with the tab in the background and recovers what was already pending when you open the office. **Releases** shows the installed version, the newest on npm (or *unavailable*), when it checked, a clickable map of every release and the notes of the newer one, with the update command for how you installed it. The office admin appears behind the top-bar counter only when there's version news: he waves the sign until you've seen it, keeps holding it until you update, then celebrates.
 
 ## MCP (read-only)
 

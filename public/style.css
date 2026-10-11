@@ -826,3 +826,8 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tcard .tcfg { margin: 6px 0 0; } .tcard .tcfg select { max-width: 130px; }
 .tcfgnow { margin: 6px 0; font-size: 13px; } .tcfgnow .warn, p.warn { color: #f7b733; } .tcfgnow .ok, p.ok { color: #63c74d; }
 .tcfg label { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; }
+
+.reccard { background: rgba(0,0,0,.22); border: 2px solid #3a3045; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+.rc-row { display: flex; justify-content: space-between; gap: 8px; } .rc-row span { opacity: .75; } .rc-row b { text-align: right; }
+.rc-why { margin: 4px 0; font-size: 12px; opacity: .85; } .rc-miss { margin: 4px 0; font-size: 12px; color: #f7b733; }
+.reccard .btn { margin-top: 6px; } .menu-panel span[aria-hidden] { width: 16px; text-align: center; }
