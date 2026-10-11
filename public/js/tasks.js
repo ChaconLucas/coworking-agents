@@ -184,7 +184,15 @@ function updateBell() {
 
 // ---- releases board ----
 let verData = null;
-async function loadVersion() { verData = await api('api/version'); if (verData && verData.current) { checkVersionNotice(); drawAdmin(); } if (!reportEl.hidden && reportTab === 'version') renderVersion(); }
+// ?admin=new | seen | party previews the admin without a real release (nothing is saved as seen)
+const adminPreview = new URLSearchParams(location.search).get('admin');
+async function loadVersion() {
+  verData = await api('api/version');
+  if (verData && verData.current && adminPreview) {
+    const [a, b, c] = verData.current.split('.').map(Number); verData = { ...verData, latest: `${a}.${b}.${c + 1}`, newer: adminPreview !== 'party' };
+    if (adminPreview === 'party') adminCelebrateUntil = Date.now() + 864e5;
+  }
+  if (verData && verData.current) { if (!adminPreview) checkVersionNotice(); drawAdmin(); } if (!reportEl.hidden && reportTab === 'version') renderVersion(); }
 setTimeout(loadVersion, 1500); setInterval(loadVersion, 30 * 60000);
 function checkVersionNotice() {
   const v = verData; if (!v.newer) return;
@@ -193,7 +201,7 @@ function checkVersionNotice() {
 }
 function renderVersion() {
   const V = T.ver, v = verData || {}, body = reportEl.querySelector('.report-body');
-  if (v.newer) { store.set('verSeen', v.latest); drawAdmin(); }
+  if (v.newer && !adminPreview) { store.set('verSeen', v.latest); drawAdmin(); }
   const cmd = (label, c) => `<p>${esc(label)} <code>${esc(c)}</code> <button class="btn small" data-vcopy="${esc(c)}">${esc(V.copy)}</button></p>`;
   body.innerHTML = tabsHtml() + `<p class="sub">${esc(V.sub)}</p>
     <div class="tbig"><div><b>${esc(v.current || '?')}</b><small>${esc(V.installed)}</small></div><div><b>${esc(v.latest || '?')}</b><small>${esc(V.latest)}</small></div><div><b>${v.checkedAt ? esc(ago(Date.now() - v.checkedAt)) : esc(V.never)}</b><small>${esc(V.checked)}</small></div></div>
@@ -218,7 +226,7 @@ function adminMode() {
   const last = store.get('lastRunVersion', '');
   if (last !== v.current) { if (last) adminCelebrateUntil = Date.now() + 10000; store.set('lastRunVersion', v.current); }
   if (Date.now() < adminCelebrateUntil) return 'celebrate';
-  if (v.newer) return store.get('verSeen', '') === v.latest ? 'pending' : 'unseen';
+  if (v.newer) return adminPreview ? (adminPreview === 'seen' ? 'pending' : 'unseen') : store.get('verSeen', '') === v.latest ? 'pending' : 'unseen';
   return 'idle';
 }
 function drawAdmin(t = Date.now()) {
