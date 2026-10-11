@@ -236,41 +236,34 @@ function drawAdmin(t = Date.now()) {
   bub.textContent = adminState === 'celebrate' ? T.ver.celebrate(v.current) : adminState !== 'idle' ? 'v' + v.latest : '';
   adminEl.classList.toggle('loud', adminState === 'unseen'); adminEl.title = T.ver.admin + (adminState !== 'idle' ? ' · ' + bub.textContent : '');
 }
-// Lucas, drawn by the top bar scene (help.js) behind the counter: textured brown crop, light eyes, stubble beard,
-// eyebrow piercing, butterfly tattoo on the neck, navy knit polo. ox, oy = top-left of the bust; rows below
-// the counter get covered by it. While there's version news he holds up a wooden sign with the version.
-const LUCAS = [
-  '.......kkkkkkkkk..........', '.....kkHhHhHhhHhkk........', '....khHhhHhhHhHhhHk.......', '....khhHhHhhhHhhhhk.......',
-  '...kdhhhhhhHhhhhhhdk......', '...kdhhHhsHhhshhhhdk......', '...kdsssssssssssssdk......', '...kdswwwssssswgwsdk......',
-  '..kSkskebssssskbeskSk.....', '..kSksssssssSsssssxSk.....', '...kksssssssSSssssskk.....', '....kBsssssssssssBk.......',
-  '....kBBssBmmmBssBBk.......', '....kDBBBBBBBBBBBDk.......', '.....kDBBBBBBBBBDk........', '......kkDDDDDDDkk.........',
-  '......ksTtTtTtTsk.........', '......kssTtttTssk.........', '...kkkPPsssssPPkkk........', '..kpppppPsssPpppppk.......',
-  '.kppLpppppPpppppLppk......', 'kppLpppppppppppppLppk.....', 'kpLppppcpppppppcppLpk.....', 'kpppppppppppppppppppk.....',
+// Lucas, drawn by the top bar scene (help.js) behind the counter in the same chibi style as the agents:
+// textured brown crop, light eyes, stubble beard, butterfly tattoo on the neck, navy polo with an open collar.
+// While there's version news he holds up a little wooden sign with the version.
+const LUCAS_HEAD = [
+  '....oooooooo....', '...ohHhhHhhho...', '..ohhhHhhhHhho..', '..ohHhhhhhHhho..', '..ohsssssssSho..',
+  '.ohssbssssbssho.', '.oSssssssssssSo.', '..oBsssmmsssBo..', '...oBBBBBBBBo...', '.....oBttBo.....',
 ];
-const LUCAS_PAL = { k: '#1a1520', h: '#5e3d25', H: '#8a5e3a', d: '#3d2818', s: '#f0c09c', S: '#d39a78', x: '#c98f6d', e: '#ffffff', b: '#4f7c9c', w: '#4a3020', g: '#e6e9ef',
-  B: '#80604a', D: '#5e4432', m: '#b9705c', T: '#666878', t: '#4b4c5c', p: '#2f3e63', P: '#222c48', L: '#43578a', c: '#2a3550' };
+const LUCAS_BODY = [
+  '..oocccsstcccoo.', '.occcccsscccccCo', 'occcccccccccccCo', 'occCccccccccCcCo', 'occCccccccccCcCo', 'osSCccccccccCSso', 'oooCCCCCCCCCCooo',
+];
+const LUCAS_COL = { o: '#1a1520', s: '#f2c7a5', S: '#d9a07c', h: '#6a4530', H: '#4a2f20', b: '#3f6a8a', m: '#a8584e', B: '#8a6a52', t: '#59586a', c: '#2f3e63', C: '#222c48' };
 function drawLucas(g, ox, oy, S, t) {
-  const still = reduceMotion.matches, f = still ? 0 : Math.floor(t / 300) % 2, party = adminState === 'celebrate';
-  const px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(ox + x * S, oy + y * S, w * S, h * S); };
-  const bob = party && f ? -1 : 0;
-  LUCAS.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const c = LUCAS_PAL[row[x]]; if (c) px(x, y + bob, 1, 1, c); } });
-  if (!still && adminState !== 'idle' && Math.floor(t / 2600) % 5 === 0 && (t % 2600) < 160) px(6, 9 + bob, 3, 1, '#f0c09c'), px(14, 9 + bob, 3, 1, '#f0c09c'); // blink
-  // raised arm (his right, our left) holding the sign; it sways while the news is unseen
-  const lift = adminState === 'unseen' && f ? -1 : 0, sy = 1 + lift + bob;
-  px(-2, 16 + bob, 5, 5, '#1a1520'); px(-1, 17 + bob, 3, 4, '#2f3e63'); px(-1, 17 + bob, 1, 4, '#43578a');                 // short sleeve
-  px(-2, 9 + sy, 5, 8 - sy + bob, '#1a1520'); px(-1, 10 + sy, 3, 7 - sy + bob, '#f0c09c'); px(1, 10 + sy, 1, 7 - sy + bob, '#d39a78'); // forearm
-  px(-1, 11 + sy, 2, 2, '#4b4c5c'); px(0, 14 + sy, 2, 1, '#4b4c5c');                    // tattoos
-  px(-1, 15 + bob, 3, 1, '#e6e9ef'); px(0, 15 + bob, 1, 1, '#1a1520');                 // bead bracelet
-  // the sign: wooden board with the version in pixel letters
-  const v = verData || {}, label = 'V' + (party ? v.current : v.latest || ''), w = Math.max(20, label.length * 4 + 5);
-  const bx = -w, by = sy - 1;
-  px(bx - 1, by - 1, w + 2, 11, '#1a1520'); px(bx, by, w, 9, party ? '#63c74d' : '#c88a4a'); px(bx, by, w, 1, party ? '#9be37f' : '#e0a868'); px(bx, by + 8, w, 1, party ? '#3e8948' : '#8f5a2e');
-  px(bx + 1, by + 1, 1, 1, '#5e3d25'); px(bx + w - 2, by + 1, 1, 1, '#5e3d25');      // nails
-  const tx = ox + (bx + 3) * S, ty = oy + (by + 2) * S; g.fillStyle = party ? '#163a1c' : '#3a1f0c';
-  for (const [i, ch] of [...label].entries()) { const gl = PIXFONT[ch]; if (gl) for (let k = 0; k < 15; k++) if (gl[k] === '1') g.fillRect(tx + (i * 4 + (k % 3)) * S, ty + ((k / 3) | 0) * S, S, S); }
-  px(-2, sy + 6, 5, 4, '#1a1520'); px(-1, sy + 7, 3, 2, '#f0c09c');                      // hand over the board
-  if (adminState === 'unseen' && f) px(bx - 3, by + 2, 1, 1, '#feae34'), px(bx - 4, by + 5, 1, 1, '#feae34');
-  if (party && !still) for (let i = 0; i < 8; i++) px(((i * 7 + f * 3) % 30) - 8, ((i * 5 + f * 2) % 9) - 2, 1, 1, ['#f7b733', '#ff6b9d', '#4fa3ff'][i % 3]);
+  const still = reduceMotion.matches, f = still ? 0 : Math.floor(t / 320) % 2, party = adminState === 'celebrate';
+  const bob = party && f ? -1 : 0, y = oy + bob;
+  g.drawImage(Art.sprite(LUCAS_BODY, LUCAS_COL, 'lucas-b'), ox, y + 10);
+  g.drawImage(Art.sprite(LUCAS_HEAD, LUCAS_COL, 'lucas-h'), ox, y);
+  const px = (x, yy, w, h, col) => { g.fillStyle = col; g.fillRect(ox + x, y + yy, w, h); };
+  px(5, 1, 3, 1, '#8a5e3a'); // hair highlight, like the agents
+  if (!still && t % 3200 < 140) { px(4, 5, 3, 1, '#f2c7a5'); px(9, 5, 3, 1, '#f2c7a5'); } // blink
+  // small raised arm on his right (our left) with the sign beside the head; it sways while the news is unseen
+  const lift = adminState === 'unseen' && f ? -1 : 0, ay = 6 + lift;
+  px(-1, ay, 3, 11 - lift, '#1a1520'); px(0, ay + 1, 1, 9 - lift, '#2f3e63'); px(-1, ay - 2, 3, 3, '#1a1520'); px(0, ay - 1, 1, 1, '#f2c7a5');
+  const v = verData || {}, label = 'V' + ((party ? v.current : v.latest) || ''), w = label.length * 4 + 3, bx = -w - 1, by = ay - 6;
+  px(bx - 1, by - 1, w + 2, 9, '#1a1520'); px(bx, by, w, 7, party ? '#63c74d' : '#d79a55'); px(bx, by + 6, w, 1, party ? '#3e8948' : '#a8703a');
+  g.fillStyle = party ? '#163a1c' : '#3a1f0c';
+  for (const [i, ch] of [...label].entries()) { const gl = PIXFONT[ch]; if (gl) for (let k = 0; k < 15; k++) if (gl[k] === '1') g.fillRect(ox + bx + 2 + i * 4 + (k % 3), y + by + 1 + ((k / 3) | 0), 1, 1); }
+  if (adminState === 'unseen' && f) { px(bx - 3, by + 1, 1, 2, '#feae34'); px(bx - 3, by + 4, 1, 1, '#feae34'); }
+  if (party && !still) for (let i = 0; i < 8; i++) px(((i * 7 + f * 3) % 28) - 6, ((i * 5 + f * 2) % 8) - 4, 1, 1, ['#f7b733', '#ff6b9d', '#4fa3ff'][i % 3]);
 }
 setInterval(() => { if (!document.hidden) drawAdmin(); }, 1000);
 try { drawAdmin(); } catch {}

@@ -125,9 +125,9 @@ function drawDock(t) {
     const adminOn = typeof drawLucas === 'function' && adminState !== 'idle';
     if (adminOn) {
       const tl0 = document.querySelector('.bar .tools').getBoundingClientRect().left - bar.getBoundingClientRect().left;
-      const ax = Math.max(x0 + PER_OFFICE * SLOT + 40, Math.floor(tl0 / DOCK_S) - 30), ay = desk - 23;
+      const ax = Math.max(x0 + PER_OFFICE * SLOT + 44, Math.floor(tl0 / DOCK_S) - 22), ay = desk - 18;
       drawLucas(dockCtx, ax, ay, 1, t);
-      Object.assign(adminEl.style, { left: (ax - 22) * DOCK_S + 'px', top: Math.max(0, ay) * DOCK_S + 'px', width: 44 * DOCK_S + 'px', height: (desk - ay) * DOCK_S + 'px' });
+      Object.assign(adminEl.style, { left: (ax - 30) * DOCK_S + 'px', top: Math.max(0, ay - 2) * DOCK_S + 'px', width: 46 * DOCK_S + 'px', height: (desk - ay + 2) * DOCK_S + 'px' });
     }
     // the counter
     r(0, desk, W, 2, '#dc9a6c'); r(0, desk + 2, W, H - desk - 2, '#8f4f3a'); r(0, H - 1, W, 1, PAL.ink);

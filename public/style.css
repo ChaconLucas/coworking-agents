@@ -594,7 +594,7 @@ main:has(#office.cam) { overflow: visible; }
 .search li em { grid-column: 2 / 4; font-style: normal; font-size: 11px; color: #6e6577; }
 .search li.on, .search li:hover { background: #2a2333; } .search li.none { color: #6e6577; cursor: default; }
 
-.rtabs { display: flex; gap: 6px; margin: 0 40px 14px 0; }
+.rtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 40px 14px 0; }
 .rtabs button { border: 2px solid #3a3045; background: #221d29; color: #b9a88a; border-radius: 6px; padding: 7px 12px; font: 700 10px/1 var(--pix); cursor: pointer; }
 .rtabs button.on { border-color: #d97757; color: #fff; background: #2a2333; }
 .today-list li { grid-template-columns: 200px 1fr 170px; }
@@ -793,3 +793,6 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tbig { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 8px 0; }
 .tbig > div { background: rgba(0,0,0,.25); padding: 6px 8px; display: flex; flex-direction: column; }
 .tbig b { font-size: 18px; } .tbig small { opacity: .75; }
+.tform input, .tform textarea, .tform select { width: 100%; min-width: 0; box-sizing: border-box; }
+.trow > label, .trank > div { min-width: 0; }
+.tlist li > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
