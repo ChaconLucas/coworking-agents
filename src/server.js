@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { snapshot: real, report } = require('./collect');
+const { snapshot: real, report, ended } = require('./collect');
 const { demoSnapshot, demoReport } = require('./demo');
 const { focus, sendText, launch } = require('./focus');
 const { usage } = require('./usage');
@@ -211,6 +211,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       });
       return;
     }
+    if (url.pathname === '/api/replay' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(demo ? [] : ended({ privacy })));
     if (url.pathname === '/api/tasks' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.list({ privacy })));
     if (url.pathname === '/api/task' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.get(url.searchParams.get('id'), { privacy }) || null));
     if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id'), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }

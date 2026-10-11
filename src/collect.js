@@ -205,4 +205,21 @@ function report({ privacy = false } = {}) {
   return { since, now, rows, topFiles, totals: { sessions: rows.length, activeMs: sum('activeMs'), tools: sum('tools'), files: fileCount.size, outTokens: sum('outTokens'), turns: sum('turns') } };
 }
 
-module.exports = { snapshot, report };
+// sessions that ended within the last hour, with their measured timeline, so the replay can show them too
+function ended({ privacy = false } = {}) {
+  const now = Date.now(), since = now - 3600 * 1000, live = new Set(snapshot().people.map(p => p.id)), out = [];
+  for (const src of SOURCES) {
+    let list = []; try { list = src.today ? src.today(since) : []; } catch {}
+    for (const { agent, id, st, title } of list) {
+      if (live.has(id)) continue;
+      const tl = segments(st.events, since, now, false).filter(g => g.kind !== 'idle' || g.to - g.from < 3600e3);
+      if (!tl.length) continue;
+      const repo = resolveRepo(st.cwd);
+      out.push({ id, agent, name: (privacy ? '' : (st.title || title || '')).slice(0, 40) || agent + '-' + String(id).slice(0, 4), title: privacy ? '' : (st.title || title || ''),
+        repo: repo && !privacy ? { name: repo.name, worktree: repo.worktree } : null, cwd: privacy ? '' : st.cwd || '', timeline: tl, startedAt: tl[0].from, endedAt: tl[tl.length - 1].to, ended: true });
+    }
+  }
+  return out.slice(0, 40);
+}
+
+module.exports = { snapshot, report, ended };

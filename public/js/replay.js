@@ -2,7 +2,7 @@
 // ---------------- replay: scrub the office back through the last hour ----------------
 // Every agent's state at a past moment comes from its own timeline (measured events), so the office
 // re-plays what really happened. Live data keeps arriving; it's just shown as of the chosen minute.
-let replayAt = 0, replayPlay = 0, liveData = null;
+let replayAt = 0, replayPlay = 0, liveData = null, replayEnded = [];
 const replayEl = document.createElement('div');
 replayEl.className = 'replay'; replayEl.hidden = true;
 replayEl.innerHTML = '<button class="hb" data-r="play">▶</button><input type="range" min="-3600" max="0" step="15" value="0"><span class="rt"></span><button class="hb" data-r="live"></button>';
@@ -13,7 +13,10 @@ const KIND_STATE = { idle: 'idle', ask: 'needs_you' };
 function applyReplay(d) {
   if (!replayAt) return d;
   const T0 = replayAt;
-  return { ...d, people: d.people.filter(p => !p.startedAt || p.startedAt <= T0).map(p => {
+  // sessions that have ended since then come back as they were (measured timelines from /api/replay)
+  const ghosts = replayEnded.filter(g => g.startedAt <= T0 && T0 < g.endedAt && !d.people.some(p => p.id === g.id))
+    .map(g => ({ state: 'idle', doing: null, files: [], editing: [], subagents: [], tools: {}, today: {}, recent: [], since: g.startedAt, ...g }));
+  return { ...d, people: [...d.people, ...ghosts].filter(p => !p.startedAt || p.startedAt <= T0).map(p => {
     const seg = (p.timeline || []).find(g => g.from <= T0 && T0 < g.to);
     const state = seg ? (KIND_STATE[seg.kind] || seg.kind) : 'asleep';
     return { ...p, state, doing: null, subagents: [], since: seg ? seg.from : p.since };
@@ -31,7 +34,7 @@ function toggleReplay(on) {
   if (on) achBump('replay');
   replayEl.hidden = !on;
   replayEl.querySelector('[data-r="live"]').textContent = T.replay.live;
-  if (!on) { clearInterval(replayPlay); replayPlay = 0; setReplay(0); } else setReplay(-1800);
+  if (!on) { clearInterval(replayPlay); replayPlay = 0; setReplay(0); } else { setReplay(-1800); fetch('api/replay').then(r => r.json()).then(list => { replayEnded = Array.isArray(list) ? list : []; if (replayAt) setReplay(Number(rRange.value)); }).catch(() => {}); }
 }
 rRange.addEventListener('input', () => setReplay(Number(rRange.value)));
 replayEl.addEventListener('click', e => {

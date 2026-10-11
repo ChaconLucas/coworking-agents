@@ -99,16 +99,16 @@ function demoUsage() {
   }
   const ppl = demoSnapshot().people;
   const top = ppl.slice(0, 5).map((p, i) => ({ id: p.id, agent: p.agent, title: p.title, activeMs: (40 - i * 7) * 36e5, tools: 2400 - i * 380, output: 3e6 - i * 4e5, last: now }));
-  return { scanning: false, scannedAt: now, byAgent, days, month: { key: Object.keys(days)[0].slice(0, 7), top } };
+  return { scanning: false, scannedAt: now, byAgent, days, month: { key: Object.keys(days)[0].slice(0, 7), top, costly: top.map((m, i) => ({ id: m.id, agent: m.agent, title: m.title, usd: [41.2, 22.7, 13.9, 6.4, 2.1][i] || 1 })) } };
 }
 
 // a few tasks in every state, for the Tasks tab in --demo (nothing runs)
 function demoTasks() {
   const n = Date.now(), base = { dir: '/Users/you/code/shop', cwd: '/Users/you/code/shop', perm: 'acceptEdits', budget: 2, testCmd: 'npm test', worktree: true, dependsOn: '', from: '', sessionId: '', tokens: { input: 52000, output: 8100, cacheRead: 410000, cacheWrite: 30000 }, turns: 6, result: '', files: [], denials: [], allowed: [], configLog: [], reason: '' };
   return [
-    { ...base, id: 'demo1', title: 'Checkout: fix double charge', desc: 'Investigate the double charge race in checkout', agent: 'claude', profile: 'deep', model: 'opus', effort: 'high', priority: 3, state: 'running', created: n - 9e5, updated: n - 2e4, cost: 1.42, attempts: 1 },
+    { ...base, id: 'demo1', sessionId: 'demo-0-Refactor checkout flow', running: { model: 'opus', effort: 'high', at: n - 9e5 }, byModel: { 'claude-opus-5-5': { usd: 1.42, input: 52000, output: 8100, cacheRead: 410000, cacheWrite: 30000 } }, costByDay: { [new Date().toISOString().slice(0, 10)]: 1.42 }, title: 'Checkout: fix double charge', desc: 'Investigate the double charge race in checkout', agent: 'claude', profile: 'deep', model: 'sonnet', effort: 'high', priority: 3, state: 'running', warn: { why: 'loop', name: 'Bash', at: n - 6e4, rec: { profile: 'deep', model: 'opus', effort: 'high', why: 'loop' } }, created: n - 9e5, updated: n - 2e4, cost: 1.42, attempts: 1 },
     { ...base, id: 'demo2', title: 'README: install section', desc: 'Update the README install docs', agent: 'claude', profile: 'eco', model: 'haiku', effort: 'low', priority: 1, state: 'blocked', reason: 'review', created: n - 3e6, updated: n - 6e5, cost: 0.08, attempts: 1, result: 'Updated the install section and added npx usage.', files: ['README.md'], tests: { code: 0, at: n - 6e5 } },
-    { ...base, id: 'demo3', title: 'API: pagination', desc: 'Add cursor pagination to /orders', agent: 'codex', profile: 'bal', model: '', effort: 'medium', priority: 2, state: 'blocked', reason: 'question', created: n - 5e6, updated: n - 9e5, cost: 0.31, attempts: 1, result: 'Should the cursor be opaque (base64) or the raw id?' },
+    { ...base, id: 'demo3', costUnknown: true, title: 'API: pagination', desc: 'Add cursor pagination to /orders', agent: 'codex', profile: 'bal', model: '', effort: 'medium', priority: 2, state: 'blocked', reason: 'question', created: n - 5e6, updated: n - 9e5, cost: 0.31, attempts: 1, result: 'Should the cursor be opaque (base64) or the raw id?' },
     { ...base, id: 'demo4', title: 'Flaky login test', desc: 'Fix the flaky login test', agent: 'claude', profile: 'bal', model: 'sonnet', effort: 'medium', priority: 2, state: 'failed', reason: 'error', created: n - 8e6, updated: n - 7e6, cost: 0.66, attempts: 2 },
     { ...base, id: 'demo5', title: 'Docs: changelog', desc: 'Write the changelog', agent: 'codex', profile: 'eco', model: '', effort: 'low', priority: 1, state: 'pending', created: n - 1e5, updated: n - 1e5, cost: 0, attempts: 0, dependsOn: 'demo2' },
     { ...base, id: 'demo6', title: 'Dark mode toggle', desc: 'Add a dark mode toggle', agent: 'claude', profile: 'bal', model: 'sonnet', effort: 'medium', priority: 2, state: 'done', created: n - 2e7, updated: n - 1.8e7, cost: 0.54, attempts: 1, result: 'Added the toggle and tests.', files: ['src/theme.js'] },

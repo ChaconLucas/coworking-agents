@@ -133,10 +133,11 @@ async function refresh() {
         if (days[k]) { days[k].output = (days[k].output || 0) + u.output; if (days[k].byAgent && days[k].byAgent[kind]) days[k].byAgent[kind].output += u.output; }
         if (k.startsWith(month)) m.output += u.output;
       }
+      m.usd = Object.entries(res.usdByDay || {}).filter(([k]) => k.startsWith(month)).reduce((n, [, c]) => n + c, 0); // estimated spend this month, per conversation
       if (m.activeMs || m.tools) board.push(m);
     }
     board.sort((a, b) => b.activeMs - a.activeMs || b.tools - a.tools);
-    state.days = days; state.month = { key: month, top: board.slice(0, 5) };
+    state.days = days; state.month = { key: month, top: board.slice(0, 5), costly: board.filter(b => b.usd > 0).sort((a, b) => b.usd - a.usd).slice(0, 8).map(({ id, agent, title, usd }) => ({ id, agent, title, usd })) };
     state.result = out; state.scannedAt = Date.now();
   } finally { state.scanning = false; }
 }

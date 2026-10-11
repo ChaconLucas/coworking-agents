@@ -456,6 +456,48 @@ const store = {
 const qs = new URLSearchParams(location.search);
 let lang = qs.get('lang') || store.get('lang', (navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
 if (!Object.prototype.hasOwnProperty.call(I18N, lang)) lang = 'pt';
+
+// tasks: controls, cost and monitoring strings (merged into the blocks above)
+{
+  const pt = {
+    proposal: (p, m, e) => `Proposta: ${p} (${m} · ${e}).`, runningCfg: 'Em execução', currentCfg: 'Configuração', pendingCfg: 'Pendente', appliedOk: (m, e) => `Aplicado: ${m} · ${e}`,
+    partUnknown: 'parte desconhecida', saveTip: 'Um perfil abaixo: modelo e esforço mais baratos a partir da próxima etapa', moreTip: 'Um perfil acima: mais capacidade a partir da próxima etapa',
+    monitored: 'Sessão monitorada (só leitura)', monitoredWhy: 'Foi aberta fora do escritório: dá para ver tudo, mas não trocar modelo ou esforço daqui.', recFor: (p, m, e) => `Recomendado: ${p} (${m} · ${e})`, notApplied: 'não aplicado (sem controle sobre esta sessão)', asTask: 'Criar uma tarefa a partir desta',
+    managed: 'Sessão gerenciada pelo escritório', openTask: 'abrir tarefa', src: 'fonte: stream do CLI', bySession: 'Por sessão (mês)', sessionsNote: 'Todas as conversas do mês, lidas do disco.',
+    settings: 'Ajustes da fila e da economia', maxAttempts: 'Tentativas por tarefa', autoApply: 'Aplicar recomendações sozinho', autoMax: 'Até o perfil', autoPerTask: 'Mudanças automáticas por tarefa', autoNote: 'Só dentro desses limites, e cada mudança fica registrada na tarefa.',
+    recommended: 'Recomendado', role: 'Papel', roles: { backend: 'Backend', frontend: 'Frontend', reviewer: 'Revisor' }, lean: 'Modo econômico (instruções curtas: ler só o necessário, sem logs longos)', leanOn: 'econômico',
+    privateNote: 'Modo privado: nomes, pastas, resultados e diffs ficam escondidos.', kinds: { task: 'tarefa', session: 'sessão ao vivo', today: 'hoje', month: 'este mês' }, resumed: 'mesma sessão',
+    ev: { created: 'criada', start: 'início', text: 'mensagem', tool: 'ferramenta', result: 'resultado', test: 'testes', state: 'estado', warn: 'alerta', config: 'configuração', applied: 'aplicado', reply: 'resposta', approve: 'aprovado', retry: 'nova tentativa', fresh: 'nova sessão', cancelling: 'cancelando', cancelled: 'cancelada', done: 'concluída', error: 'erro', worktree: 'worktree' },
+    subagents: n => `${n} subagente(s)`, srcClaude: 'por modelo, do total do Claude Code (inclui subagentes)', srcCodex: 'por turno, dos tokens do Codex; subagentes do Codex não aparecem no stream',
+    fresh: 'Nova sessão com resumo', freshTip: 'Começa uma sessão nova levando só um resumo: decisões, testes e pendências. Gasta menos contexto, mas perde o cache da sessão antiga.',
+    since: c => `Desde o commit ${c}:`, newFiles: 'Arquivos novos', cancelling: 'Cancelando… confirma quando o processo terminar.', similar: n => `${n} tarefa(s) parecida(s) no histórico`,
+  };
+  const en = {
+    proposal: (p, m, e) => `Proposal: ${p} (${m} · ${e}).`, runningCfg: 'Running', currentCfg: 'Configuration', pendingCfg: 'Pending', appliedOk: (m, e) => `Applied: ${m} · ${e}`,
+    partUnknown: 'part unknown', saveTip: 'One profile down: cheaper model and effort from the next step', moreTip: 'One profile up: more capacity from the next step',
+    monitored: 'Monitored session (read-only)', monitoredWhy: 'It was opened outside the office: you can see everything, but not change model or effort from here.', recFor: (p, m, e) => `Recommended: ${p} (${m} · ${e})`, notApplied: 'not applied (no control over this session)', asTask: 'Create a task from this one',
+    managed: 'Session managed by the office', openTask: 'open task', src: 'source: CLI stream', bySession: 'By session (month)', sessionsNote: 'Every conversation this month, read from disk.',
+    settings: 'Queue and economy settings', maxAttempts: 'Attempts per task', autoApply: 'Apply recommendations automatically', autoMax: 'Up to profile', autoPerTask: 'Automatic changes per task', autoNote: 'Only within these limits, and every change is logged on the task.',
+    recommended: 'Recommended', role: 'Role', roles: { backend: 'Backend', frontend: 'Frontend', reviewer: 'Reviewer' }, lean: 'Economy mode (short instructions: read only what is needed, no long logs)', leanOn: 'economy',
+    privateNote: 'Private mode: names, folders, results and diffs are hidden.', kinds: { task: 'task', session: 'live session', today: 'today', month: 'this month' }, resumed: 'same session',
+    ev: { created: 'created', start: 'start', text: 'message', tool: 'tool', result: 'result', test: 'tests', state: 'state', warn: 'warning', config: 'configuration', applied: 'applied', reply: 'reply', approve: 'approved', retry: 'retry', fresh: 'new session', cancelling: 'cancelling', cancelled: 'cancelled', done: 'done', error: 'error', worktree: 'worktree' },
+    subagents: n => `${n} subagent(s)`, srcClaude: 'per model, from Claude Code\'s total (includes subagents)', srcCodex: 'per turn, from Codex tokens; Codex subagents are not in the stream',
+    fresh: 'New session with a summary', freshTip: 'Starts a new session carrying only a summary: decisions, tests and open items. Less context, but the old session\'s cache is lost.',
+    since: c => `Since commit ${c}:`, newFiles: 'New files', cancelling: 'Cancelling… confirmed when the process exits.', similar: n => `${n} similar task(s) in history`,
+  };
+  Object.assign(I18N.pt.tasks, pt); Object.assign(I18N.en.tasks, en);
+  Object.assign(I18N.pt.tasks.recWhy, { scope: 'escopo amplo (muitos arquivos ou o projeto todo)', attempts: 'já teve tentativas sem sucesso', 'history-up': 'tarefas parecidas falharam nesse perfil', 'history-down': 'tarefas parecidas deram certo num perfil mais barato' });
+  Object.assign(I18N.en.tasks.recWhy, { scope: 'wide scope (many files or the whole project)', attempts: 'previous attempts failed', 'history-up': 'similar tasks failed at this profile', 'history-down': 'similar tasks succeeded at a cheaper profile' });
+  Object.assign(I18N.pt.tasks.reasons, { nogit: 'pediu worktree, mas a pasta não é um repositório git', worktree: 'não consegui criar a worktree', detached: 'o servidor reiniciou; o agente ainda está rodando' });
+  Object.assign(I18N.en.tasks.reasons, { nogit: 'a worktree was asked but the folder is not a git repo', worktree: 'could not create the worktree', detached: 'the server restarted; the agent is still running' });
+  Object.assign(I18N.pt.tasks.warn, { high: w => `Esta execução já custou ${fmtUSD(w.usd || 0)}, mais de 3× a mediana das tarefas concluídas (${fmtUSD(w.median || 0)}).`, budgetUnknown: 'Não dá para aplicar o orçamento: o custo deste modelo é desconhecido.', budget: 'Chegou no orçamento e foi pausada. Uma chamada que já estava em andamento pode ter passado um pouco do limite.' });
+  Object.assign(I18N.en.tasks.warn, { high: w => `This run already cost ${fmtUSD(w.usd || 0)}, over 3× the median finished task (${fmtUSD(w.median || 0)}).`, budgetUnknown: 'The budget cannot be enforced: this model\'s cost is unknown.', budget: 'Hit the budget and was paused. A call already in progress may have gone slightly over.' });
+  Object.assign(I18N.pt.tasks.fail, { attempts: 'Chegou no limite de tentativas (ajuste em Ajustes).', private: 'Escondido no modo privado.', notask: 'Tarefa não encontrada.' });
+  Object.assign(I18N.en.tasks.fail, { attempts: 'Hit the attempt limit (change it in Settings).', private: 'Hidden in private mode.', notask: 'Task not found.' });
+  Object.assign(I18N.pt.notices, { hidden: 'Aviso escondido (modo privado)', privateNote: 'Modo privado: os textos dos avisos ficam escondidos.' });
+  Object.assign(I18N.en.notices, { hidden: 'Notice hidden (private mode)', privateNote: 'Private mode: notice texts are hidden.' });
+}
+
 let T = I18N[lang];
 // sound is on by default; alerts follow the browser permission (asked on open). Only the buttons turn them off.
 let soundOn = store.get('sound', true);

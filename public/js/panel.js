@@ -97,6 +97,7 @@ function renderPanel() {
     ${canCompact(p) ? `<div class="actions"><button class="btn compact" data-compact-panel="${esc(p.id)}">⤓ ${esc(T.alerts.compact)} · ${Math.round(ctxPct * 100)}%</button></div>` : ''}
     <div class="actions"><button class="btn" id="btn-goto" data-id="${esc(p.id)}">›_ ${esc(p.agent === 'codex' && !p.pid ? P.gotoCodex : P.goto)}</button><span class="note" id="goto-msg"></span></div>
     ${p.coarse ? `<p class="note">${esc(T.panel.coarse)}</p>` : ''}
+    ${typeof taskCardHtml === 'function' ? taskCardHtml(p) : ''}
     <section class="card now" style="--c:${col}"><small>${esc(P.doing)}</small><p><span class="ico">${KIND_ICON[p.doing ? p.doing.kind : ''] || '•'}</span>${p.doing ? `<code>${esc(p.doing.tool)}</code> ` : ''}${esc(now)}</p>${p.doing ? `<span class="note">${esc(T.for(ago(p.doing.for)))}</span>` : ''}${p.state === 'waiting' ? `<p class="note">${esc(P.waitNote)}</p>` : ''}</section>
     ${p.lastPrompt ? `<section class="card quote"><small>${esc(P.lastPrompt)}${p.lastPromptAt ? ' · ' + esc(ago(data.now - p.lastPromptAt)) : ''}</small><p>${esc(p.lastPrompt)}</p></section>` : ''}
     ${p.lastReply ? `<section class="card quote reply"><small>${esc(P.lastReply)}${p.lastReplyAt ? ' · ' + esc(ago(data.now - p.lastReplyAt)) : ''}</small><p>${esc(p.lastReply)}</p></section>` : ''}

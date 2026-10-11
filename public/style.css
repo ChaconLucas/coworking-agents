@@ -821,3 +821,8 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .vmap i { flex: none; width: 22px; height: 4px; background: repeating-linear-gradient(90deg, #3a3045 0 4px, transparent 4px 8px); }
 .vnotes { background: rgba(0,0,0,.25); padding: 10px 14px; border-left: 4px solid #d97757; }
 .vhero canvas { width: 96px; height: 102px; }
+.trank { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.tcard { margin: 10px 0; } .tcard.managed { border-left: 4px solid #63c74d; }
+.tcard .tcfg { margin: 6px 0 0; } .tcard .tcfg select { max-width: 130px; }
+.tcfgnow { margin: 6px 0; font-size: 13px; } .tcfgnow .warn, p.warn { color: #f7b733; } .tcfgnow .ok, p.ok { color: #63c74d; }
+.tcfg label { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; }
