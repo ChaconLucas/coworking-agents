@@ -352,7 +352,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, '')).reason, 'text', 'empty text is refused');
   }
 
-  // tasks: input guards, recommendation rules, handoff and search (demo mode: nothing runs, nothing is written)
+  // tasks: guards and rules (demo: nothing runs, nothing is written)
   const tasks = require('../src/tasks'); tasks._reset({ demo: true });
   assert.strictEqual(tasks.op({ op: 'create', dir: '/etc', desc: 'x' }).reason, 'nodir', 'tasks only run inside the home folder');
   assert.strictEqual(tasks.op({ op: 'create', dir: require('os').homedir(), desc: '  ' }).reason, 'nodesc', 'a task needs a description');
@@ -360,13 +360,112 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual(tasks.recommend('refactor the payment architecture').profile, 'deep');
   assert.strictEqual(tasks.recommend('fix a typo in the README').profile, 'eco');
   assert.strictEqual(tasks.recommend('add a button to the settings page').profile, 'bal');
-  const made = tasks.op({ op: 'create', dir: require('os').homedir(), desc: 'add a button', agent: 'claude', profile: 'eco' }).task;
-  assert.deepStrictEqual([made.model, made.effort, made.state], ['haiku', 'low', 'pending']);
-  assert.strictEqual(tasks.op({ op: 'config', id: made.id, step: 1 }).task.profile, 'bal', 'more capacity goes one profile up');
-  assert.strictEqual(made.configLog.length, 1, 'config changes are logged');
-  assert.strictEqual(tasks.op({ op: 'reply', id: made.id, text: 'hi' }).reason, 'state', 'no reply while queued');
-  made.result = 'Added the button.'; assert.ok(tasks.op({ op: 'handoff', id: made.id, agent: 'codex' }).task.desc.includes('Added the button.'), 'handoff carries the last result');
-  assert.ok(tasks.search('install').some(r => r.id === 'demo2'), 'search finds tasks by text');
+  assert.strictEqual(tasks.recommend('touch a.js b.js c.js d.js e.js f.js g.js now').profile, 'deep', 'wide scope goes deep');
+  assert.strictEqual(tasks.op({ op: 'conclude', id: 'demo1' }).reason, 'state', 'a running task cannot be concluded');
+  assert.strictEqual(tasks.op({ op: 'approve', id: 'demo4' }).reason, 'state', 'approve only when blocked');
+  // private mode: no names, paths, results or event texts
+  const priv = tasks.list({ privacy: true }).tasks;
+  assert.ok(priv.every(t => /^task \d+$/.test(t.title) && !t.desc && !t.cwd && !t.result), 'private list hides names');
+  assert.ok(tasks.get('demo2', { privacy: true }).events.every(e => e.text === undefined), 'private events carry no text');
+  assert.strictEqual((await tasks.diff('demo2', { privacy: true })).reason, 'private');
+  assert.deepStrictEqual(tasks.search('install', { privacy: true }), []);
+
+  // real runs against fake agents (test/fake-bin): a throwaway HOME with a git repo
+  const realHome = process.env.HOME, realPath = process.env.PATH;
+  const H = fs.mkdtempSync(path.join(require('os').tmpdir(), 'cw-home-')), proj = path.join(H, 'proj'), plain = path.join(H, 'plain');
+  fs.mkdirSync(proj); fs.mkdirSync(plain);
+  process.env.HOME = H; process.env.PATH = path.join(__dirname, 'fake-bin') + path.delimiter + realPath;
+  const sh = (...a) => require('child_process').execFileSync('git', ['-C', proj, ...a], { stdio: 'ignore' });
+  sh('init', '-q'); sh('config', 'user.email', 't@t'); sh('config', 'user.name', 't'); fs.writeFileSync(path.join(proj, 'a.txt'), 'a\n'); sh('add', '.'); sh('commit', '-qm', 'init');
+  const mode = m => fs.writeFileSync(path.join(H, 'fake-mode'), m), lastArgs = () => JSON.parse(fs.readFileSync(path.join(H, 'fake-args'), 'utf8').trim().split('\n').pop());
+  tasks._reset(); tasks.startQueue({});
+  const T = id => tasks.get(id);
+
+  mode('ok');
+  let t1 = tasks.op({ op: 'create', dir: proj, desc: 'add a feature', agent: 'claude', profile: 'bal', worktree: true, testCmd: 'echo all good', role: 'backend' }).task;
+  assert.ok(await tasks._idle(), 'run finished');
+  t1 = T(t1.id);
+  assert.deepStrictEqual([t1.state, t1.reason], ['blocked', 'review']);
+  assert.ok(Math.abs(t1.cost - 0.01) < 1e-9, 'cost from the CLI total, not doubled by the live estimate (' + t1.cost + ')');
+  assert.deepStrictEqual(Object.keys(t1.byModel), ['claude-sonnet-5'], 'cost kept per real model id');
+  assert.strictEqual(t1.tokens.input, 1000, 'tokens counted once');
+  assert.ok(t1.cwd.includes('worktrees'), 'ran in its own worktree');
+  assert.strictEqual(t1.tests.code, 0);
+  const a1 = lastArgs(); assert.ok(a1.includes('--append-system-prompt') && a1[a1.indexOf('--model') + 1] === 'sonnet' && a1[a1.indexOf('--effort') + 1] === 'medium', 'role, model and effort reach the CLI');
+  const d1 = await tasks.diff(t1.id);
+  assert.ok(d1.diff.includes('+changed') && d1.diff.includes('brand new'), 'diff shows committed work and new files');
+  assert.ok(t1.files.includes('a.txt') && t1.files.includes('new.txt'));
+
+  // pending config: shown as "next", confirmed as applied when the next run starts (same session)
+  tasks.op({ op: 'config', id: t1.id, model: 'opus', effort: 'high' });
+  assert.strictEqual(T(t1.id).configLog.slice(-1)[0].applies, 'now');
+  tasks.op({ op: 'reply', id: t1.id, text: 'one more thing' }); await tasks._idle();
+  const a2 = lastArgs(); assert.strictEqual(a2[a2.indexOf('--resume') + 1], 'S1', 'the session is resumed');
+  assert.ok(T(t1.id).events.some(e => e.kind === 'applied' && e.to.model === 'opus'), 'change confirmed when applied');
+  assert.ok(Math.abs(T(t1.id).cost - 0.02) < 1e-9, 'resumed runs add their own cost only');
+
+  // failure, then a clean retry
+  mode('fail'); let t2 = tasks.op({ op: 'create', dir: proj, desc: 'break', agent: 'claude' }).task; await tasks._idle();
+  assert.strictEqual(T(t2.id).state, 'failed');
+  mode('ok'); tasks.op({ op: 'retry', id: t2.id }); await tasks._idle();
+  t2 = T(t2.id); assert.deepStrictEqual([t2.state, t2.failedTurn, t2.attempts], ['blocked', false, 2], 'a successful retry leaves the failed state');
+
+  // cancel: no conclude while running, the slot stays taken until the process is gone
+  mode('slow'); const t3 = tasks.op({ op: 'create', dir: proj, desc: 'slow', agent: 'claude' }).task;
+  await new Promise(r => setTimeout(r, 400));
+  assert.strictEqual(T(t3.id).state, 'running');
+  assert.strictEqual(tasks.op({ op: 'conclude', id: t3.id }).reason, 'state');
+  assert.ok(tasks.op({ op: 'cancel', id: t3.id }).pending, 'cancel waits for the process');
+  assert.strictEqual(T(t3.id).state, 'running', 'still running until it exits');
+  await tasks._idle(); assert.strictEqual(T(t3.id).state, 'cancelled');
+
+  // budget: stops the run and blocks; Codex without a known model has unknown cost, never zero-and-fine
+  const t4 = tasks.op({ op: 'create', dir: proj, desc: 'pricey', agent: 'claude', budget: 0.005 }).task; await tasks._idle();
+  assert.deepStrictEqual([T(t4.id).state, T(t4.id).reason], ['blocked', 'budget']);
+  mode('ok'); const t5 = tasks.op({ op: 'create', dir: plain, desc: 'codex job', agent: 'codex', budget: 1 }).task; await tasks._idle();
+  assert.ok(T(t5.id).costUnknown && T(t5.id).cost === 0, 'unknown Codex model: cost unknown');
+  assert.ok(T(t5.id).events.some(e => e.why === 'budgetUnknown'), 'budget said to be unenforceable');
+  fs.mkdirSync(path.join(H, '.codex'), { recursive: true });
+  fs.writeFileSync(path.join(H, '.codex', 'models_cache.json'), JSON.stringify({ models: [{ slug: 'gpt-6.1-sol', supported_reasoning_levels: [{ effort: 'low' }, { effort: 'xhigh' }] }] }));
+  fs.writeFileSync(path.join(H, '.codex', 'config.toml'), 'model = "gpt-6.1-sol"\n');
+  assert.ok(tasks.options('codex').models.includes('gpt-6.1-sol') && tasks.options('codex').efforts.includes('xhigh'), 'Codex models and efforts from its own cache');
+  const t6 = tasks.op({ op: 'create', dir: plain, desc: 'codex job', agent: 'codex', model: 'gpt-6.1-sol', effort: 'xhigh' }).task; await tasks._idle();
+  const a6 = lastArgs(); assert.ok(a6[a6.indexOf('-m') + 1] === 'gpt-6.1-sol' && a6.includes('model_reasoning_effort="xhigh"'));
+  assert.ok(!T(t6.id).costUnknown && T(t6.id).cost > 0, 'known Codex model is priced');
+  tasks.op({ op: 'reply', id: t6.id, text: 'go on' }); await tasks._idle();
+  assert.deepStrictEqual(lastArgs().slice(0, 3), ['exec', 'resume', 'T1'], 'Codex resumes its thread');
+
+  // a Codex turn that failed must not leave the next successful attempt marked as failed
+  mode('cfail'); const t6b = tasks.op({ op: 'create', dir: plain, desc: 'codex fail', agent: 'codex' }).task; await tasks._idle();
+  assert.strictEqual(T(t6b.id).state, 'failed');
+  mode('ok'); tasks.op({ op: 'retry', id: t6b.id }); await tasks._idle();
+  assert.strictEqual(T(t6b.id).state, 'blocked', 'retry clears the failure flag');
+
+  // worktree asked in a folder that is not a repo: told, never run in place
+  const t7 = tasks.op({ op: 'create', dir: plain, desc: 'x', agent: 'claude', worktree: true }).task; await tasks._idle();
+  assert.deepStrictEqual([T(t7.id).state, T(t7.id).reason], ['failed', 'nogit']);
+
+  // a loop warning carries the proposal; auto-apply only within the allowed limits, logged
+  tasks.op({ op: 'settings', autoApply: true, autoMax: 'deep', autoPerTask: 1 });
+  mode('loop'); const t8 = tasks.op({ op: 'create', dir: proj, desc: 'loop', agent: 'claude', profile: 'eco' }).task; await tasks._idle();
+  await new Promise(r => setTimeout(r, 20));
+  assert.strictEqual(T(t8.id).warn.rec.profile, 'bal');
+  assert.ok(T(t8.id).configLog.some(c => c.why === 'auto:loop' && c.to.profile === 'bal'), 'auto-applied and logged');
+  tasks.op({ op: 'settings', autoApply: false });
+
+  // handoff carries decisions, tests and open items
+  const h = tasks.handoffText(T(t1.id), 'finish it');
+  assert.ok(h.includes('Decisions') && h.includes('echo all good') && h.includes('Open items'));
+  // restart: a running task whose process is gone is detected, not assumed alive
+  mode('slow'); const t9 = tasks.op({ op: 'create', dir: proj, desc: 'detach', agent: 'claude' }).task;
+  await new Promise(r => setTimeout(r, 300));
+  const saved = JSON.parse(fs.readFileSync(path.join(H, '.config', 'coworking-agents', 'tasks', 'tasks.json'), 'utf8'));
+  assert.ok(saved.tasks.find(x => x.id === t9.id).pid > 0, 'pid persisted');
+  tasks.op({ op: 'cancel', id: t9.id }); await tasks._idle();
+
+  process.env.HOME = realHome; process.env.PATH = realPath; tasks._reset({ demo: true });
+  fs.rmSync(H, { recursive: true, force: true });
+
   // MCP: read-only tools only
   const { TOOLS } = require('../src/mcp');
   assert.deepStrictEqual(TOOLS.map(t => t.name), ['list_agents', 'get_agent_status', 'get_conflicts', 'get_daily_report', 'list_tasks']);

@@ -5,7 +5,7 @@
 
 const CURRENT = require('../package.json').version;
 const URL = 'https://registry.npmjs.org/coworking-agents/latest';
-let latest = null, timer = null, checkedAt = 0;
+let latest = null, timer = null, checkedAt = 0, error = '', remoteNotes = null;
 
 // true when a is a higher x.y.z than b (pre-release tags like 0.0.0-stage never count as newer)
 function newer(a, b) {
@@ -18,8 +18,12 @@ function newer(a, b) {
 async function check() {
   try {
     const r = await fetch(URL, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) });
-    if (r.ok) { const v = (await r.json()).version; if (typeof v === 'string') latest = v; checkedAt = Date.now(); }
-  } catch {}
+    if (r.ok) { const v = (await r.json()).version; if (typeof v === 'string') latest = v; checkedAt = Date.now(); error = ''; } else error = 'http ' + r.status;
+  } catch (e) { error = 'offline'; }
+  // the installed changelog can't know the future: the newer version's notes come from its own published CHANGELOG.md
+  if (latest && newer(latest, CURRENT) && (!remoteNotes || remoteNotes.v !== latest)) {
+    try { const r = await fetch(`https://unpkg.com/coworking-agents@${latest}/CHANGELOG.md`, { signal: AbortSignal.timeout(5000) }); if (r.ok) remoteNotes = { v: latest, list: parse(await r.text()) }; } catch {}
+  }
   return updateInfo();
 }
 
@@ -34,10 +38,22 @@ function startChecks() {
 function updateInfo() { return latest && newer(latest, CURRENT) ? { current: CURRENT, latest } : null; }
 
 // release notes: the CHANGELOG.md shipped in the package ("## x.y.z — date" headings, "- " items)
+function parse(txt) {
+  return String(txt).split(/^## /m).slice(1).map(b => { const [h, ...rest] = b.split('\n'); const [v, date] = h.split(/\s+—\s+/); return { v: v.trim(), date: (date || '').trim(), items: rest.filter(l => l.startsWith('- ')).map(l => l.slice(2).trim()).slice(0, 12) }; });
+}
 function notes() {
   let txt = ''; try { txt = require('fs').readFileSync(require('path').join(__dirname, '..', 'CHANGELOG.md'), 'utf8'); } catch {}
-  return txt.split(/^## /m).slice(1).map(b => { const [h, ...rest] = b.split('\n'); const [v, date] = h.split(/\s+—\s+/); return { v: v.trim(), date: (date || '').trim(), items: rest.filter(l => l.startsWith('- ')).map(l => l.slice(2).trim()).slice(0, 12) }; });
+  const local = parse(txt), extra = remoteNotes ? remoteNotes.list.filter(n => !local.some(l => l.v === n.v)) : [];
+  return [...extra, ...local];
 }
-function versionInfo() { return { current: CURRENT, latest, checkedAt, newer: !!(latest && newer(latest, CURRENT)), notes: notes() }; }
+// how this copy was installed, so the page shows the right update command
+function installMode() {
+  const p = __dirname.replace(/\\/g, '/');
+  if (/\/_npx\//.test(p)) return 'npx';
+  if (/\.claude\/plugins\//.test(p)) return 'plugin';
+  if (/\/lib\/node_modules\/coworking-agents\//.test(p + '/') || /\/node_modules\/coworking-agents\/src/.test(p) && !/_npx/.test(p)) return 'global';
+  return 'source';
+}
+function versionInfo() { return { current: CURRENT, latest, checkedAt, error, newer: !!(latest && newer(latest, CURRENT)), install: installMode(), notes: notes() }; }
 
-module.exports = { startChecks, updateInfo, versionInfo, newer, CURRENT };
+module.exports = { startChecks, updateInfo, versionInfo, newer, parse, installMode, CURRENT };

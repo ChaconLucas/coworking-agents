@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+// fake `codex exec --json` for the tests
+const fs = require('fs'), path = require('path'), H = process.env.HOME;
+fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify(process.argv.slice(2)) + '\n');
+const out = o => process.stdout.write(JSON.stringify(o) + '\n');
+const mode = (() => { try { return fs.readFileSync(path.join(H, 'fake-mode'), 'utf8').trim(); } catch { return 'ok'; } })();
+if (mode === 'cfail') { out({ type: 'thread.started', thread_id: 'T2' }); out({ type: 'turn.failed', error: { message: 'boom' } }); return; }
+out({ type: 'thread.started', thread_id: 'T1' });
+out({ type: 'item.started', item: { type: 'command_execution', command: 'ls' } });
+out({ type: 'item.completed', item: { type: 'agent_message', text: 'ok' } });
+out({ type: 'turn.completed', usage: { input_tokens: 2000, cached_input_tokens: 1000, output_tokens: 50 } });

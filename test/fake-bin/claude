@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+// fake `claude -p --output-format stream-json` for the tests: behaviour comes from $HOME/fake-mode
+const fs = require('fs'), path = require('path'), H = process.env.HOME;
+const mode = (() => { try { return fs.readFileSync(path.join(H, 'fake-mode'), 'utf8').trim(); } catch { return 'ok'; } })();
+fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify(process.argv.slice(2)) + '\n');
+const out = o => process.stdout.write(JSON.stringify(o) + '\n');
+const model = 'claude-sonnet-5', usage = { input_tokens: 1000, output_tokens: 100, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
+out({ type: 'system', subtype: 'init', session_id: 'S1', model });
+const msg = (id, content) => out({ type: 'assistant', message: { id, model, content, usage } });
+msg('m1', [{ type: 'text', text: 'working' }]); msg('m1', [{ type: 'tool_use', name: 'Read', input: { file_path: 'a.txt' } }]); // same message twice: usage counts once
+if (mode === 'loop') for (let i = 0; i < 3; i++) msg('l' + i, [{ type: 'tool_use', name: 'Bash', input: { command: 'ls' } }]);
+if (mode === 'slow') { let n = 0; const iv = setInterval(() => msg('s' + n++, [{ type: 'text', text: 'still going' }]), 100); setTimeout(() => clearInterval(iv), 20000); return; }
+if (mode === 'ok' || mode === 'loop') { fs.writeFileSync('new.txt', 'brand new\n'); fs.appendFileSync('a.txt', 'changed\n'); require('child_process').execFileSync('git', ['commit', '-qam', 'agent commit']); }
+const fail = mode === 'fail';
+out({ type: 'result', subtype: fail ? 'error_during_execution' : 'success', is_error: fail, result: mode === 'question' ? 'Which one?' : 'done', num_turns: 2, total_cost_usd: 0.01,
+  modelUsage: { [model]: { inputTokens: 1000, outputTokens: 100, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.01 } },
+  permission_denials: mode === 'deny' ? [{ tool_name: 'Bash', tool_input: { command: 'rm x' } }] : [] });
+process.exit(fail ? 1 : 0);

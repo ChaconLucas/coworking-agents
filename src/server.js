@@ -33,6 +33,17 @@ const LOCKED = `<!doctype html><meta charset="utf-8"><title>coworking-agents</ti
 <p style="max-width:420px;text-align:center">Abra o escritório pelo link que o <code>coworking-agents</code> mostrou no terminal.<br><br>
 <span style="color:#9a9187">Open the office using the link printed by <code>coworking-agents</code> in your terminal.</span></p>`;
 
+// one search box for the whole history: office tasks, live sessions, today's report and this month's top conversations
+function searchAll(q, privacy, demo) {
+  q = String(q).slice(0, 100).toLowerCase().trim();
+  if (q.length < 2 || privacy) return [];
+  const out = tasks.search(q), has = x => x && String(x).toLowerCase().includes(q);
+  try { for (const p of (demo ? demoSnapshot() : real()).people) if (has(p.title) || has(p.lastPrompt) || has(p.name)) out.push({ kind: 'session', id: p.id, title: p.title || p.name, agent: p.agent, state: p.state, live: true }); } catch {}
+  try { for (const r of (demo ? demoReport() : report()).rows) if (has(r.title)) out.push({ kind: 'today', id: r.id, title: r.title, agent: r.agent, live: r.live }); } catch {}
+  try { const u = demo ? require('./demo').demoUsage() : usage(); for (const m of (u.month && u.month.top) || []) if (has(m.title)) out.push({ kind: 'month', id: m.id, title: m.title, agent: m.agent }); } catch {}
+  const seen = new Set(); return out.filter(r => !seen.has(r.kind === 'task' ? 't' + r.id : r.id) && seen.add(r.kind === 'task' ? 't' + r.id : r.id)).slice(0, 40);
+}
+
 // private mode: conversation titles name projects and people, so they go
 function privateUsage(u, privacy) {
   if (!privacy || !u) return u;
@@ -48,7 +59,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   let last = '', lastPush = 0;
 
   function safeSnapshot() {
-    try { return JSON.stringify({ ...snapshot({ privacy }), update: demo ? null : updateInfo() }); } catch (e) { return JSON.stringify({ error: 'snapshot failed' }); }
+    try { return JSON.stringify({ ...snapshot({ privacy }), update: demo ? null : updateInfo(), privacy }); } catch (e) { return JSON.stringify({ error: 'snapshot failed' }); }
   }
 
   function tick() {
@@ -200,10 +211,10 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       });
       return;
     }
-    if (url.pathname === '/api/tasks' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.list()));
-    if (url.pathname === '/api/task' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.get(url.searchParams.get('id')) || null));
-    if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id')).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }
-    if (url.pathname === '/api/search' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.search(url.searchParams.get('q') || '')));
+    if (url.pathname === '/api/tasks' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.list({ privacy })));
+    if (url.pathname === '/api/task' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.get(url.searchParams.get('id'), { privacy }) || null));
+    if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id'), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }
+    if (url.pathname === '/api/search' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(searchAll(url.searchParams.get('q') || '', privacy, demo)));
     if (url.pathname === '/api/version' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(versionInfo()));
     if (url.pathname === '/api/tasks' && req.method === 'POST') {
       const origin = req.headers.origin || '';
