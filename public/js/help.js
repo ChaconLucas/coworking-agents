@@ -72,7 +72,8 @@ function sceneBox() {
   const x0 = Math.max(Math.round(W * .3), Math.ceil((c.right - b0.left) / DOCK_S) + 18);
   // the office must end before the tools (and their speech clouds before the "+N" tag)
   const tools = document.querySelector('.bar .tools'), tl = tools ? (tools.getBoundingClientRect().left - b0.left) / DOCK_S : W;
-  const fit = Math.max(1, Math.min(4, Math.floor((tl - x0 - 30) / SLOT)));
+  const reserve = typeof drawLucas === 'function' && adminState !== 'idle' ? 60 : 0; // room for the admin and his sign
+  const fit = Math.max(1, Math.min(4, Math.floor((tl - x0 - 30 - reserve) / SLOT)));
   if (fit !== PER_OFFICE) { PER_OFFICE = fit; if (data) renderDock(); }
   return { W, H, x0, desk: H - 7 };
 }
@@ -124,9 +125,9 @@ function drawDock(t) {
     const adminOn = typeof drawLucas === 'function' && adminState !== 'idle';
     if (adminOn) {
       const tl0 = document.querySelector('.bar .tools').getBoundingClientRect().left - bar.getBoundingClientRect().left;
-      const ax = Math.max(x0 + PER_OFFICE * SLOT + 16, Math.floor(tl0 / DOCK_S) - 36), ay = desk - 26;
+      const ax = Math.max(x0 + PER_OFFICE * SLOT + 40, Math.floor(tl0 / DOCK_S) - 30), ay = desk - 23;
       drawLucas(dockCtx, ax, ay, 1, t);
-      Object.assign(adminEl.style, { left: (ax + 4) * DOCK_S + 'px', top: Math.max(0, ay) * DOCK_S + 'px', width: 18 * DOCK_S + 'px', height: (desk - ay) * DOCK_S + 'px' });
+      Object.assign(adminEl.style, { left: (ax - 22) * DOCK_S + 'px', top: Math.max(0, ay) * DOCK_S + 'px', width: 44 * DOCK_S + 'px', height: (desk - ay) * DOCK_S + 'px' });
     }
     // the counter
     r(0, desk, W, 2, '#dc9a6c'); r(0, desk + 2, W, H - desk - 2, '#8f4f3a'); r(0, H - 1, W, 1, PAL.ink);

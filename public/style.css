@@ -786,7 +786,7 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 #btn-bell .bell-n { position: absolute; top: -4px; right: -4px; background: #e5484d; color: #fff; font-style: normal; font-size: 10px; line-height: 14px; min-width: 14px; padding: 0 2px; }
 .admin { position: absolute !important; z-index: 2 !important; background: none; border: 0; padding: 0; cursor: pointer; }
 .admin[hidden] { display: none; }
-.admin-bubble { position: absolute; right: calc(100% + 4px); top: 8px; white-space: nowrap; background: #fff6d5; color: #2a1c14; font-size: 11px; padding: 2px 6px; border: 2px solid #2a1c14; }
+.admin-bubble { display: none; position: absolute; right: calc(100% + 4px); top: 8px; white-space: nowrap; background: #fff6d5; color: #2a1c14; font-size: 11px; padding: 2px 6px; border: 2px solid #2a1c14; }
 .admin.loud .admin-bubble { animation: tpulse 1s steps(2) infinite; }
 @media (prefers-reduced-motion: reduce) { .admin.loud .admin-bubble, .st-running .tdot { animation: none; } }
 @media (max-width: 640px) { .trank { grid-template-columns: 1fr; } .admin-bubble { display: none; } }
