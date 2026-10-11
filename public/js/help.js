@@ -120,13 +120,21 @@ function drawDock(t) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const lx of lamps) { const g = ctx.createRadialGradient(lx + 5, desk - 6, 0, lx + 5, desk - 6, 30); g.addColorStop(0, 'rgba(255,190,90,.35)'); g.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = g; ctx.fillRect(lx - 30, desk - 40, 70, 40); }
     ctx.restore();
+    // the office admin stands behind the counter in the monitor's place, only while there's version news (tasks.js)
+    const adminOn = typeof drawLucas === 'function' && adminState !== 'idle';
+    if (adminOn) {
+      const tl0 = document.querySelector('.bar .tools').getBoundingClientRect().left - bar.getBoundingClientRect().left;
+      const ax = Math.max(x0 + PER_OFFICE * SLOT + 16, Math.floor(tl0 / DOCK_S) - 36), ay = desk - 26;
+      drawLucas(dockCtx, ax, ay, 1, t);
+      Object.assign(adminEl.style, { left: (ax + 4) * DOCK_S + 'px', top: Math.max(0, ay) * DOCK_S + 'px', width: 18 * DOCK_S + 'px', height: (desk - ay) * DOCK_S + 'px' });
+    }
     // the counter
     r(0, desk, W, 2, '#dc9a6c'); r(0, desk + 2, W, H - desk - 2, '#8f4f3a'); r(0, H - 1, W, 1, PAL.ink);
     for (const lx of lamps) Art.drawLamp(lx, desk - 12, true);
     // retro monitor sign on the right
     const tl = document.querySelector('.bar .tools').getBoundingClientRect().left - bar.getBoundingClientRect().left;
     const mx = Math.floor(tl / DOCK_S) - 40;
-    if (mx > x0 + PER_OFFICE * SLOT + 20) {
+    if (!adminOn && mx > x0 + PER_OFFICE * SLOT + 20) {
       r(mx - 2, desk - 26, 34, 24, PAL.ink); r(mx, desk - 24, 30, 20, '#0c1410');
       for (let i = 0; i < 4; i++) r(mx + 3, desk - 21 + i * 4, [18, 16, 20, 14][i], 2, '#3ddc84');
       if (f % 2) r(mx + 3 + 15, desk - 9, 3, 2, '#3ddc84');

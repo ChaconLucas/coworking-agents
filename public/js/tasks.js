@@ -216,8 +216,8 @@ reportEl.addEventListener('click', e => {
 
 // ---- the office admin: waves with a sign while a new version is unseen, keeps the sign until it runs, celebrates once ----
 const adminEl = document.createElement('button');
-adminEl.id = 'admin'; adminEl.className = 'admin'; adminEl.innerHTML = '<canvas width="96" height="120"></canvas><span class="admin-bubble" hidden></span>';
-{ const bell = document.getElementById('btn-bell'); if (bell) bell.before(adminEl); else document.body.appendChild(adminEl); } // in the header, next to the bell
+adminEl.id = 'admin'; adminEl.className = 'admin'; adminEl.innerHTML = '<span class="admin-bubble"></span>'; adminEl.hidden = true;
+document.querySelector('.bar').appendChild(adminEl); // a click target over the admin drawn in the top bar scene
 adminEl.addEventListener('click', () => openReport('version'));
 const reduceMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 let adminState = 'idle', adminCelebrateUntil = 0;
@@ -231,9 +231,15 @@ function adminMode() {
 }
 function drawAdmin(t = Date.now()) {
   adminState = adminMode();
-  const c = adminEl.querySelector('canvas'), g = c.getContext('2d'), S = 4, still = reduceMotion.matches, f = still ? 0 : Math.floor(t / 280) % 2;
-  g.clearRect(0, 0, c.width, c.height);
-  const px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x * S, y * S, w * S, h * S); };
+  const v = verData || {}, bub = adminEl.querySelector('.admin-bubble');
+  adminEl.hidden = adminState === 'idle'; // only shows up when there's news about a version
+  bub.textContent = adminState === 'celebrate' ? T.ver.celebrate(v.current) : adminState !== 'idle' ? 'v' + v.latest : '';
+  adminEl.classList.toggle('loud', adminState === 'unseen'); adminEl.title = T.ver.admin + (adminState !== 'idle' ? ' · ' + bub.textContent : '');
+}
+// drawn by the top bar scene (help.js), standing behind the counter: ox, oy = top-left of a 24-wide sprite, S = pixel size
+function drawLucas(g, ox, oy, S, t) {
+  const still = reduceMotion.matches, f = still ? 0 : Math.floor(t / 280) % 2;
+  const px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(ox + x * S, oy + y * S, w * S, h * S); };
   const bob = adminState === 'celebrate' && f ? -1 : 0, y0 = 5 + bob;
   // Lucas: short textured brown hair, light skin, stubble beard, butterfly tattoo on the neck, navy knit polo
   // with an open collar, tattooed forearms (the left one blacked out), bead bracelet, dark jeans, white sneakers
@@ -252,10 +258,6 @@ function drawAdmin(t = Date.now()) {
   if (up) { px(17, y0 + 11, 2, 3, PO); px(17, y0 + 6, 2, 5, INK2); px(17, y0 + 9, 2, 1, '#f2f2f2'); px(17, y0 + 5, 2, 1, SK); px(18, y0 - 1, 1, 6, '#8a5a2b'); px(15, y0 - 4, 9, 4, adminState === 'celebrate' ? '#63c74d' : '#f7b733'); px(16, y0 - 3, 7, 2, '#fff6d5'); }
   else { px(17, y0 + 13, 2, 3, PO); px(17, y0 + 16, 2, 4, INK2); px(17, y0 + 19, 2, 1, '#f2f2f2'); px(17, y0 + 20, 2, 1, SK); }
   if (adminState === 'celebrate' && !still) for (let i = 0; i < 6; i++) px((i * 7 + f * 3) % 24, (i * 5 + f * 2) % 8, 1, 1, ['#f7b733', '#ff6b9d', '#4fa3ff'][i % 3]);
-  const bub = adminEl.querySelector('.admin-bubble'), v = verData || {};
-  bub.hidden = adminState === 'idle'; bub.textContent = adminState === 'celebrate' ? T.ver.celebrate(v.current) : adminState !== 'idle' ? 'v' + v.latest : '';
-  adminEl.hidden = adminState === 'idle'; // only shows up when there's news about a version
-  adminEl.classList.toggle('loud', adminState === 'unseen'); adminEl.title = T.ver.admin + (adminState !== 'idle' ? ' · ' + bub.textContent : '');
 }
-setInterval(() => { if (!document.hidden && adminState !== 'idle') drawAdmin(); }, 280);
+setInterval(() => { if (!document.hidden) drawAdmin(); }, 1000);
 try { drawAdmin(); } catch {}
