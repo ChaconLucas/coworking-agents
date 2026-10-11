@@ -19,9 +19,12 @@ if (flag('-h') || flag('--help')) {
   --private   hide session titles, paths and file names (screen sharing)
   --demo [N]  show a fake office with every state and N agents (default 10)
   --json      print one snapshot and exit
+  mcp         run a read-only MCP server on stdio (claude mcp add coworking -- npx coworking-agents mcp)
   --no-update-check  don't ask npm whether a newer version is out`);
   process.exit(0);
 }
+
+if (args[0] === 'mcp') { require('../src/mcp').serve(); return; }
 
 if (flag('--json')) {
   const { snapshot } = require('../src/collect');

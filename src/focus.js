@@ -165,12 +165,27 @@ end run`,
 end run`,
 };
 
+// any OS: an agent running inside tmux gets the text through `tmux send-keys` on the pane that owns its tty
+async function sendTmux(pid, text) {
+  const info = await run('ps', ['-o', 'tty=,stat=', '-p', String(pid)]);
+  const m = info && /^(\S+)\s+(\S+)$/.exec(info.trim());
+  if (!m || m[1] === '?' || m[1] === '??') return null;
+  const panes = await run('tmux', ['list-panes', '-a', '-F', '#{pane_tty} #{pane_id}']);
+  const pane = panes && panes.split('\n').map(l => l.split(' ')).find(([tty]) => tty === '/dev/' + m[1]);
+  if (!pane) return null;
+  if (!m[2].includes('+')) return { ok: false, reason: 'notforeground', app: 'tmux' };
+  if ((await run('tmux', ['send-keys', '-t', pane[1], '-l', text])) == null) return { ok: false, reason: 'notfound', app: 'tmux' };
+  await run('tmux', ['send-keys', '-t', pane[1], 'Enter']);
+  return { ok: true, app: 'tmux' };
+}
+
 async function sendText(person, text) {
-  if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
   if (person.entrypoint === 'claude-desktop') return { ok: false, reason: 'desktop' };
   if (!person.pid || !['claude', 'codex'].includes(person.agent)) return { ok: false, reason: 'unsupported' };
   text = String(text || '').replace(/\r/g, '').trim();
   if (!text || text.length > 4000) return { ok: false, reason: 'text' };
+  const viaTmux = await sendTmux(person.pid, text); if (viaTmux) return viaTmux;
+  if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
   const info = await run('ps', ['-o', 'tty=,stat=', '-p', String(person.pid)]);
   const m = info && /^(ttys?\d+)\s+(\S+)$/.exec(info.trim());
   if (!m) return { ok: false, reason: 'notty' };

@@ -11,6 +11,7 @@
     "public",
     ".claude-plugin",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
     "commands",
     "skills",

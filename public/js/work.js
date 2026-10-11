@@ -63,7 +63,7 @@ let goalToldFor = store.get('goalTold', ''), costToldFor = store.get('costTold',
 function checkGoals() {
   const s = prog.style || {}, k = todayKey();
   if (s.goalHours && todayHours() >= s.goalHours && goalToldFor !== k) { goalToldFor = k; store.set('goalTold', k); toast(`<b>${esc(T.goal.reached)}</b>${esc(T.goal.reachedBody(s.goalHours))}`, 'ok'); playTune('trophy'); confettiAt = Date.now(); achBump('goals'); }
-  if (s.costAlert && todayUsd() >= s.costAlert && costToldFor !== k) { costToldFor = k; store.set('costTold', k); toast(`<b>${esc(T.goal.costHit(fmtUSD(todayUsd())))}</b>${esc(T.goal.costBody)}`, 'warn'); notifyOS(T.goal.costHit(fmtUSD(todayUsd())), T.goal.costBody); }
+  if (s.costAlert && todayUsd() >= s.costAlert && costToldFor !== k) { costToldFor = k; store.set('costTold', k); toast(`<b>${esc(T.goal.costHit(fmtUSD(todayUsd())))}</b>${esc(T.goal.costBody)}`, 'warn'); notifyOS(T.goal.costHit(fmtUSD(todayUsd())), T.goal.costBody); if (typeof pushNotice === 'function') pushNotice('cost:' + k, 'warn', T.goal.costHit(fmtUSD(todayUsd())), T.goal.costBody); }
 }
 setInterval(checkGoals, 60000);
 

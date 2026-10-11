@@ -41,7 +41,7 @@ let reportTab = 'usage', todayData = null;
 function openReport(tab) { reportTab = tab || 'usage'; achBump('tab_' + reportTab); reportEl.hidden = false; renderReport(); loadUsage(true); if (reportTab === 'today') loadToday(); }
 async function loadToday() { try { todayData = await fetch('api/report').then(r => r.json()); } catch {} if (!reportEl.hidden) renderReport(); }
 reportEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { reportTab = t.dataset.tab; achBump('tab_' + reportTab); if (reportTab === 'today') loadToday(); renderReport(); } });
-function tabsHtml() { return `<div class="rtabs">${[['queue', T.queue.tab(typeof queueList === 'function' ? queueList().filter(p => p.state !== 'idle').length : 0)], ['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['office', T.office.tab], ['feed', T.feed.title]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
+function tabsHtml() { return `<div class="rtabs">${[['tasks', T.tasks.tab(typeof tasksWaiting === 'function' ? tasksWaiting() : 0)], ['notices', T.notices.tab(typeof unreadNotices === 'function' ? unreadNotices() : 0)], ['queue', T.queue.tab(typeof queueList === 'function' ? queueList().filter(p => p.state !== 'idle').length : 0)], ['usage', T.usage.title], ['today', T.today.title], ['paper', T.paper.tab], ['ach', T.ach.title], ['shop', T.shop.title], ['office', T.office.tab], ['feed', T.feed.title], ['version', T.ver.tab]].map(([k, l]) => `<button data-tab="${k}" class="${reportTab === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`; }
 // activity feed: newest first, grouped by hour
 function renderFeed() {
   const F = T.feed, body = reportEl.querySelector('.report-body');
@@ -97,6 +97,9 @@ reportEl.addEventListener('click', async e => {
 function closeReport() { reportEl.hidden = true; }
 
 function renderReport() {
+  if (reportTab === 'tasks') return renderTasks();
+  if (reportTab === 'notices') return renderNotices();
+  if (reportTab === 'version') return renderVersion();
   if (reportTab === 'today') return renderToday();
   if (reportTab === 'feed') return renderFeed();
   if (reportTab === 'ach') return renderAchievements();

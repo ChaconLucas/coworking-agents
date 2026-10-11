@@ -178,6 +178,27 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 - **Focus mode:** sounds and system notifications pause for 25 or 50 minutes.
 - **Replay:** scrub or play back the last hour.
 
+## Tasks: hand work to agents from the office
+
+Open **Tasks** (☰ → report tabs) and describe the work, pick a folder, an agent (Claude Code, Codex or *Automatic*) and a profile. The agent runs in the background (`claude -p` / `codex exec`), in its own git worktree if you tick it. You never need the terminal:
+
+- **Answer** its questions and **approve** tools it was not allowed to use; it resumes the same session.
+- **Review** the result, the files changed, the diff and your test command's output, then **conclude**, **retry** or **hand off** to the other agent (with a summary of what was done).
+- **Queue:** priority, "after task X" dependencies and how many agents run at once.
+- **Cost:** per task (tokens in/out/cache, estimated USD, attempts), a ranking by task and by AI for today / 7 / 30 days, and an optional budget that pauses the task when reached.
+- **Profiles and controls:** Economy, Balanced, Deep. *Save*, *More capacity*, *Apply recommendation* or pick model and effort by hand; changes apply from the next step and are logged. The recommendation is plain rules plus what similar past tasks taught (no AI call to choose).
+- **Warnings:** the same action repeated without progress, two failed attempts, budget reached.
+
+Only tasks created here can be controlled. Sessions found by monitoring stay read-only. Costs are estimates at API prices, not your bill or plan percentage. Tasks live in `~/.config/coworking-agents/tasks/`.
+
+## Notices, releases and the office admin
+
+The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. **Releases** shows the installed version, the newest on npm, when it checked and what changed, with the update command to copy. The office admin waves a sign while a new version is unseen, keeps it until you run it, then celebrates.
+
+## MCP (read-only)
+
+`claude mcp add coworking -- npx coworking-agents mcp` gives other agents `list_agents`, `get_agent_status`, `get_conflicts`, `get_daily_report` and `list_tasks`. Nothing through MCP changes anything.
+
 ## Walk around (Gather-style)
 
 You're in the office too, with a **YOU** tag. **WASD** or the arrow keys walk (hold **Shift** to run), a click on the floor walks you there through the doors, and walls stop you. Near an agent, a prop or a door, **Enter** talks, opens or enters. Turn it off in the ☰ menu.
@@ -253,7 +274,8 @@ Click the elevator (or press Enter next to it) to ride between floors, up to the
 |---|---|---|---|
 | See sessions (Claude Code, Codex, other CLIs) | ✓ | ✓ | ✓ |
 | Go to terminal | exact tab (Terminal, iTerm2) | window (needs `xdotool` or `wmctrl`) | window |
-| Reply / answer / compact from the office | ✓ | copy and go | copy and go |
+| Reply / answer / compact from the office | ✓ | tmux, else copy and go | tmux, else copy and go |
+| Tasks in the background | ✓ | ✓ | ✓ (needs the CLIs on PATH) |
 
 Linux and Windows support is written against their process tools but has not been tested on real machines yet; reports welcome. See the [roadmap](https://github.com/ChaconLucas/coworking-agents/blob/main/ROADMAP.md) for what's waiting on testing and what's next.
 

@@ -128,7 +128,7 @@ async function refresh() {
         d.first = Math.min(d.first, a.first); d.last = Math.max(d.last, a.last);
         if (k.startsWith(month)) { m.activeMs += a.activeMs; m.tools += a.tools; m.last = Math.max(m.last, a.last); }
       }
-      for (const [k, c] of Object.entries(res.usdByDay || {})) if (days[k]) days[k].usd = (days[k].usd || 0) + c;
+      for (const [k, c] of Object.entries(res.usdByDay || {})) if (days[k]) { days[k].usd = (days[k].usd || 0) + c; if (days[k].byAgent && days[k].byAgent[kind]) days[k].byAgent[kind].usd = (days[k].byAgent[kind].usd || 0) + c; }
       for (const [k, u] of Object.entries(res.byDay)) {
         if (days[k]) { days[k].output = (days[k].output || 0) + u.output; if (days[k].byAgent && days[k].byAgent[kind]) days[k].byAgent[kind].output += u.output; }
         if (k.startsWith(month)) m.output += u.output;

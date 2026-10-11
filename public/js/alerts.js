@@ -61,6 +61,7 @@ function checkAlerts() {
       if (firstAlertPass) continue; // already waiting when the page opened: the counters show it
       const what = p.state === 'needs_you' ? A.waitAsk(mins) : A.waitApprove(mins);
       toast(`<b>${esc(what)}</b>${esc(p.name)} · ${esc(p.title || '')}`, 'warn');
+      if (typeof pushNotice === 'function') pushNotice('agent:' + p.id, 'warn', p.name + ': ' + what, p.title || '', { agent: p.id });
       notifyOS(what, p.name);
     }
   }

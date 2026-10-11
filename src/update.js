@@ -5,7 +5,7 @@
 
 const CURRENT = require('../package.json').version;
 const URL = 'https://registry.npmjs.org/coworking-agents/latest';
-let latest = null, timer = null;
+let latest = null, timer = null, checkedAt = 0;
 
 // true when a is a higher x.y.z than b (pre-release tags like 0.0.0-stage never count as newer)
 function newer(a, b) {
@@ -18,7 +18,7 @@ function newer(a, b) {
 async function check() {
   try {
     const r = await fetch(URL, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) });
-    if (r.ok) { const v = (await r.json()).version; if (typeof v === 'string') latest = v; }
+    if (r.ok) { const v = (await r.json()).version; if (typeof v === 'string') latest = v; checkedAt = Date.now(); }
   } catch {}
   return updateInfo();
 }
@@ -33,4 +33,11 @@ function startChecks() {
 // what the page shows: null until a newer version is known
 function updateInfo() { return latest && newer(latest, CURRENT) ? { current: CURRENT, latest } : null; }
 
-module.exports = { startChecks, updateInfo, newer, CURRENT };
+// release notes: the CHANGELOG.md shipped in the package ("## x.y.z — date" headings, "- " items)
+function notes() {
+  let txt = ''; try { txt = require('fs').readFileSync(require('path').join(__dirname, '..', 'CHANGELOG.md'), 'utf8'); } catch {}
+  return txt.split(/^## /m).slice(1, 6).map(b => { const [h, ...rest] = b.split('\n'); const [v, date] = h.split(/\s+—\s+/); return { v: v.trim(), date: (date || '').trim(), items: rest.filter(l => l.startsWith('- ')).map(l => l.slice(2).trim()).slice(0, 12) }; });
+}
+function versionInfo() { return { current: CURRENT, latest, checkedAt, newer: !!(latest && newer(latest, CURRENT)), notes: notes() }; }
+
+module.exports = { startChecks, updateInfo, versionInfo, newer, CURRENT };

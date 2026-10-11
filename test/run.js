@@ -344,13 +344,32 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
 
   // reply safeguards: Claude and Codex CLI sessions only, and only when the agent owns a real terminal tab
   const { sendText } = require('../src/focus');
-  assert.strictEqual((await sendText({ agent: 'codex', pid: null }, 'hi')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform', 'a Codex conversation not matched to a terminal process never receives text');
-  assert.strictEqual((await sendText({ agent: 'gemini', pid: 1 }, 'hi')).reason, process.platform === 'darwin' ? 'unsupported' : 'platform', 'other AIs never receive text');
+  assert.strictEqual((await sendText({ agent: 'codex', pid: null }, 'hi')).reason, 'unsupported', 'a Codex conversation not matched to a terminal process never receives text');
+  assert.strictEqual((await sendText({ agent: 'gemini', pid: 1 }, 'hi')).reason, 'unsupported', 'other AIs never receive text');
   if (process.platform === 'darwin') assert.strictEqual((await sendText({ agent: 'codex', pid: sleepers[0].pid }, 'hi')).reason, 'notty', 'a Codex process without a terminal never receives text');
   if (process.platform === 'darwin') {
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, 'hi')).reason, 'notty', 'a process without a terminal never receives text');
     assert.strictEqual((await sendText({ agent: 'claude', pid: sleepers[0].pid }, '')).reason, 'text', 'empty text is refused');
   }
+
+  // tasks: input guards, recommendation rules, handoff and search (demo mode: nothing runs, nothing is written)
+  const tasks = require('../src/tasks'); tasks._reset({ demo: true });
+  assert.strictEqual(tasks.op({ op: 'create', dir: '/etc', desc: 'x' }).reason, 'nodir', 'tasks only run inside the home folder');
+  assert.strictEqual(tasks.op({ op: 'create', dir: require('os').homedir(), desc: '  ' }).reason, 'nodesc', 'a task needs a description');
+  assert.strictEqual(tasks.op({ op: 'create', dir: require('os').homedir(), desc: 'x', agent: 'gemini' }).reason, 'unsupported', 'only supported agents');
+  assert.strictEqual(tasks.recommend('refactor the payment architecture').profile, 'deep');
+  assert.strictEqual(tasks.recommend('fix a typo in the README').profile, 'eco');
+  assert.strictEqual(tasks.recommend('add a button to the settings page').profile, 'bal');
+  const made = tasks.op({ op: 'create', dir: require('os').homedir(), desc: 'add a button', agent: 'claude', profile: 'eco' }).task;
+  assert.deepStrictEqual([made.model, made.effort, made.state], ['haiku', 'low', 'pending']);
+  assert.strictEqual(tasks.op({ op: 'config', id: made.id, step: 1 }).task.profile, 'bal', 'more capacity goes one profile up');
+  assert.strictEqual(made.configLog.length, 1, 'config changes are logged');
+  assert.strictEqual(tasks.op({ op: 'reply', id: made.id, text: 'hi' }).reason, 'state', 'no reply while queued');
+  made.result = 'Added the button.'; assert.ok(tasks.op({ op: 'handoff', id: made.id, agent: 'codex' }).task.desc.includes('Added the button.'), 'handoff carries the last result');
+  assert.ok(tasks.search('install').some(r => r.id === 'demo2'), 'search finds tasks by text');
+  // MCP: read-only tools only
+  const { TOOLS } = require('../src/mcp');
+  assert.deepStrictEqual(TOOLS.map(t => t.name), ['list_agents', 'get_agent_status', 'get_conflicts', 'get_daily_report', 'list_tasks']);
 
   fakeAider.kill(); sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
   fs.rmSync(root, { recursive: true, force: true });
