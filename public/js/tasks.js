@@ -209,7 +209,7 @@ reportEl.addEventListener('click', e => {
 // ---- the office admin: waves with a sign while a new version is unseen, keeps the sign until it runs, celebrates once ----
 const adminEl = document.createElement('button');
 adminEl.id = 'admin'; adminEl.className = 'admin'; adminEl.innerHTML = '<canvas width="96" height="120"></canvas><span class="admin-bubble" hidden></span>';
-document.body.appendChild(adminEl);
+{ const bell = document.getElementById('btn-bell'); if (bell) bell.before(adminEl); else document.body.appendChild(adminEl); } // in the header, next to the bell
 adminEl.addEventListener('click', () => openReport('version'));
 const reduceMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 let adminState = 'idle', adminCelebrateUntil = 0;
@@ -226,22 +226,27 @@ function drawAdmin(t = Date.now()) {
   const c = adminEl.querySelector('canvas'), g = c.getContext('2d'), S = 4, still = reduceMotion.matches, f = still ? 0 : Math.floor(t / 280) % 2;
   g.clearRect(0, 0, c.width, c.height);
   const px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x * S, y * S, w * S, h * S); };
-  const bob = adminState === 'celebrate' && f ? -1 : 0, y0 = 6 + bob;
-  // legs, shoes, suit, shirt and tie, head, short dark hair and beard, glasses
-  px(9, y0 + 20, 2, 3, '#2b2f45'); px(13, y0 + 20, 2, 3, '#2b2f45'); px(8, y0 + 23, 3, 1, '#16121a'); px(13, y0 + 23, 3, 1, '#16121a');
-  px(7, y0 + 11, 10, 9, '#24345c'); px(11, y0 + 11, 2, 6, '#f2f0ea'); px(11, y0 + 12, 2, 4, '#c9302c');
-  px(8, y0 + 3, 8, 8, '#e0a47a'); px(8, y0 + 2, 8, 2, '#2a1c14'); px(7, y0 + 3, 1, 4, '#2a1c14'); px(16, y0 + 3, 1, 4, '#2a1c14'); px(8, y0 + 9, 8, 2, '#3a271c');
-  px(9, y0 + 6, 2, 1, '#1a1a1a'); px(13, y0 + 6, 2, 1, '#1a1a1a'); px(11, y0 + 6, 2, 1, '#555'); px(10, y0 + 9, 4, 1, '#c97e5e');
-  // arms: the right one waves (or holds the sign up) when there's news
-  px(5, y0 + 12, 2, 6, '#24345c'); px(5, y0 + 18, 2, 1, '#e0a47a');
-  const up = adminState === 'unseen' ? !f : adminState === 'celebrate' ? f : false;
-  if (adminState === 'unseen' || adminState === 'pending' || adminState === 'celebrate') {
-    if (up || adminState === 'pending') { px(17, y0 + 7, 2, 5, '#24345c'); px(17, y0 + 6, 2, 1, '#e0a47a'); px(18, y0 - 1, 1, 7, '#8a5a2b'); px(15, y0 - 5, 9, 5, adminState === 'celebrate' ? '#63c74d' : '#f7b733'); px(16, y0 - 4, 7, 3, '#fff6d5'); }
-    else { px(17, y0 + 12, 2, 6, '#24345c'); px(17, y0 + 18, 2, 1, '#e0a47a'); }
-  } else { px(17, y0 + 12, 2, 6, '#24345c'); px(17, y0 + 18, 2, 1, '#e0a47a'); }
+  const bob = adminState === 'celebrate' && f ? -1 : 0, y0 = 5 + bob;
+  // Lucas: short textured brown hair, light skin, stubble beard, butterfly tattoo on the neck, navy knit polo
+  // with an open collar, tattooed forearms (the left one blacked out), bead bracelet, dark jeans, white sneakers
+  const SK = '#ebb894', SK2 = '#d49c78', HR = '#5e3d25', HR2 = '#7b5434', BD = '#8c6a50', PO = '#2d3b5e', PO2 = '#243150', INK = '#4b4c5c', INK2 = '#2f3140';
+  px(9, y0 + 22, 2, 2, '#2c3242'); px(13, y0 + 22, 2, 2, '#2c3242'); px(8, y0 + 24, 3, 1, '#ececec'); px(13, y0 + 24, 3, 1, '#ececec');
+  px(7, y0 + 13, 10, 9, PO); for (let x = 8; x < 17; x += 2) px(x, y0 + 14, 1, 8, PO2);
+  px(10, y0 + 13, 4, 1, SK); px(11, y0 + 14, 2, 1, SK); px(9, y0 + 13, 1, 2, PO2); px(14, y0 + 13, 1, 2, PO2); px(11, y0 + 13, 2, 1, INK);
+  px(10, y0 + 11, 4, 2, SK); px(10, y0 + 11, 1, 1, INK); px(13, y0 + 11, 1, 1, INK); px(11, y0 + 12, 2, 1, INK2); px(11, y0 + 11, 2, 1, INK);
+  px(8, y0 + 3, 8, 8, SK); px(7, y0 + 5, 1, 3, SK2); px(16, y0 + 5, 1, 3, SK2); px(16, y0 + 5, 1, 1, '#d8dde6');
+  px(8, y0 + 1, 8, 3, HR); px(7, y0 + 2, 1, 3, HR); px(16, y0 + 2, 1, 3, HR); px(9, y0 + 1, 1, 1, HR2); px(11, y0 + 2, 1, 1, HR2); px(13, y0 + 1, 1, 1, HR2); px(14, y0 + 3, 1, 1, HR2); px(10, y0 + 3, 1, 1, HR2); px(9, y0 + 0, 6, 1, HR);
+  px(9, y0 + 5, 2, 1, '#4a3020'); px(13, y0 + 5, 2, 1, '#4a3020'); px(9, y0 + 6, 2, 1, '#fff'); px(13, y0 + 6, 2, 1, '#fff'); px(10, y0 + 6, 1, 1, '#4f7894'); px(13, y0 + 6, 1, 1, '#4f7894');
+  px(11, y0 + 7, 2, 1, SK2); px(8, y0 + 8, 1, 2, BD); px(15, y0 + 8, 1, 2, BD); px(9, y0 + 9, 6, 2, BD); px(10, y0 + 8, 1, 1, BD); px(13, y0 + 8, 1, 1, BD); px(11, y0 + 9, 2, 1, '#c4836a'); px(13, y0 + 5, 1, 1, '#d8dde6'); px(10, y0 + 10, 4, 1, BD);
+  // arms: short polo sleeves, inked forearms; the right one (our left) waves or holds the sign up when there's news
+  px(5, y0 + 13, 2, 3, PO); px(5, y0 + 16, 2, 4, SK); px(5, y0 + 16, 1, 1, INK); px(6, y0 + 18, 1, 1, INK); px(5, y0 + 20, 2, 1, SK);
+  const up = adminState === 'unseen' ? !f : adminState === 'celebrate' ? f : adminState === 'pending';
+  if (up) { px(17, y0 + 11, 2, 3, PO); px(17, y0 + 6, 2, 5, INK2); px(17, y0 + 9, 2, 1, '#f2f2f2'); px(17, y0 + 5, 2, 1, SK); px(18, y0 - 1, 1, 6, '#8a5a2b'); px(15, y0 - 4, 9, 4, adminState === 'celebrate' ? '#63c74d' : '#f7b733'); px(16, y0 - 3, 7, 2, '#fff6d5'); }
+  else { px(17, y0 + 13, 2, 3, PO); px(17, y0 + 16, 2, 4, INK2); px(17, y0 + 19, 2, 1, '#f2f2f2'); px(17, y0 + 20, 2, 1, SK); }
   if (adminState === 'celebrate' && !still) for (let i = 0; i < 6; i++) px((i * 7 + f * 3) % 24, (i * 5 + f * 2) % 8, 1, 1, ['#f7b733', '#ff6b9d', '#4fa3ff'][i % 3]);
   const bub = adminEl.querySelector('.admin-bubble'), v = verData || {};
   bub.hidden = adminState === 'idle'; bub.textContent = adminState === 'celebrate' ? T.ver.celebrate(v.current) : adminState !== 'idle' ? 'v' + v.latest : '';
+  adminEl.hidden = adminState === 'idle'; // only shows up when there's news about a version
   adminEl.classList.toggle('loud', adminState === 'unseen'); adminEl.title = T.ver.admin + (adminState !== 'idle' ? ' · ' + bub.textContent : '');
 }
 setInterval(() => { if (!document.hidden && adminState !== 'idle') drawAdmin(); }, 280);
