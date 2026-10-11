@@ -1,5 +1,5 @@
 'use strict';
-// "A newer version is out": asks the npm registry for the latest version, once at start and every 6 hours.
+// "A newer version is out": asks the npm registry for the latest version, once at start, every hour and when the releases tab opens.
 // Only the package name goes out (no data about you or your sessions). Off with --no-update-check
 // or COWORKING_NO_UPDATE_CHECK=1. Started by the CLI only, so tests and the demo never touch the network.
 
@@ -29,7 +29,7 @@ async function check() {
 
 function startChecks() {
   if (timer || process.env.COWORKING_NO_UPDATE_CHECK) return Promise.resolve(null);
-  timer = setInterval(check, 6 * 3600e3);
+  timer = setInterval(check, 3600e3);
   timer.unref();
   return check();
 }
@@ -56,4 +56,7 @@ function installMode() {
 }
 function versionInfo() { return { current: CURRENT, latest, checkedAt, error, newer: !!(latest && newer(latest, CURRENT)), install: installMode(), notes: notes() }; }
 
-module.exports = { startChecks, updateInfo, versionInfo, newer, parse, installMode, CURRENT };
+// opening the releases tab asks again when the last answer is over 10 minutes old (only when checks are on)
+function maybeCheck() { return timer && Date.now() - checkedAt > 600e3 ? check() : Promise.resolve(updateInfo()); }
+
+module.exports = { maybeCheck, startChecks, updateInfo, versionInfo, newer, parse, installMode, CURRENT };

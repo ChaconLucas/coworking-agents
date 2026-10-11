@@ -10,7 +10,7 @@ const { usage } = require('./usage');
 const { updateInfo } = require('./update');
 const progress = require('./progress');
 const tasks = require('./tasks');
-const { versionInfo } = require('./update');
+const { versionInfo, maybeCheck } = require('./update');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png', '.ico': 'image/x-icon' };
@@ -216,7 +216,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/task' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.get(url.searchParams.get('id'), { privacy }) || null));
     if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id'), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }
     if (url.pathname === '/api/search' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(searchAll(url.searchParams.get('q') || '', privacy, demo)));
-    if (url.pathname === '/api/version' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(versionInfo()));
+    if (url.pathname === '/api/version' && req.method === 'GET') { (demo ? Promise.resolve() : maybeCheck()).then(() => send(res, 200, 'application/json', JSON.stringify(versionInfo()))); return; }
     if (url.pathname === '/api/tasks' && req.method === 'POST') {
       const origin = req.headers.origin || '';
       if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
