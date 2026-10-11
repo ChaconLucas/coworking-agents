@@ -25,8 +25,9 @@ Estimated cost · wait reminder · git state on the door · daily report as Mark
 
 - **Seasonal decor** by date (subtle, off with a toggle).
 
-## Tasks (0.4.0) — next steps
-- Automatic assignment beyond "least busy agent"; per-profile instructions (Backend, Frontend, Reviewer).
-- Mid-run permission prompts in the page (today: denied tools are listed after the step and you approve to resume).
-- Compare similar tasks by tests, cost and retries to tune recommendations further; optional auto-apply.
-- Semantic search over history only if plain text search stops being enough.
+## Tasks — next steps
+- Mid-step permission prompts in the page (today denied tools are listed after the step; approving resumes with them allowed).
+- Compaction of a headless Claude session (`/compact` through `-p`) once it's confirmed to work; today the option is a fresh session with a summary.
+- Codex subagent usage (not in `codex exec --json`).
+- CI: left out on purpose for now (GitHub Actions removed); `npm test` runs before every commit.
+- Semantic search over history only if plain text search stops being enough; smarter automatic assignment.

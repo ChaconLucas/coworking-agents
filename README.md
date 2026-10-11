@@ -180,20 +180,23 @@ Agents away from their desks (kitchen, meeting room, nap corner) carry a name ta
 
 ## Tasks: hand work to agents from the office
 
-Open **Tasks** (☰ → report tabs) and describe the work, pick a folder, an agent (Claude Code, Codex or *Automatic*) and a profile. The agent runs in the background (`claude -p` / `codex exec`), in its own git worktree if you tick it. You never need the terminal:
+Open **Tasks** and describe the work, pick a folder, an agent (Claude Code, Codex or *Automatic*), a profile and optionally a role (Backend, Frontend, Reviewer). The agent runs in the background (`claude -p` / `codex exec`), in its own git worktree if you tick it. You never need the terminal:
 
-- **Answer** its questions and **approve** tools it was not allowed to use; it resumes the same session.
-- **Review** the result, the files changed, the diff and your test command's output, then **conclude**, **retry** or **hand off** to the other agent (with a summary of what was done).
-- **Queue:** priority, "after task X" dependencies and how many agents run at once.
-- **Cost:** per task (tokens in/out/cache, estimated USD, attempts), a ranking by task and by AI for today / 7 / 30 days, and an optional budget that pauses the task when reached.
-- **Profiles and controls:** Economy, Balanced, Deep. *Save*, *More capacity*, *Apply recommendation* or pick model and effort by hand; changes apply from the next step and are logged. The recommendation is plain rules plus what similar past tasks taught (no AI call to choose).
-- **Warnings:** the same action repeated without progress, two failed attempts, budget reached.
+- **Answer** its questions and **approve** tools it was not allowed to use; it resumes the same session. **Retry**, start a **new session with a summary**, or **hand off** to the other agent with the decisions, tests and open items.
+- **Review** everything since the task started: commits, staged and unstaged changes and new files, plus your test command's output (filtered to the failing lines and the tail).
+- **Queue:** priority, "after task X" dependencies, how many agents run at once and how many attempts a task gets.
+- **Model and effort:** Claude `haiku`/`sonnet`/`opus` with efforts low → max; Codex models and efforts from Codex's own model list. *Save*, *More capacity*, *Apply recommendation* or pick by hand. A change made while a step runs is shown as **pending** and marked **applied** when the next step starts.
+- **Click the agent:** a session started by the office shows its task, running vs pending config, cost and the same controls. A session opened elsewhere is **monitored**: you see the recommendation, marked as not applied, and can turn it into a task.
+- **Cost:** per real model, tokens in/out/cache, attempts and subagents (Claude's totals include them; Codex's stream doesn't show them). Unknown prices show as unknown, never as zero. Ranking by AI, task and session for today / 7 / 30 days. A budget pauses the task; when the cost is unknown it says the budget can't be enforced, and a call already running may go slightly over.
+- **Recommendations:** local rules on scope, wording and attempts plus what similar finished tasks show (success with tests, cost, retries). No AI call to choose. Optional **auto-apply** up to a profile and a number of changes per task, all logged.
+- **Warnings:** the same action repeated without progress, two failed attempts, a run costing over 3× the median finished task, budget reached or unenforceable. Notices carry the exact proposal: *Apply*, *See why*, *Not now*.
+- **Economy mode:** short instructions on demand (read only what's needed, no long logs, no re-exploring), filtered logs, attempt and parallel limits, resume to keep the cache, or a fresh session with a summary when the context is too big.
 
-Only tasks created here can be controlled. Sessions found by monitoring stay read-only. Costs are estimates at API prices, not your bill or plan percentage. Tasks live in `~/.config/coworking-agents/tasks/`.
+Tasks live in `~/.config/coworking-agents/tasks/`. In private mode names, folders, results, diffs and notice texts stay hidden.
 
 ## Notices, releases and the office admin
 
-The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. **Releases** shows the installed version, the newest on npm, when it checked and what changed, with the update command to copy. The office admin waves a sign while a new version is unseen, keeps it until you run it, then celebrates.
+The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. It keeps working with the tab in the background and recovers what was already pending when you open the office. **Releases** shows the installed version, the newest on npm (or *unavailable*), when it checked, a clickable map of every release and the notes of the newer one, with the update command for how you installed it. Lucas, the office admin, appears behind the top-bar counter only when there's version news: he waves the sign until you've seen it, keeps holding it until you update, then celebrates.
 
 ## MCP (read-only)
 
