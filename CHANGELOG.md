@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 — 2026-10-11
+## Unreleased
 - Tasks: create a task, pick folder, agent and profile; it runs in the background (Claude Code or Codex), in its own worktree if you want
 - Answer questions, approve blocked tools, review the diff and test results, conclude, hand off or retry — all from the office
 - Queue with priority, dependencies, max parallel agents and automatic agent choice
