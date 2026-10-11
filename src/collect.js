@@ -174,6 +174,7 @@ function snapshot({ privacy = false } = {}) {
 
 // Daily report: every conversation touched since midnight, open or already closed.
 function report({ privacy = false } = {}) {
+  const alias = new Map(), aliasOf = name => { if (!name) return name; if (!alias.has(name)) alias.set(name, 'repo ' + String.fromCharCode(65 + (alias.size % 26)) + (alias.size >= 26 ? alias.size : '')); return alias.get(name); };
   const now = Date.now(), d = new Date(now);
   const since = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), key = dayKey(now);
   const live = new Map(snapshot({ privacy }).people.map(p => [p.id, p]));
@@ -193,13 +194,13 @@ function report({ privacy = false } = {}) {
       const p = live.get(id);
       rows.push({
         agent, id, name: p ? p.name : '', live: !!p, title: privacy ? '' : (st.title || title || ''),
-        repo: repo ? repo.name : '', activeMs, tools, turns: evToday.filter(e => e.kind === 'idle').length,
+        repo: repo ? (privacy ? aliasOf(repo.name) : repo.name) : '', activeMs, tools, turns: evToday.filter(e => e.kind === 'idle').length,
         files: files.length, outTokens: st.outByDay[key] || 0, first: evToday.length ? evToday[0].ts : 0,
       });
     }
   }
   rows.sort((a, b) => b.activeMs - a.activeMs);
-  const topFiles = [...fileCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([f, n]) => ({ ...relFile(f), n })).map(({ abs, ...f }) => privacy ? { ...f, rel: '' } : f);
+  const topFiles = [...fileCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([f, n]) => ({ ...relFile(f), n })).map(({ abs, ...f }) => privacy ? { ...f, rel: '', repo: aliasOf(f.repo) } : f);
   const sum = k => rows.reduce((a, r) => a + r[k], 0);
   return { since, now, rows, topFiles, totals: { sessions: rows.length, activeMs: sum('activeMs'), tools: sum('tools'), files: fileCount.size, outTokens: sum('outTokens'), turns: sum('turns') } };
 }

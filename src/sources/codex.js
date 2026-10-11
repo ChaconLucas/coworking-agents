@@ -31,8 +31,8 @@ function parseArgs(a) {
 
 function summarize(name, args, raw) {
   if (name === 'apply_patch') {
-    const m = /\*\*\* (?:Update|Add|Delete) File: (.+)/.exec(raw || args.raw || '');
-    return { what: m ? path.basename(m[1].trim()) : '', file: m ? m[1].trim() : '' };
+    const files = [...String(raw || args.raw || '').matchAll(/\*\*\* (?:Update|Add|Delete) File: (.+)/g)].map(m => m[1].trim());
+    return { what: files.map(f => path.basename(f)).join(', '), file: files[0] || '', files };
   }
   const cmd = args.cmd || args.command;
   if (cmd) return { what: short(Array.isArray(cmd) ? cmd.join(' ') : cmd) };
@@ -69,7 +69,7 @@ function absorb(st, d) {
     if (t === 'token_count' && p.rate_limits) {
       const w = x => x && { usedPercent: Number(x.used_percent) || 0, windowMinutes: Number(x.window_minutes) || 0, resetsAt: (Number(x.resets_at) || 0) * 1000 };
       st.limits = { at: ts, primary: w(p.rate_limits.primary), secondary: w(p.rate_limits.secondary) };
-      if (p.info.model_context_window) st.ctxMax = p.info.model_context_window;
+      if (p.info && p.info.model_context_window) st.ctxMax = p.info.model_context_window;
     } else if (/approval_request$/.test(t || '')) {
       // explicit approval request: needs you until the tool responds
       const id = p.call_id || 'approval';
@@ -83,10 +83,11 @@ function absorb(st, d) {
       const item = { id: p.call_id || p.id, name, kind: activityOf(name), what: s.what, ts: ts || Date.now() };
       if (item.kind === 'ask') item.ask = short(args.prompt || args.question || args.message || '', 140);
       track(st, item, s.file);
+      for (const f of (s.files || []).slice(1)) st.files.set(f, item.ts);
       // Codex skills are read as files: reading a SKILL.md counts as using the skill
       const sk = /skills\/(?:\.system\/)?([^/\s'"]+)\/SKILL\.md/.exec(JSON.stringify(args));
       if (sk) st.skills[sk[1]] = (st.skills[sk[1]] || 0) + 1;
-      if (activityOf(name) === 'mcp') { const srv = name.startsWith('_') ? 'connector' : name.split('__')[0]; st.mcps[srv] = (st.mcps[srv] || 0) + 1; }
+      if (activityOf(name) === 'mcp') { const srv = name.startsWith('_') ? 'connector' : name.replace(/^mcp__/, '').split('__')[0]; st.mcps[srv] = (st.mcps[srv] || 0) + 1; }
     } else if (/_output$/.test(p.type || '')) {
       st.pending.delete(p.call_id);
       st.pending.delete('approval');

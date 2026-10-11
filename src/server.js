@@ -31,6 +31,13 @@ const LOCKED = `<!doctype html><meta charset="utf-8"><title>coworking-agents</ti
 <p style="max-width:420px;text-align:center">Abra o escritório pelo link que o <code>coworking-agents</code> mostrou no terminal.<br><br>
 <span style="color:#9a9187">Open the office using the link printed by <code>coworking-agents</code> in your terminal.</span></p>`;
 
+// private mode: conversation titles name projects and people, so they go
+function privateUsage(u, privacy) {
+  if (!privacy || !u) return u;
+  const strip = x => Array.isArray(x) ? x.map(strip) : x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === 'title' ? '' : strip(v)])) : x;
+  return strip(u);
+}
+
 function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token } = {}) {
   token = token || crypto.randomBytes(24).toString('hex');
   const snapshot = demo ? demoSnapshot : real;
@@ -122,7 +129,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       });
       return;
     }
-    if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : usage()));
+    if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : privateUsage(usage(), privacy)));
     if (url.pathname === '/api/compact' && req.method === 'POST') {
       // types "/compact" into a Claude session that finished its turn and whose context is filling up
       const origin = req.headers.origin || '';
