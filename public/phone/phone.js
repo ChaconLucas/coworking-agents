@@ -95,3 +95,10 @@ app.addEventListener('click', async e => {
 });
 load(true); setInterval(load, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+// tap the logo: how this page is running (full-screen app or inside Safari), screen heights and the notch / home-bar insets
+document.querySelector('.brand').addEventListener('click', () => {
+  const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom);left:0;width:1px;visibility:hidden'; document.body.appendChild(probe);
+  const r = probe.getBoundingClientRect(), top = Math.round(r.top), bottom = Math.round(innerHeight - r.bottom); probe.remove();
+  const mode = matchMedia('(display-mode: standalone)').matches || navigator.standalone ? P.diagApp : P.diagSafari;
+  alert(`${mode}\n${P.diagScreen}: ${screen.width}×${screen.height} · ${P.diagPage}: ${innerWidth}×${innerHeight}\n${P.diagInsets}: ${top} / ${bottom}`);
+});
