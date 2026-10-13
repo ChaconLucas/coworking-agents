@@ -75,9 +75,9 @@ async function load(force) {
   if (!force && (busy || (a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) || document.querySelector('details[open].new'))) return; // don't wipe what is being typed
   const r = await fetch('api/m').then(x => (x.ok ? x.json() : null)).catch(() => null);
   if (!r) { statusEl.textContent = P.offline; return; }
-  const key = JSON.stringify({ ...r, now: 0 }); d = r; if (force || key !== last) { last = key; render(); }
+  const key = JSON.stringify({ ...r, now: 0 }); d = r; if (force || key !== last) { last = key; const y = app.scrollTop; render(); app.scrollTop = y; }
 }
-tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; try { localStorage.setItem('cw.phone.tab', tab); } catch {} scrollTo(0, 0); if (d) render(); });
+tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
 app.addEventListener('click', async e => {
   const b = e.target.closest('[data-op]'); if (!b) return;
   const op = b.dataset.op, id = b.dataset.id || 'new', body = { op, id };
