@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Secrets before commit: Ready to ship? scans the lines the task added and its new files for keys, tokens, private keys and credential files; the commit is blocked until you remove them or confirm (the value is never shown)
 - Visits (with `--phone`): a one-hour, LAN-only, read-only link that shows a picture of the office drawn without names plus how many are working; its own token, PNG-only frames, ended on demand
 - Sounds and do not disturb (Personalise tab): turn each sound on or off; a daily quiet window (may cross midnight) mutes sounds and system notifications while notices still land in the bell
 - Compare models: a table on your finished tasks per AI, model and effort with average cost, attempts, tests passing and how many ended well

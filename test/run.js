@@ -526,6 +526,17 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await tasks.check(t1.id)).dirtyCount, 0, 'clean after the commit');
   assert.strictEqual((await tasks.ship(t1.id, { op: 'commit', message: 'again' })).reason, 'clean', 'nothing to commit');
   assert.strictEqual((await tasks.ship(t1.id, { op: 'pr' })).reason, 'gh', 'no PR without a logged-in gh and a remote');
+  // secrets: a key in the work blocks the commit (the value is never sent back) until you force it
+  const fakeKey = 'sk-ant-api03-' + 'Q'.repeat(30);
+  fs.writeFileSync(path.join(T(t1.id).cwd, 'config.js'), `const key = '${fakeKey}';\n`); fs.writeFileSync(path.join(T(t1.id).cwd, '.env'), 'X=1\n');
+  const sc = await tasks.check(t1.id);
+  assert.ok(sc.secrets.some(x => x.file === 'config.js' && x.kind === 'anthropic') && sc.secrets.some(x => x.file === '.env' && x.kind === 'file'), 'secrets found: ' + JSON.stringify(sc.secrets));
+  assert.ok(!JSON.stringify(sc).includes(fakeKey), 'the key itself is never returned');
+  const blocked = await tasks.ship(t1.id, { op: 'commit', message: 'add config' });
+  assert.strictEqual(blocked.reason, 'secrets', 'commit blocked'); assert.ok(!JSON.stringify(blocked).includes(fakeKey));
+  assert.ok((await tasks.ship(t1.id, { op: 'commit', message: 'add config', force: true })).ok, 'forced on purpose');
+  const { execFileSync } = require('child_process');
+  execFileSync('git', ['-C', T(t1.id).cwd, 'reset', '-q', '--hard', 'HEAD~1']); // keep the rest of the tests on the clean history
 
   // pending config: shown as "next", confirmed as applied when the next run starts (same session)
   tasks.op({ op: 'config', id: t1.id, model: 'opus', effort: 'high' });

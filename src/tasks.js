@@ -538,10 +538,36 @@ async function changedFiles(t) {
   return [...set].slice(0, 200);
 }
 // everything since the task started: commits, staged, unstaged and new files
+// secrets about to be committed: keys and tokens in the lines this task added and in its new files (the value itself is never returned)
+const SECRET_RULES = [
+  ['aws', /AKIA[0-9A-Z]{16}/], ['github', /\bgh[pousr]_[A-Za-z0-9]{30,}/], ['anthropic', /\bsk-ant-[A-Za-z0-9_-]{20,}/], ['openai', /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}/],
+  ['slack', /\bxox[baprs]-[A-Za-z0-9-]{10,}/], ['google', /\bAIza[0-9A-Za-z_-]{35}/], ['stripe', /\b[sr]k_live_[0-9A-Za-z]{20,}/],
+  ['private key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/], ['password or token', /\b(?:api[_-]?key|secret|passwd|password|token|auth)\b["']?\s*[:=]\s*["'][^"'\s]{12,}["']/i],
+];
+const SECRET_FILES = /(^|\/)(\.env(\.[\w-]+)?|id_rsa|id_ed25519|[^/]*\.pem|[^/]*\.p12|[^/]*\.key|credentials(\.json)?|\.npmrc|\.netrc)$/;
+function scanText(file, text, out) {
+  text.split('\n').forEach((line, i) => { for (const [kind, re] of SECRET_RULES) if (re.test(line)) { out.push({ file, line: i + 1, kind }); break; } });
+}
+async function secrets(t) {
+  const cwd = t.cwd || t.dir, out = [];
+  const d = (await git(cwd, ['diff', '--unified=0', '--no-color', t.baseCommit || 'HEAD'])) || '';
+  let file = '', ln = 0;
+  for (const line of d.split('\n')) {
+    if (line.startsWith('+++ ')) { file = line.slice(6); continue; }
+    const h = /^@@ -\d+(?:,\d+)? \+(\d+)/.exec(line); if (h) { ln = Number(h[1]); continue; }
+    if (line.startsWith('+')) { for (const [kind, re] of SECRET_RULES) if (re.test(line)) { out.push({ file, line: ln, kind }); break; } ln++; }
+  }
+  const untracked = ((await git(cwd, ['ls-files', '--others', '--exclude-standard'])) || '').split('\n').filter(Boolean);
+  for (const f of [...untracked, ...((await git(cwd, ['diff', '--name-only', t.baseCommit || 'HEAD'])) || '').split('\n').filter(Boolean)]) if (SECRET_FILES.test(f) && !out.some(x => x.file === f && x.kind === 'file')) out.push({ file: f, line: 0, kind: 'file' });
+  for (const f of untracked.slice(0, 200)) {
+    try { const full = path.join(cwd, f), st = fs.statSync(full); if (st.size > 300000) continue; const buf = fs.readFileSync(full); if (buf.includes(0)) continue; scanText(f, buf.toString('utf8'), out); } catch {}
+  }
+  return out.slice(0, 50);
+}
 // before concluding: everything that says "ready to ship" in one place (tests, review, files, what is not committed, the branch)
 async function check(id, { privacy = false } = {}) {
   load(); const t = tasks.find(x => x.id === id); if (!t) return { ok: false, reason: 'notask' };
-  if (demo) return { ok: true, tests: t.tests || null, review: t.review ? { ok: /^\s*OK\b/i.test(t.review.text || ''), pending: !t.review.text } : null, files: t.files.length, dirty: privacy ? [] : ['src/app.js'], dirtyCount: 1, branch: 'coworking/' + t.id, base: 'main', ahead: 1, gh: true, canPr: true, suggest: t.title };
+  if (demo) return { ok: true, tests: t.tests || null, review: t.review ? { ok: /^\s*OK\b/i.test(t.review.text || ''), pending: !t.review.text } : null, files: t.files.length, dirty: privacy ? [] : ['src/app.js'], dirtyCount: 1, branch: 'coworking/' + t.id, base: 'main', ahead: 1, gh: true, canPr: true, suggest: t.title, secrets: [{ file: '.env', line: 0, kind: 'file' }, { file: 'src/config.js', line: 12, kind: 'openai' }] };
   const cwd = t.cwd || t.dir;
   const status = (await git(cwd, ['status', '--porcelain'])) || '', dirty = status.split('\n').filter(Boolean).map(l => l.slice(3));
   const branch = ((await git(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])) || '').trim();
@@ -550,7 +576,7 @@ async function check(id, { privacy = false } = {}) {
   const gh = remote && (await run1('gh', ['auth', 'status'], { cwd, timeout: 8000 })).code === 0;
   return { ok: true, tests: t.tests || null, review: t.review ? { ok: /^\s*OK\b/i.test(t.review.text || ''), pending: !t.review.text } : null, files: t.files.length,
     dirty: privacy ? dirty.map(() => '•') : dirty.slice(0, 30), dirtyCount: dirty.length, branch: privacy ? '' : branch, ahead, gh, canPr: gh && !!branch && !['main', 'master', 'HEAD'].includes(branch),
-    suggest: s(t.title, 72) };
+    suggest: s(t.title, 72), secrets: privacy ? [] : await secrets(t) };
 }
 // commit what the task changed, and open a pull request with gh: only when you press the button, never on its own
 async function ship(id, m = {}) {
@@ -561,6 +587,8 @@ async function ship(id, m = {}) {
   if (m.op === 'commit') {
     const msg = s(m.message, 2000).trim(); if (!msg) return { ok: false, reason: 'nomsg' };
     if (!((await git(cwd, ['status', '--porcelain'])) || '').trim()) return { ok: false, reason: 'clean' };
+    const found = await secrets(t); if (found.length && !m.force) return { ok: false, reason: 'secrets', secrets: found }; // never commit a key by accident
+    if (found.length) log(t, { kind: 'warn', why: 'secretsForced', text: found.map(x => x.file + ':' + x.line + ' ' + x.kind).join(', ') });
     const add = await run1('git', ['-C', cwd, 'add', '-A']); if (add.code) return { ok: false, reason: 'git', detail: s(add.err, 300) };
     const c = await run1('git', ['-C', cwd, 'commit', '-m', msg]); if (c.code) return { ok: false, reason: 'git', detail: s(c.err || c.out, 300) };
     const sha = ((await git(cwd, ['rev-parse', '--short', 'HEAD'])) || '').trim(); log(t, { kind: 'commit', text: sha + ' ' + msg.split('\n')[0] }); save();

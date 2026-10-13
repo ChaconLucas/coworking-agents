@@ -295,8 +295,9 @@ function shipHtml(t, c) {
     ${li(c.review ? (c.review.pending ? null : c.review.ok) : null, c.review ? (c.review.pending ? S.reviewRunning : c.review.ok ? S.reviewOk : S.reviewBad) : S.noReview)}
     ${li(null, S.files(c.files))}
     ${li(c.dirtyCount === 0, c.dirtyCount ? S.dirty(c.dirtyCount) + ': ' + c.dirty.slice(0, 8).join(', ') + (c.dirtyCount > 8 ? '…' : '') : S.clean)}
-    ${c.branch ? li(null, S.branch(c.branch, c.ahead)) : ''}</ul>
-    ${c.dirtyCount ? `<label>${esc(S.msg)}<textarea data-ship-msg rows="2">${esc(c.suggest || t.title)}</textarea></label><p><button class="btn small" data-tact="shipCommit">⎇ ${esc(S.commit)}</button></p>` : ''}
+    ${c.branch ? li(null, S.branch(c.branch, c.ahead)) : ''}
+    ${(c.secrets || []).length ? `<li class="bad">⛔ ${esc(S.secrets(c.secrets.length))}<ul class="tsecrets">${c.secrets.map(x => `<li><code>${esc(x.file)}${x.line ? ':' + x.line : ''}</code> — ${esc(S.secretKind[x.kind] || x.kind)}</li>`).join('')}</ul></li>` : li(true, S.noSecrets)}</ul>
+    ${c.dirtyCount ? `<label>${esc(S.msg)}<textarea data-ship-msg rows="2">${esc(c.suggest || t.title)}</textarea></label>${(c.secrets || []).length ? `<label class="tchk"><input type="checkbox" data-ship-force> ${esc(S.force)}</label>` : ''}<p><button class="btn small" data-tact="shipCommit">⎇ ${esc(S.commit)}</button></p>` : ''}
     ${c.canPr ? `<p><button class="btn small" data-tact="shipPr">⇪ ${esc(S.pr)}</button> <small class="note">${esc(S.prNote)}</small></p>` : `<p class="note">${esc(c.gh ? S.noPrBranch : S.noPrGh)}</p>`}
     <p><button class="btn" data-tact="conclude">✔ ${esc(S.conclude)}</button> <button class="btn small ghost" data-tact="shipClose">${esc(S.close)}</button></p><p class="note" id="tship-msg"></p></div>`;
 }
@@ -400,7 +401,7 @@ reportEl.addEventListener('click', async e => {
   if (act === 'shipCommit' || act === 'shipPr') {
     const S = X.ship, m = document.getElementById('tship-msg'), mb = reportEl.querySelector('[data-ship-msg]');
     b.disabled = true; if (m) m.textContent = S.working;
-    const r = await shipApi({ op: act === 'shipCommit' ? 'commit' : 'pr', id, message: mb ? mb.value : '' }); b.disabled = false;
+    const fc = reportEl.querySelector('[data-ship-force]'), r = await shipApi({ op: act === 'shipCommit' ? 'commit' : 'pr', id, message: mb ? mb.value : '', force: !!(fc && fc.checked) }); b.disabled = false;
     if (!r.ok) { if (m) m.textContent = '⚠ ' + (S.fail[r.reason] || r.reason) + (r.detail ? ' — ' + r.detail : ''); return; }
     taskShip = { id, ...(await shipApi({ op: 'check', id })) }; await loadTask(id);
     const m2 = document.getElementById('tship-msg'); if (m2) m2.textContent = '✓ ' + (r.sha ? S.committed(r.sha) : S.prDone);
