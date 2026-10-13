@@ -258,6 +258,7 @@ function formHtml() {
     <label>${esc(X.dep)}${sel('dependsOn', [['', X.none], ...taskData.tasks.filter(t => !['done', 'cancelled'].includes(t.state)).map(t => [t.id, t.title])], '')}</label>
     <label class="tchk" title="${esc(X.chainTip)}"><input type="checkbox" data-tf="chain"> ${esc(X.chain)}</label>
     <label>${esc(X.budget)}<input data-tf="budget" type="number" min="0" step="0.5" value="0"></label></div>
+    <label>${esc(X.moreDirs)}<textarea data-tf="moreDirs" rows="2" placeholder="${esc(X.moreDirsPh)}"></textarea></label>
     <label>${esc(X.test)}<input data-tf="testCmd" placeholder="npm test"></label>
     <label class="tchk"><input type="checkbox" data-tf="worktree" checked> ${esc(X.wt)}</label>
     <label class="tchk"><input type="checkbox" data-tf="lean"> ${esc(X.lean)}</label>
@@ -366,7 +367,15 @@ reportEl.addEventListener('click', async e => {
   const act = b.dataset.tact, X = TT(), msg = t => { const m = document.getElementById('tmsg'); if (m) m.textContent = t; };
   if (act === 'recommend') { const v = tfVal(), r = await api('api/tasks', { op: 'recommend', desc: v.desc, agent: v.agent === 'auto' ? 'claude' : v.agent }); if (r.ok) { reportEl.querySelector('[data-tf="profile"]').value = r.rec.profile; taskWhy = `${X.recFor(X.profiles[r.rec.profile], r.rec.model || X.cliDefault, r.rec.effort)} — ${r.rec.why.map(w => X.recWhy[w] || w).join(' · ')}${r.rec.similar ? ' · ' + X.similar(r.rec.similar) : ''}`; msg(taskWhy); } return; }
   if (act === 'saveTpl') { const v = tfVal(); if (!v.desc.trim()) return msg(X.fail.nodesc); const name = (prompt(X.tplName, v.title || v.desc.split('\n')[0].slice(0, 40)) || '').trim(); if (!name) return; const r = await api('api/tasks', { op: 'template', name, ...v }); if (!r.ok) return msg(tFail(r)); await pollTasks(); renderTasks(); return msg(X.tplSaved(name)); }
-  if (act === 'create') { const r = await api('api/tasks', { op: 'create', ...tfVal() }); if (!r.ok) return msg(tFail(r)); taskWhy = ''; achBump('launches'); await pollTasks(); return loadTask(r.task.id); }
+  if (act === 'create') {
+    const { moreDirs = '', ...v } = tfVal(), extra = [...new Set(moreDirs.split('\n').map(x => x.trim()).filter(x => x && x !== v.dir))].slice(0, 20);
+    const r = await api('api/tasks', { op: 'create', ...v }); if (!r.ok) return msg(tFail(r));
+    // the same request in other folders: one task each, every folder checked by the server
+    const fails = []; for (const dir of extra) { const r2 = await api('api/tasks', { op: 'create', ...v, dir }); if (!r2.ok) fails.push(dir + ' (' + tFail(r2) + ')'); }
+    taskWhy = ''; achBump('launches'); await pollTasks();
+    if (extra.length) { taskSel = ''; taskWhy = X.batchDone(extra.length + 1 - fails.length) + (fails.length ? ' ' + X.batchFail(fails.join(', ')) : ''); for (const k of ['desc', 'title', 'moreDirs']) { const el = reportEl.querySelector(`[data-tf="${k}"]`); if (el) el.value = ''; } renderTasks(); return; }
+    return loadTask(r.task.id);
+  }
   if (act === 'back') { taskSel = ''; taskDetail = null; taskDiff = null; return renderTasks(); }
   const id = taskSel; if (!id) return;
   if (act === 'checkShip') { taskShip = { id, ...(await shipApi({ op: 'check', id })) }; return loadTask(id); }
