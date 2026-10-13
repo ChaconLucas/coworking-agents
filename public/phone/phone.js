@@ -26,7 +26,15 @@ function nowTab() {
   for (const p of others) h.push(`<div class="card agent"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><div class="line"><b>${esc(p.name)}</b>${pill(stateCls(p.state), T.states[p.state] || p.state)}</div>
     <small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.branch ? ' · ' + esc(p.branch) : ''}${p.since ? ' · ' + esc(ago(d.now - p.since)) : ''}</small>
     ${p.doing && working(p) ? `<p class="doing">${esc(p.doing)}</p>` : p.title ? `<p class="doing dim">${esc(p.title)}</p>` : ''}</div></div></div>`);
+  h.push(pushCard());
   return h.join('');
+}
+// notices on the phone: turned on through the project's HTTPS page (iOS only gives push to an HTTPS home-screen app)
+function pushCard() {
+  const p = d.push; if (!p) return '';
+  const start = label => `<a class="btn${p.n ? ' ghost' : ''}" href="${esc(p.link)}" target="_blank" rel="noopener">🔔 ${esc(label)}</a>`;
+  return `<h2>${esc(P.pushTitle)}</h2><div class="card">${p.n ? `<b>🔔 ${esc(P.pushOn(p.n))}</b><div class="row"><button class="ghost" data-op="push-test" data-id="push">${esc(P.pushTest)}</button>${start(P.pushAnother)}<button class="bad" data-op="push-off" data-id="push">${esc(P.pushOff)}</button></div>`
+    : `<b>🔕 ${esc(P.pushNone)}</b><small>${esc(P.pushHow)}</small><div class="row">${start(P.pushStart)}</div>`}<p class="msg" data-msg="push"></p></div>`;
 }
 function tasksTab() {
   const groups = [['need', ['blocked', 'failed']], ['active', ['running', 'pending']], ['done', ['done', 'cancelled']]];
@@ -86,6 +94,8 @@ app.addEventListener('click', async e => {
   if (op === 'reply') { const ta = app.querySelector(`[data-text="${CSS.escape(id)}"]`); body.text = ta ? ta.value.trim() : ''; if (!body.text) return ta && ta.focus(); }
   if (op === 'create') { const ta = app.querySelector('[data-new-text]'); body.text = ta ? ta.value.trim() : ''; if (!body.text) return ta && ta.focus(); body.dir = app.querySelector('[data-new-dir]').value; body.agent = app.querySelector('[data-new-agent]').value; }
   if (op === 'cancel' && !confirm(X.cancelSure)) return;
+  if (op === 'push-off' && !confirm(P.pushOffSure)) return;
+  if (op === 'push-test') { body.title = P.testTitle; body.text = P.testBody; }
   busy = true; b.disabled = true;
   const r = await post(body); busy = false;
   const m = app.querySelector(`[data-msg="${CSS.escape(id)}"]`); if (m) m.textContent = r.ok ? '✓ ' + P.done : '⚠ ' + (P.fail[r.reason] || r.reason || '?');
@@ -93,6 +103,12 @@ app.addEventListener('click', async e => {
   if (op === 'create' && r.ok) { const det = app.querySelector('details.new'); if (det) det.open = false; setTimeout(() => load(true), 600); return; }
   setTimeout(load, 800);
 });
+// back from the notices page with this phone's subscription in the #fragment: hand it to the office
+if (location.hash.startsWith('#push=')) {
+  let sub = null; try { sub = JSON.parse(decodeURIComponent(location.hash.slice(6))); } catch {}
+  history.replaceState(null, '', location.pathname);
+  post({ op: 'push-add', sub }).then(r => { alert(r.ok ? P.pushAdded : '⚠ ' + (P.fail[r.reason] || r.reason || '?')); load(true); });
+}
 load(true); setInterval(load, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
 // tap the logo: how this page is running (full-screen app or inside Safari), screen heights and the notch / home-bar insets

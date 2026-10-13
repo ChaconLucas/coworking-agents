@@ -8,6 +8,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const push = require('./push');
 
 const DIR = path.join(__dirname, '..', 'public', 'phone');
 // what a phone needs to put the panel on its home screen: no data in any of them, so no code needed
@@ -88,7 +89,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
         if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, url.pathname === '/' ? String(d).replace(/__V__/g, BUILD) : d))); } // files named with this run, so a home-screen icon never keeps an old page
-        if (url.pathname === '/api/m' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(view({ snapshot, tasks, privacy, extra }))); }
+        if (url.pathname === '/api/m' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify({ ...view({ snapshot, tasks, privacy, extra }), push: demo ? null : { n: push.count(), link: push.link(`http://${host}/?t=${token}`) } })); }
         if (url.pathname === '/frame.png' && req.method === 'GET') { phoneSeen = Date.now(); return frame ? (res.writeHead(200, { 'Content-Type': 'image/png' }), res.end(frame)) : send(res, 404, 'text/plain', 'no picture yet'); } // the office drawn without names
         if (url.pathname === '/api/m' && req.method === 'POST') {
           if (req.headers['x-coworking'] !== '1' || req.headers.origin !== 'http://' + host) { res.writeHead(403); return res.end(); }
@@ -99,6 +100,10 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
             try {
               if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}');
               if (OPS.has(m.op)) return send(res, 200, 'application/json', JSON.stringify(tasks.op({ op: m.op, id: String(m.id || ''), allow: !!m.allow, text: String(m.text || '').slice(0, 4000) })));
+              // notices on this phone: its subscription (checked: a known push service, real keys), a test, or all off
+              if (m.op === 'push-add') return send(res, 200, 'application/json', JSON.stringify(push.add(m.sub)));
+              if (m.op === 'push-off') return send(res, 200, 'application/json', JSON.stringify(push.clear()));
+              if (m.op === 'push-test') return send(res, 200, 'application/json', JSON.stringify(await push.send({ title: String(m.title || '').slice(0, 80), body: String(m.text || '').slice(0, 200), tag: 'test', url: `http://${host}/?t=${token}` })));
               if (m.op === 'create') { // only in a folder your agents or tasks already use, isolated in its own worktree
                 const dir = String(m.dir || ''); if (!folders(snapshot({ privacy }), tasks.list({ privacy })).includes(dir)) return send(res, 200, 'application/json', '{"ok":false,"reason":"nodir"}');
                 return send(res, 200, 'application/json', JSON.stringify(tasks.op({ op: 'create', dir, desc: String(m.text || '').slice(0, 8000), agent: ['claude', 'codex'].includes(m.agent) ? m.agent : 'auto', worktree: true, from: 'phone' })));
