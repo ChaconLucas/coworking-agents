@@ -206,6 +206,10 @@ function checkAchievements() {
   }
   for (const p of live) if (p.repo) { achAdd('repos', p.repo.name); if (p.branch && p.branch !== 'HEAD') achAdd('branches', p.repo.name + ':' + p.branch); }
   { const clean = trees.size >= 3 && [...trees.values()].every(g => g.dirty === 0); if (clean && !achClean) achBump('cleanDesk'); achClean = clean; }
+  // Sunday: the week's card is ready (once a week)
+  if (new Date().getDay() === 0 && usageData && usageData.days && typeof pushNotice === 'function' && store.get('weekCardSaid', '') !== weekKey()) {
+    store.set('weekCardSaid', weekKey()); pushNotice('week:' + weekKey(), 'ok', T.share.ready, T.share.readyWhy, { tab: 'paper' });
+  }
   for (const c of data.fileClashes || []) achAdd('clashes', c.file + '|' + c.who.slice().sort().join(','));
   // office tasks: done on the first attempt, a review that said OK, and weeks spent under the month's cost goal
   for (const t of (typeof taskData !== 'undefined' && taskData.tasks) || []) {

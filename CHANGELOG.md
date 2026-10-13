@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Achievements: First try (tasks done without a retry), Approved (reviews that said OK), Penny-wise (weeks under the cost goal)
+- Weekly card: best day, the AI used most and the week's cost; a notice on Sundays when it is ready
 - Ready to ship?: concluding a task first shows tests, review, files, what is not committed and the branch; commit with an editable message and open a PR with `gh`, only when you press it
 - Agents that say they are working but write nothing for 10 minutes get a notice
 - File clashes land in the notices, with a pause button when one side is an office task

@@ -224,6 +224,14 @@ function shareCard() {
   g.fillStyle = '#c0cbdc'; g.font = '14px system-ui, sans-serif'; g.fillText(T.share.week, 24, 76);
   const stat = (y, big, label) => { g.fillStyle = '#ffffff'; g.font = 'bold 30px system-ui, sans-serif'; g.fillText(big, 24, y); g.fillStyle = '#9a9187'; g.font = '13px system-ui, sans-serif'; g.fillText(label, 24, y + 18); };
   stat(126, hours.toFixed(1) + 'h', T.share.hours); stat(186, fmtK(tools), T.share.actions); stat(246, `${tiers} · ${legends}★`, T.share.trophies);
+  // the week in three lines: best day, the AI used most, what it cost (estimated)
+  const best = days.slice().sort((a, b) => (d(b).activeMs || 0) - (d(a).activeMs || 0))[0], usd = days.reduce((n, k) => n + (d(k).usd || 0), 0);
+  const byAi = {}; for (const k of days) for (const [ai, v] of Object.entries(d(k).byAgent || {})) byAi[ai] = (byAi[ai] || 0) + (v.activeMs || 0);
+  const topAi = Object.entries(byAi).sort((a, b) => b[1] - a[1])[0];
+  const line = (y, label, value) => { g.fillStyle = '#9a9187'; g.font = '13px system-ui, sans-serif'; g.fillText(label, 300, y); g.fillStyle = '#ffffff'; g.font = 'bold 14px system-ui, sans-serif'; g.fillText(value, 420, y); };
+  if (best && d(best).activeMs) line(232, T.share.bestDay, `${new Date(best + 'T12:00:00').toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en', { weekday: 'long' })} · ${(d(best).activeMs / 36e5).toFixed(1)}h`);
+  if (topAi) line(254, T.share.topAi, (AGENT[topAi[0]] || {}).label || topAi[0]);
+  if (usd) line(276, T.share.cost, fmtUSD(usd));
   g.fillStyle = '#d97757'; g.fillRect(0, 290, 600, 25); g.fillStyle = '#ffffff'; g.font = 'bold 13px system-ui, sans-serif'; g.fillText('npx coworking-agents', 24, 307);
   c.toBlob(b => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `coworking-week-${weekKey()}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(`<b>${esc(T.share.saved)}</b>${esc(a.download)}`, 'ok'); achBump('shares'); }, 'image/png');
 }
