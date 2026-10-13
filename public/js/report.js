@@ -68,7 +68,7 @@ function renderToday() {
   const hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
   if (!r) { body.innerHTML = tabsHtml() + `<p class="note">${esc(D.loading)}</p>`; return; }
   const t = r.totals, max = Math.max(1, ...r.rows.map(x => x.activeMs));
-  body.innerHTML = tabsHtml() + `<div class="rhead"><p class="sub">${esc(D.sub)}</p><button class="btn small" data-copy-md>${esc(D.copyMd)}</button></div>
+  body.innerHTML = tabsHtml() + `<div class="rhead"><p class="sub">${esc(D.sub)}</p><span><button class="btn small" data-copy-md>${esc(D.copyMd)}</button> <button class="btn small" data-copy-md="slack">${esc(D.copySlack)}</button></span></div>
     <div class="ltiles">${[[hrs(t.activeMs), D.active], [t.sessions, D.sessions], [t.tools, D.tools], [t.files, D.files], [fmtK(t.outTokens), D.tokens]].map(([v, l]) => `<div class="ltile" style="--c:#2ce8f5"><div class="ltop"><span>${esc(l)}</span></div><b>${esc(String(v))}</b></div>`).join('')}</div>
     <h3>${esc(D.who)}</h3>
     <ul class="bars today-list">${r.rows.map(x => `<li><code title="${esc(x.title)}"><i class="ailogo" data-ai="${esc(x.agent)}"></i>${esc(x.name || x.title || x.id.slice(0, 8))}</code><span class="tbar"><i style="width:${(x.activeMs / max * 100).toFixed(1)}%;background:${(AGENT[x.agent] || {}).color || '#888'}"></i></span><span class="t">${esc(hrs(x.activeMs))} · ${Number(x.tools) || 0} ${esc(D.toolsShort)} · ${fmtK(x.outTokens)}</span></li>`).join('')}</ul>
@@ -82,17 +82,26 @@ function todayMarkdown(r) {
   const D = T.today, hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
   const day = new Date(r.now || Date.now()).toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en', { weekday: 'long', day: 'numeric', month: 'long' });
   const t = r.totals, lines = [`## ${D.title} · ${day}`, '', `**${hrs(t.activeMs)}** ${D.active} · **${t.sessions}** ${D.sessions} · **${t.tools}** ${D.tools} · **${t.files}** ${D.files} · **${fmtK(t.outTokens)}** ${D.tokens}`, '', `### ${D.who}`];
-  for (const x of r.rows) lines.push(`- **${x.name || x.title || x.id.slice(0, 8)}** (${(AGENT[x.agent] || {}).label || x.agent}${x.repo ? ', ' + x.repo : ''})${x.title && x.name ? ` — ${x.title}` : ''}: ${hrs(x.activeMs)}, ${Number(x.tools) || 0} ${D.toolsShort}`);
+  const usd = r.rows.reduce((a, x) => a + (x.usd || 0), 0);
+  if (usd) lines.splice(3, 0, '', `${D.costLine}: **${fmtUSD(usd)}**${r.rows.some(x => x.unpriced) ? ' + ?' : ''}`);
+  for (const x of r.rows) lines.push(`- **${x.name || x.title || x.id.slice(0, 8)}** (${(AGENT[x.agent] || {}).label || x.agent}${x.repo ? ', ' + x.repo : ''})${x.title && x.name ? ` — ${x.title}` : ''}: ${hrs(x.activeMs)}, ${Number(x.tools) || 0} ${D.toolsShort}${x.usd ? ', ' + fmtUSD(x.usd) : ''}`);
   if (r.topFiles.length) { lines.push('', `### ${D.filesTop}`); for (const f of r.topFiles) lines.push(`- \`${f.rel}\` (${f.repo}${f.n > 1 ? ', ' + f.n + '×' : ''})`); }
+  // what is still open: tasks waiting on you or failed, and agents asking something
+  const open = [...((typeof taskData !== 'undefined' && taskData.tasks) || []).filter(x => ['blocked', 'failed', 'pending'].includes(x.state)).map(x => `${x.title} — ${T.tasks.states[x.state]}${x.reason ? ' (' + (T.tasks.reasons[x.reason] || x.reason) + ')' : ''}`),
+    ...((data && data.people) || []).filter(p => ['needs_you', 'waiting'].includes(p.state)).map(p => `${p.name}${p.title ? ' (' + p.title + ')' : ''} — ${T.states[p.state] || p.state}`)];
+  if (open.length) { lines.push('', `### ${D.pending}`); for (const o of open) lines.push('- ' + o); }
   return lines.join('\n') + '\n';
 }
+// the same report in Slack's own markup: *bold*, no headings, • bullets
+const toSlack = md => md.split('\n').map(l => l.replace(/^#{2,3} (.*)$/, '*$1*').replace(/\*\*([^*]+)\*\*/g, '*$1*').replace(/^- /, '• ')).join('\n');
 reportEl.addEventListener('click', async e => {
   const b = e.target.closest('[data-copy-md]');
   if (!b || !todayData) return;
   let ok = false;
-  try { await navigator.clipboard.writeText(todayMarkdown(todayData)); ok = true; } catch {}
+  const slack = b.dataset.copyMd === 'slack', md = todayMarkdown(todayData), label = slack ? T.today.copySlack : T.today.copyMd;
+  try { await navigator.clipboard.writeText(slack ? toSlack(md) : md); ok = true; } catch {}
   b.textContent = ok ? T.today.copied : T.today.copyFail;
-  setTimeout(() => { b.textContent = T.today.copyMd; }, 2000);
+  setTimeout(() => { b.textContent = label; }, 2000);
 });
 function closeReport() { reportEl.hidden = true; }
 

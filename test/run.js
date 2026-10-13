@@ -260,6 +260,13 @@ sleepK.kill();
   assert.ok(html.includes('data-tpermit="tk1" data-allow="1"') && html.includes('data-always="1"') && html.includes('npm test'), 'allow, always and deny on the card');
   run('taskData.tasks = [asking]; globalThis.reply = () => ({ ok: true, tasks: [asking], options: taskData.options }); reportEl.hidden = true'); await run('pollTasks()');
   assert.ok(run("notices.some(n => n.key === 'ask:tk1' && n.ref.ask)"), 'a permission question becomes a notice');
+  // daily report to paste: cost, what each one did, what is still open; Slack markup
+  run(`T = I18N.en; taskData.tasks = [{ title: 'Build', state: 'blocked', reason: 'review' }]; data = { now: Date.now(), people: [{ name: 'ada', title: 'docs', state: 'needs_you' }], limits: {} };
+    var md = todayMarkdown({ now: Date.now(), totals: { activeMs: 36e5, sessions: 1, tools: 3, files: 1, outTokens: 1000 }, rows: [{ id: 'x1', agent: 'claude', name: 'ada', title: 'docs', repo: 'r', activeMs: 36e5, tools: 3, usd: 1.5 }], topFiles: [] });`);
+  const md = run('md'), sl = run('toSlack(md)');
+  assert.ok(md.includes('1.50') && md.includes('Build — ') && md.includes('ada (docs)'), 'cost, open tasks and agents waiting go into the report');
+  assert.ok(!sl.includes('##') && !sl.includes('**') && sl.includes('• '), 'Slack gets its own markup');
+
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
   run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
     data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);
