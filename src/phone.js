@@ -12,7 +12,7 @@ const push = require('./push');
 
 const DIR = path.join(__dirname, '..', 'public', 'phone');
 // what a phone needs to put the panel on its home screen: no data in any of them, so no code needed
-const PUBLIC = { '/fonts/silkscreen-400.woff2': ['../fonts/silkscreen-400.woff2', 'font/woff2'], '/fonts/silkscreen-700.woff2': ['../fonts/silkscreen-700.woff2', 'font/woff2'], '/logo.svg': ['../logo.svg', 'image/svg+xml'], '/art.js': ['../art.js', 'text/javascript; charset=utf-8'], '/manifest.webmanifest': ['phone.webmanifest', 'application/manifest+json'], '/icon-192.png': ['../icon-192.png', 'image/png'], '/icon-512.png': ['../icon-512.png', 'image/png'], '/apple-touch-icon.png': ['../apple-touch-icon.png', 'image/png'] };
+const PUBLIC = { '/fonts/silkscreen-400.woff2': ['../fonts/silkscreen-400.woff2', 'font/woff2'], '/fonts/silkscreen-700.woff2': ['../fonts/silkscreen-700.woff2', 'font/woff2'], '/logo.svg': ['../logo.svg', 'image/svg+xml'], '/art.js': ['../art.js', 'text/javascript; charset=utf-8'], '/manifest.webmanifest': ['phone.webmanifest', 'application/manifest+json'], '/icon-192.png': ['../icon-192.png', 'image/png'], '/icon-512.png': ['../icon-512.png', 'image/png'], '/apple-touch-icon.png': ['../apple-touch-icon.png', 'image/png'], '/go.js': ['go.js', 'text/javascript; charset=utf-8'] };
 const FILES = { '/': ['index.html', 'text/html; charset=utf-8'], '/i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], '/phone.js': ['phone.js', 'text/javascript; charset=utf-8'], '/phone.css': ['phone.css', 'text/css; charset=utf-8'] };
 const BUILD = Date.now().toString(36);
 const OPS = new Set(['permit', 'reply', 'conclude', 'cancel', 'retry']);
@@ -85,7 +85,10 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         if (PUBLIC[url.pathname] && req.method === 'GET') { const [f, type] = PUBLIC[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
         if (url.pathname === '/' && url.searchParams.has('t')) {
           if (!same(url.searchParams.get('t'), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code again.');
-          res.writeHead(302, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/${kept ? '; Max-Age=31536000' : ''}`, Location: '/' }); return res.end();
+          // a page that moves on by itself instead of a redirect: arriving from another site (the notices page), the redirected
+          // request would go without the strict cookie; the page's own navigation is same-site and takes it
+          res.writeHead(200, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/${kept ? '; Max-Age=31536000' : ''}`, 'Content-Type': 'text/html; charset=utf-8' });
+          return res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><script src="/go.js"></script>');
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
         if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, url.pathname === '/' ? String(d).replace(/__V__/g, BUILD) : d))); } // files named with this run, so a home-screen icon never keeps an old page

@@ -761,7 +761,8 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     const tok = ph.url.split('t=')[1], base = 'http://' + ph.host, get = (u, h = {}) => fetch(base + u, { headers: h, redirect: 'manual' });
     assert.strictEqual((await get('/api/m')).status, 401, 'phone: no token, nothing');
     assert.strictEqual((await get('/api/m', { Cookie: 'cwp=' + 'b'.repeat(32) })).status, 401, 'phone: wrong token');
-    const login = await get('/?t=' + tok); assert.ok(login.status === 302 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')), 'phone: the link sets a strict cookie');
+    const login = await get('/?t=' + tok); assert.ok(login.status === 200 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')) && (await login.text()).includes('src="/go.js"'), 'phone: the link sets a strict cookie and moves on by itself');
+    assert.strictEqual((await get('/go.js')).status, 200, 'phone: the page that moves on needs no code');
     const ck = { Cookie: 'cwp=' + tok };
     assert.strictEqual((await get('/api/m', ck)).status, 200);
     assert.deepStrictEqual([(await get('/api/tasks', ck)).status, (await get('/index.html', ck)).status, (await get('/../src/server.js', ck)).status], [404, 404, 404], 'phone: nothing of the office');
