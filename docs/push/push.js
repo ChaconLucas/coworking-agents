@@ -20,7 +20,8 @@ const standalone = matchMedia('(display-mode: standalone)').matches || navigator
 const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const raw = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
 // what the phone reports, shown under a refusal so it can be told apart: asked and refused, or never asked
-const diag = before => { const v = /OS (\d+)_(\d+)/.exec(navigator.userAgent); document.getElementById('note').textContent = `${P.note} · ${before} → ${Notification.permission} · ${standalone ? 'app' : 'browser'} · iOS ${v ? v[1] + '.' + v[2] : '?'}`; };
+const fresh = !!h.get('k'); // arrived through the office's link (the app opened from its own icon keeps it only if iOS saved it)
+const diag = before => { const v = /OS (\d+)_(\d+)/.exec(navigator.userAgent), perm = 'Notification' in window ? Notification.permission : 'none'; document.getElementById('note').textContent = `${P.note} · ${before || perm} → ${perm} · ${matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'tab'}/${navigator.standalone ? 'home' : 'no-home'} · ${fresh ? 'link' : 'icon'} · iOS ${v ? v[1] + '.' + v[2] : '?'}`; };
 const blocked = before => { say(P.denied); diag(before); actions.textContent = ''; button(P.retry, () => show().catch(() => say(P.error))); };
 const handBack = sub => { say(P.sending); location.href = back + '#push=' + encodeURIComponent(JSON.stringify(sub)); };
 
@@ -28,6 +29,8 @@ async function show() {
   actions.textContent = '';
   if (ios && !standalone) return say(P.install);
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return say(P.unsupported);
+  // refused before ever asking, right after the office's link: this is the office app's in-app browser, not a home-screen app
+  if (Notification.permission === 'denied' && ios && fresh) { say(P.inApp); return diag('denied'); }
   if (Notification.permission === 'denied') return blocked('denied');
   const reg = await navigator.serviceWorker.register('sw.js');
   const sub = await reg.pushManager.getSubscription().catch(() => null);
@@ -48,4 +51,4 @@ async function show() {
     } catch { say(P.error); }
   });
 }
-show().catch(() => say(P.error));
+show().then(() => diag(), () => { say(P.error); diag(); });
