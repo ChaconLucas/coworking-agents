@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sounds and do not disturb (Personalise tab): turn each sound on or off; a daily quiet window (may cross midnight) mutes sounds and system notifications while notices still land in the bell
 - Compare models: a table on your finished tasks per AI, model and effort with average cost, attempts, tests passing and how many ended well
 - Search what was said: the tasks search box also looks in what you asked and what Claude and Codex answered over the last 7 days (never tool output; off in private mode)
 - Message several agents (☰ → 📣): one request to the agents you pick; typed into terminal sessions that are waiting, continued in the background for VS Code and app conversations, busy ones left out

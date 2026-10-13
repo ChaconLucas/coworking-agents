@@ -23,6 +23,7 @@ function toast(html, kind) {
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 7000);
 }
 function notifyOS(title, body) {
+  if (typeof quietNow === 'function' && quietNow()) return; // do not disturb
   playTune('limit');
   if (notifyOn && !focusing() && 'Notification' in window && Notification.permission === 'granted' && document.hidden) { try { new Notification(title, { body }); } catch {} }
 }

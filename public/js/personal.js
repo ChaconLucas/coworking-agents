@@ -132,6 +132,10 @@ function renderOffice() {
     ${row('plants', STYLE.plants)}
     ${row('station', STYLE.station)}
     ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}
+    <h3>🔔 ${esc(T.quiet.title)}</h3>${(() => { const q = store.get('quiet', null) || {}, off = store.get('soundOff', {}) || {};
+      return `<p class="note">${esc(T.quiet.sub)}</p><div class="opts">${SOUND_KINDS.map(k => `<label class="tchk"><input type="checkbox" data-soundkind="${k}" ${off[k] ? '' : 'checked'}> ${esc(T.quiet.kinds[k])}</label>`).join('')}</div>
+      <p class="office-name"><label class="tchk"><input type="checkbox" data-quiet="on" ${q.on ? 'checked' : ''}> ${esc(T.quiet.dnd)}</label> <input type="time" data-quiet="from" value="${esc(q.from || '22:00')}"> ${esc(T.quiet.to)} <input type="time" data-quiet="to" value="${esc(q.to || '08:00')}"></p>
+      ${quietNow() ? `<p class="note">🌙 ${esc(T.quiet.now)}</p>` : ''}`; })()}
     <h3>${esc(T.backup.title)}</h3><p class="note">${esc(T.backup.sub)}</p>
     <p><button class="btn small" data-backup="export">⬇ ${esc(T.backup.export)}</button> <button class="btn small" data-backup="import">⬆ ${esc(T.backup.import)}</button><input type="file" accept="application/json,.json" data-backup-file hidden></p><p class="note" id="backup-msg"></p>`;
   const face = document.getElementById('you-face'); if (face) face.appendChild(youPortrait());
@@ -186,4 +190,9 @@ document.addEventListener('change', async e => {
   if (typeof pollTasks === 'function') await pollTasks();
   renderReport(); if (typeof applyAvatars === 'function') applyAvatars();
   const m2 = document.getElementById('backup-msg'); if (m2) m2.textContent = '✓ ' + T.backup.imported(n);
+});
+document.addEventListener('change', e => {
+  const k = e.target.closest('[data-soundkind]'), q = e.target.closest('[data-quiet]');
+  if (k) { const off = { ...(store.get('soundOff', {}) || {}) }; off[k.dataset.soundkind] = !k.checked; store.set('soundOff', off); if (k.checked) playTune(k.dataset.soundkind); }
+  if (q) { const cur = { from: '22:00', to: '08:00', ...(store.get('quiet', null) || {}) }; cur[q.dataset.quiet] = q.type === 'checkbox' ? q.checked : q.value; store.set('quiet', cur); renderReport(); }
 });

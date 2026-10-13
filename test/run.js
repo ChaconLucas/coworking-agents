@@ -284,6 +284,12 @@ sleepK.kill();
   for (const f of ['rowHtml(tx)', 'askPermHtml(tx)', "shipHtml(tx, { ok: true, dirty: [P], dirtyCount: 1, branch: P, suggest: P, files: 1, canPr: true, gh: true, tests: { code: 0 }, review: { ok: true } })", 'askHtml(px)', 'recCardHtml(null, px)', 'taskCardHtml(px)', '(taskData.tasks = [tx], compareHtml())'])
     assert.ok(!/<img|<b data-xss|data-xss>/.test(run(f).replace(/&lt;b data-xss&gt;/g, '')), 'XSS escaped in ' + f);
 
+  // do not disturb: a window that crosses midnight
+  run(`var __sg = store.get, __ss = store.set, __st = {}; store.get = (k, d) => (k in __st ? __st[k] : d); store.set = (k, v) => { __st[k] = v; }; store.set('quiet', { on: true, from: '22:00', to: '08:00' })`);
+  assert.deepStrictEqual([run("quietNow(new Date('2026-01-01T23:30:00'))"), run("quietNow(new Date('2026-01-01T07:59:00'))"), run("quietNow(new Date('2026-01-01T12:00:00'))")], [true, true, false], 'quiet hours across midnight');
+  run(`store.set('quiet', { on: false, from: '22:00', to: '08:00' })`); assert.strictEqual(run("quietNow(new Date('2026-01-01T23:30:00'))"), false, 'off means off');
+  run('store.get = __sg; store.set = __ss');
+
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
   run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
     data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);

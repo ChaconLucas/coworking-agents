@@ -82,10 +82,18 @@ let prevStates = new Map(), audio = null;
 // focus mode: sounds and system notifications pause for a while (toasts and the office keep going)
 let focusUntil = Number(store.get('focusUntil', 0)) || 0;
 const focusing = () => focusUntil > Date.now();
+// do not disturb: a daily quiet window (may cross midnight) mutes sounds and system notifications; each sound can also be turned off
+const SOUND_KINDS = ['need', 'done', 'arrive', 'leave', 'limit', 'trophy', 'purr'];
+function quietNow(d = new Date()) {
+  const q = store.get('quiet', null); if (!q || !q.on || !/^\d\d:\d\d$/.test(q.from || '') || !/^\d\d:\d\d$/.test(q.to || '')) return false;
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  return q.from <= q.to ? hm >= q.from && hm < q.to : hm >= q.from || hm < q.to;
+}
+const soundMuted = kind => quietNow() || (store.get('soundOff', {}) || {})[kind] === true;
 const FOCUS_STEPS = [25, 50]; // minutes; each click goes to the next, then off
 const lastSeen = new Map(); // id → last known person, to name who left
 function beep(urgent) {
-  if (!soundOn || focusing()) return;
+  if (!soundOn || focusing() || quietNow()) return;
   try {
     audio = audio || new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
@@ -98,7 +106,7 @@ function beep(urgent) {
 // a little chiptune per event: request (two rising beeps), done (soft chime), arrival (three notes up), leaving (two notes down)
 const TUNES = { need: [[880, 0], [1175, .12]], done: [[784, 0], [1047, .1]], arrive: [[523, 0], [659, .09], [784, .18]], leave: [[659, 0], [440, .12]], limit: [[440, 0], [440, .18], [440, .36]], trophy: [[523, 0], [659, .08], [784, .16], [1047, .24], [1319, .36]], purr: [[196, 0], [185, .1], [196, .2]] };
 function playTune(kind) {
-  if (!soundOn || focusing() || !TUNES[kind]) return;
+  if (!soundOn || focusing() || !TUNES[kind] || soundMuted(kind)) return;
   try {
     audio = audio || new AudioContext();
     for (const [freq, at] of TUNES[kind]) {
