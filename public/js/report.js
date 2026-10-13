@@ -5,6 +5,7 @@ async function loadUsage(force) {
   if (!force && Date.now() - usageAt < 30000) return usageData;
   usageAt = Date.now();
   try { usageData = await fetch('api/usage').then(r => r.json()); } catch {}
+  costGoalCheck();
   renderUsagePill();
   if (!reportEl.hidden) renderReport();
   // the first full scan takes a few seconds: poll until it lands
@@ -15,6 +16,31 @@ setInterval(() => loadUsage(), 30000);
 setTimeout(() => loadUsage(true), 500);
 
 const meterCls = p => p > 85 ? 'hi' : p > 60 ? 'mid' : '';
+// the month's cost goal: spent so far (estimated from the logs), the end-of-month projection at this pace, and a notice when it goes over
+function monthSpend(u) {
+  const now = new Date(), key = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const spent = Object.entries((u && u.days) || {}).filter(([k]) => k.startsWith(key)).reduce((n, [, d]) => n + (d.usd || 0), 0);
+  const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), elapsed = now.getDate() - 1 + (now.getHours() * 60 + now.getMinutes()) / 1440;
+  return { key, spent, projected: elapsed >= 1 ? spent / elapsed * dim : 0, elapsed };
+}
+function costGoalHtml(u) {
+  const G = T.goalCost, goal = Number(((typeof taskData !== 'undefined' && taskData.settings) || {}).monthGoal) || 0, m = monthSpend(u);
+  const pct = goal ? Math.min(100, m.spent / goal * 100) : 0, ppct = goal ? Math.min(100, m.projected / goal * 100) : 0, c = !goal ? '#8b9bb4' : m.spent >= goal ? '#e43b44' : m.projected > goal ? '#feae34' : '#63c74d';
+  return `<h3>${esc(G.title)}</h3><div class="cgoal"><label>${esc(G.goal)} <input type="number" min="0" step="5" value="${goal || ''}" placeholder="0" data-cost-goal></label>
+    ${goal ? `<div class="gbar"><i class="proj" style="width:${ppct.toFixed(1)}%"></i><i style="width:${pct.toFixed(1)}%;background:${c}"></i></div>` : ''}
+    <p class="note">${esc(G.spent(fmtUSD(m.spent)))}${m.projected ? ' · ' + esc(G.projected(fmtUSD(m.projected))) : ''}${goal ? ' · ' + esc(m.spent >= goal ? G.over : m.projected > goal ? G.overPace : G.ok) : ' · ' + esc(G.none)}</p></div>`;
+}
+function costGoalCheck() {
+  const goal = Number(((typeof taskData !== 'undefined' && taskData.settings) || {}).monthGoal) || 0; if (!goal || !usageData || typeof pushNotice !== 'function') return;
+  const G = T.goalCost, m = monthSpend(usageData), said = store.get('goalSaid', []);
+  const say = (k, kind, title, body) => { if (said.includes(k)) return; store.set('goalSaid', [...said.slice(-10), k]); pushNotice(k, kind, title, body, { tab: 'usage' }); notifyOS(title, body); };
+  if (m.spent >= goal) say(`goal:${m.key}:over:${goal}`, 'warn', G.noticeOver(fmtUSD(goal)), G.spent(fmtUSD(m.spent)));
+  else if (m.elapsed >= 2 && m.projected > goal) say(`goal:${m.key}:pace:${goal}`, 'warn', G.noticePace(fmtUSD(m.projected), fmtUSD(goal)), G.spent(fmtUSD(m.spent)) + '. ' + G.tip);
+}
+document.addEventListener('change', async e => {
+  const g = e.target.closest('[data-cost-goal]'); if (!g) return;
+  await api('api/tasks', { op: 'settings', monthGoal: Number(g.value) || 0 }); await pollTasks(); costGoalCheck(); renderReport();
+});
 function renderUsagePill() {
   const pill = document.getElementById('usage-pill');
   if (!pill || !data) return;
@@ -147,6 +173,7 @@ function renderReport() {
   const total = id => u && u.byAgent && u.byAgent[id] ? u.byAgent[id].total : null;
   body.innerHTML = tabsHtml() + `<h2 hidden>${esc(U.title)}</h2><p class="sub">${esc(U.reportSub)}${u && u.scannedAt ? ' · ' + esc(U.updated) + ' ' + esc(ago(Date.now() - u.scannedAt)) : ''}</p>
     <h3>${esc(U.limits)}</h3><div class="ltiles">${tiles || `<p class="note">${esc(U.none)}</p>`}</div>
+    ${costGoalHtml(u)}
     <h3>${esc(U.last14)}</h3><div class="chart-wrap"><span class="ymax">${tok(max)}</span>${chart}</div>
     <h3>${esc(U.allTime)}</h3><div class="rgrid">${Object.keys(AGENT).map(card).join('')}</div>
     <p class="note" style="margin-top:14px">${esc(U.note)} ${esc(U.costNote)}</p>`;

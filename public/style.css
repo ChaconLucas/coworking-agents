@@ -849,3 +849,7 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .treview a, .tcard a { color: #8ecbff; }
 .qr { display: block; image-rendering: pixelated; max-width: 100%; margin: 10px 0; border-radius: 6px; }
 .qr-url { word-break: break-all; }
+.cgoal input { width: 110px; min-width: 0; }
+.gbar { position: relative; height: 12px; background: rgba(0,0,0,.3); border: 2px solid #3a3045; margin: 8px 0 4px; }
+.gbar i { position: absolute; left: 0; top: 0; bottom: 0; }
+.gbar i.proj { background: repeating-linear-gradient(45deg, rgba(254,174,52,.35) 0 4px, transparent 4px 8px); }

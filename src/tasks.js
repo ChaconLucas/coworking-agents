@@ -200,6 +200,7 @@ function op(m = {}) {
     if (m.maxAttempts !== undefined) settings.maxAttempts = Math.min(10, Math.max(1, Number(m.maxAttempts) || 3));
     if (m.autoApply !== undefined) settings.autoApply = !!m.autoApply;
     if (m.autoReview !== undefined) settings.autoReview = !!m.autoReview;
+    if (m.monthGoal !== undefined) settings.monthGoal = Math.max(0, Math.min(1e6, Number(m.monthGoal) || 0));
     if (ORDER.includes(m.autoMax)) settings.autoMax = m.autoMax;
     if (m.autoPerTask !== undefined) settings.autoPerTask = Math.min(5, Math.max(0, Number(m.autoPerTask) || 0));
     save(); tick(); return { ok: true, settings };

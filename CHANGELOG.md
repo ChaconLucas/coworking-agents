@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Agents that say they are working but write nothing for 10 minutes get a notice
+- File clashes land in the notices, with a pause button when one side is an office task
+- Month's cost goal in Usage: spent so far, end-of-month projection, and a notice when the pace or the total goes over
 - Shop: beanie, bow, wizard hat, round glasses, mustache, green and blue shirts; bought outfits say *Wear* and open the wardrobe instead of *Move*
 - Phone panel (opt-in `--phone`): a small page on your Wi-Fi to see who needs you and answer permissions, replies and single-choice questions; its own restricted server and token, QR code in the terminal and in the office
 - Automatic review (opt-in): when a task finishes with changes, a read-only reviewer with the same AI reads the diff and its verdict shows on the original task

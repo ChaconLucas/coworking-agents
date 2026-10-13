@@ -271,6 +271,13 @@ sleepK.kill();
   run(`notices = []; data = { now: Date.now(), limits: {}, people: [{ id: 's1', name: 'ada', state: 'thinking', lastActivity: Date.now() - 11 * 60000, doing: { tool: 'Bash', what: 'npm test' } }, { id: 's2', name: 'bob', state: 'thinking', lastActivity: Date.now() - 60000 }] }; checkAlerts(); checkAlerts()`);
   assert.deepStrictEqual(run("JSON.stringify(notices.filter(n => n.key.startsWith('stall:')).map(n => [n.key, n.n]))"), JSON.stringify([['stall:s1', 1]]), 'a quiet worker is flagged once, an active one is not');
 
+  // month's cost goal: reaching it gives one notice; the projection follows the days elapsed
+  run(`notices = []; store.set('goalSaid', []); var mk = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
+    usageData = { days: { [mk + '-01']: { usd: 30 }, [mk + '-02']: { usd: 25 }, '1999-01-01': { usd: 999 } } }; taskData.settings = { monthGoal: 50 }; costGoalCheck(); costGoalCheck();`);
+  assert.strictEqual(run('Math.round(monthSpend(usageData).spent)'), 55, 'only this month counts');
+  assert.strictEqual(run("notices.filter(n => n.key.startsWith('goal:')).length"), 1, 'goal reached: one notice');
+  assert.ok(run('costGoalHtml(usageData)').includes('data-cost-goal'), 'goal shown in the usage tab');
+
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
   run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
     data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);
