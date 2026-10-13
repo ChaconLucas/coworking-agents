@@ -501,6 +501,12 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(!T(t6.id).costUnknown && T(t6.id).cost > 0, 'known Codex model is priced');
   tasks.op({ op: 'reply', id: t6.id, text: 'go on' }); await tasks._idle();
   assert.deepStrictEqual([lastArgs().thread.method, lastArgs().thread.threadId], ['thread/resume', 'T1'], 'Codex resumes its thread');
+  mode('kids'); const tk = tasks.op({ op: 'create', dir: plain, desc: 'codex with a helper', agent: 'codex', model: 'gpt-6.1-sol' }).task; await tasks._idle();
+  const k1 = T(tk.id);
+  assert.ok(k1.tokens.input === 1000 + 4000 && k1.tokens.output === 50 + 300 && k1.subagents >= 1, 'a Codex subagent counts from its own log (' + k1.tokens.input + ')');
+  tasks.op({ op: 'reply', id: tk.id, text: 'go on' }); await tasks._idle();
+  assert.strictEqual(T(tk.id).tokens.input, 1000 + 4000 + 1000, 'and only once');
+  mode('ok');
   tasks.op({ op: 'compact', id: t6.id }); await tasks._idle();
   assert.deepStrictEqual([lastArgs().compact.threadId, T(t6.id).state, T(t6.id).reason, T(t6.id).result], ['T1', 'blocked', 'compacted', 'ok'], 'Codex compacts its thread');
 
@@ -510,6 +516,14 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.deepStrictEqual([deepLink({ agent: 'claude', entrypoint: 'claude-vscode', id: 'aaaaaaaa-1' }).url, deepLink({ agent: 'claude', entrypoint: 'claude-desktop', id: 'aaaaaaaa-1' }).url, deepLink({ agent: 'codex', entrypoint: 'codex-vscode', id: 'bbbbbbbb-2' }).url, deepLink({ agent: 'codex', id: 'bbbbbbbb-2' }).url],
     ['vscode://anthropic.claude-code/open?session=aaaaaaaa-1', 'claude://code/continue?session=aaaaaaaa-1', 'vscode://openai.chatgpt/local/bbbbbbbb-2', 'codex://threads/bbbbbbbb-2'], 'each outside conversation opens where it lives');
   assert.ok(!deepLink({ agent: 'claude', entrypoint: 'cli', id: 'aaaaaaaa-1', pid: 1 }) && !deepLink({ agent: 'codex', id: 'x;rm -rf' }), 'terminals keep the tab path; odd ids never become a link');
+  const { codexKeys, switchCfg } = require('../src/focus');
+  const cache = { models: [{ slug: 'a', visibility: 'list', priority: 1, supported_reasoning_levels: [{ effort: 'low' }, { effort: 'medium' }, { effort: 'high' }, { effort: 'xhigh' }, { effort: 'max' }] }, { slug: 'hidden', visibility: 'hide', priority: 2 }, { slug: 'b', visibility: 'list', priority: 3, supported_reasoning_levels: [{ effort: 'low' }, { effort: 'medium' }] }] };
+  const kb = codexKeys('b', 'medium', cache);
+  assert.deepStrictEqual([kb[0].text, kb[1].key, kb[2].text, kb.filter(k => k.key === 'up').length, kb.filter(k => k.key === 'down').length, kb[kb.length - 1].text], ['/model', 'enter', '2', 6, 1, 's'], 'Codex picker: visible models in order, up to the top, down to the effort, session only');
+  assert.ok(!codexKeys('hidden', 'low', cache) && !codexKeys('a', 'max', cache) && !codexKeys('b', 'high', cache), 'only what the picker shows directly');
+  assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'claude-vscode' }, 'sonnet', 'low')).reason, 'unsupported', 'VS Code and the app are not typed into');
+  assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'cli' }, 'sonnet; rm -rf ~', 'low')).reason, 'text', 'only a model name and a known effort are typed');
+
   // a request sent from the office to a session opened outside continues that same conversation, never in a worktree
   const ext = 'b1c2d3e4-0000-4000-8000-123456789abc';
   const tx = tasks.op({ op: 'create', dir: proj, desc: 'from the office', agent: 'claude', resume: ext, worktree: true, model: 'haiku', effort: 'low' }).task;

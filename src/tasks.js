@@ -355,7 +355,7 @@ function runCodex(t, prompt, sys) {
       if (j.method === 'item/started' && it.type && !['userMessage', 'agentMessage', 'reasoning'].includes(it.type) && !/compact/i.test(it.type)) { toolEvent(t, it.type, it.command || it.changes || it.query || ''); if (/agent/i.test(it.type)) t.subagents++; }
       if (j.method === 'thread/compacted' || (j.method === 'item/completed' && /compact/i.test(it.type || ''))) { if (!L.compacted) { L.compacted = true; log(t, { kind: 'compacted' }); } if (t.compactOnly) end(); }
       if (j.method === 'item/completed' && it.type === 'agentMessage' && it.text && !t.compactOnly) { t.result = s(it.text, 6000); log(t, { kind: 'text', text: s(it.text, 2000) }); }
-      if (j.method === 'thread/tokenUsage/updated' && p.tokenUsage && p.tokenUsage.last) {
+      if (j.method === 'thread/tokenUsage/updated' && p.tokenUsage && p.tokenUsage.last && (!p.threadId || p.threadId === t.sessionId)) { // subagents are counted from their own logs
         const u = p.tokenUsage.last, k = p.turnId + ':' + (p.tokenUsage.total && p.tokenUsage.total.totalTokens);
         if (!seen.has(k)) { seen.add(k); addCost(t, L.model, { input: Math.max(0, (u.inputTokens || 0) - (u.cachedInputTokens || 0)), output: u.outputTokens || 0, cacheRead: u.cachedInputTokens || 0, cacheWrite: u.cacheWriteInputTokens || 0 }); save(); }
       }
@@ -367,7 +367,21 @@ function runCodex(t, prompt, sys) {
       budget(t, c);
     }
   });
-  c.on('close', code => { procs.delete(t.id); askers.delete(t.id); t.ask = null; t.pid = 0; finish(t, over && !t.failedTurn ? 0 : code || (t.failedTurn ? 1 : 0), err); });
+  const started = Date.now() - 6e4;
+  c.on('close', code => { procs.delete(t.id); askers.delete(t.id); t.ask = null; t.pid = 0; subagentCost(t, started); finish(t, over && !t.failedTurn ? 0 : code || (t.failedTurn ? 1 : 0), err); });
+}
+// Codex subagents: what their own logs say they used, added once (only the growth since the last look)
+function subagentCost(t, since) {
+  let kids = []; try { kids = require('./sources/codex').children(t.sessionId, Math.min(since, t.created)); } catch {}
+  t.subSeen = t.subSeen || {};
+  for (const k of kids) {
+    if (!k.usage) continue;
+    const prev = t.subSeen[k.id] || { input: 0, output: 0, cacheRead: 0 }, d = { input: k.usage.input - prev.input, output: k.usage.output - prev.output, cacheRead: k.usage.cacheRead - prev.cacheRead, cacheWrite: 0 };
+    if (d.input < 0 || d.output < 0 || d.cacheRead < 0 || !(d.input || d.output || d.cacheRead)) continue;
+    t.subSeen[k.id] = { input: k.usage.input, output: k.usage.output, cacheRead: k.usage.cacheRead };
+    if (!prev.input && !prev.output) t.subagents = Math.max(t.subagents, Object.keys(t.subSeen).length);
+    addCost(t, k.model, d); log(t, { kind: 'subagent', id: k.id.slice(-6), model: k.model, tokens: d.input + d.output + d.cacheRead });
+  }
 }
 function codexRequest(t, j, write) {
   const p = j.params || {}, m = j.method, reply = result => write({ id: j.id, result });

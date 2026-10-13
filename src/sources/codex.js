@@ -50,6 +50,7 @@ function absorb(st, d) {
     st.id = p.id || p.session_id; st.cwd = p.cwd || st.cwd; st.version = p.cli_version || '';
     st.startedAt = p.timestamp ? Date.parse(p.timestamp) : ts; st.originator = p.originator || '';
     if (p.git && p.git.branch) st.branch = p.git.branch;
+    const spawn = p.source && p.source.subagent && p.source.subagent.thread_spawn; if (spawn && spawn.parent_thread_id) st.parent = spawn.parent_thread_id;
   } else if (d.type === 'turn_context') {
     if (p.cwd) st.cwd = p.cwd;
     if (p.model) st.model = p.model;
@@ -207,4 +208,12 @@ function credentials() {
   return { topSkills: [], skills: [...new Set(skills)], mcps: [], plugins: [] };
 }
 
-module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today, limits };
+// subagents write their own rollouts pointing at the parent thread: their usage, any depth, since a moment
+function children(threadId, since) {
+  const all = []; for (const f of recentRollouts(Date.now(), since)) { const st = read(f); if (st && st.id && st.parent) all.push(st); }
+  const ids = new Set([threadId]), out = [];
+  for (let grew = true; grew;) { grew = false; for (const st of all) if (!ids.has(st.id) && ids.has(st.parent)) { ids.add(st.id); out.push({ id: st.id, model: st.model, usage: st.usage || null }); grew = true; } }
+  return out;
+}
+
+module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today, limits, children };

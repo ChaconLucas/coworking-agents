@@ -26,7 +26,6 @@ Estimated cost · wait reminder · git state on the door · daily report as Mark
 - **Seasonal decor** by date (subtle, off with a toggle).
 
 ## Tasks — next steps
-- Codex subagent cost: `codex app-server` usage updates are counted for every thread it reports; whether spawned subagents report theirs there is not verified yet.
-- Changing the model of a step that is already running in an outside session (it applies from the next request sent from the office).
-- CI: left out on purpose for now (GitHub Actions removed); `npm test` runs before every commit.
+- Switching model and effort in VS Code and the desktop apps (only terminals take typing; there it applies from the next request sent from the office).
+- CI: left out for now; `npm test` runs before every commit.
 - Semantic search over history only if plain text search stops being enough; smarter automatic assignment.

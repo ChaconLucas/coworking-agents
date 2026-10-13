@@ -29,6 +29,12 @@ process.stdin.on('data', d => {
 });
 process.stdin.on('end', () => process.exit(0));
 function finish() {
+  if (mode === 'kids') { // a subagent writes its own rollout pointing at this thread
+    const d = new Date(), dir = path.join(process.env.CODEX_HOME || path.join(H, '.codex'), 'sessions', String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0'));
+    fs.mkdirSync(dir, { recursive: true }); const iso = d.toISOString(), l = o => JSON.stringify({ timestamp: iso, ...o }) + '\n';
+    fs.writeFileSync(path.join(dir, 'rollout-kid-' + thread + '.jsonl'), l({ type: 'session_meta', payload: { id: 'KID-' + thread, cwd: '/tmp', timestamp: iso, originator: 'codex_exec', source: { subagent: { thread_spawn: { parent_thread_id: thread, depth: 1 } } } } })
+      + l({ type: 'turn_context', payload: { model: 'gpt-6.1-sol', effort: 'low' } }) + l({ type: 'event_msg', payload: { type: 'token_count', info: { total_token_usage: { input_tokens: 5000, cached_input_tokens: 1000, output_tokens: 300 } } } }));
+  }
   usage('u1', 2050); usage('u1', 2050); // the same update twice counts once
   out({ method: 'item/completed', params: { item: { type: 'agentMessage', text: 'ok' } } });
   out({ method: 'turn/completed', params: { threadId: thread, turn: { id: 'u1', status: 'completed' } } });

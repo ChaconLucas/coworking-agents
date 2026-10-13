@@ -114,6 +114,19 @@ function taskCardHtml(p) {
     ${recCardHtml(t)}<div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out</small></div><div><b>${esc(X.attempts(t.attempts))}</b><small>${esc(X.src)}</small></div></div>
     ${askPermHtml(t)}${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}</p>` : ''}${ctlHtml(t, 'p')}</section>`;
 }
+// a session running in a terminal switches model and effort right away: the office types /model and /effort (Codex: its picker)
+const canSwitch = p => typeof canType === 'function' && canType() && !!p.pid && ['claude', 'codex'].includes(p.agent) && !['claude-desktop', 'claude-vscode', 'codex-vscode', 'codex-desktop'].includes(p.entrypoint);
+const switchModel = (p, rec) => rec.model || ((taskData.options || {})[p.agent] || {}).def || '';
+async function switchTo(p, rec) {
+  const r = await fetch('api/switch', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id: p.id, model: switchModel(p, rec), effort: rec.effort }) }).then(x => x.json()).catch(() => ({ ok: false, reason: 'unknown' }));
+  return r;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-pswitch]'); if (!b) return;
+  const p = data.people.find(x => x.id === b.dataset.pswitch), hit = recOf.get('p:' + b.dataset.pswitch), X = TT(); if (!p || !hit || !hit.rec) return;
+  b.disabled = true; const r = await switchTo(p, hit.rec), m = document.querySelector(`[data-pswitch-msg="${CSS.escape(p.id)}"]`);
+  if (m) m.textContent = r.ok ? '✓ ' + X.switchOk : '⚠ ' + (X.switchFail[r.reason] || r.reason || '?'); b.disabled = false;
+});
 // a session opened outside (terminal, VS Code, the app) takes a request that continues the same conversation in the background
 const canAsk = p => ['claude', 'codex'].includes(p.agent) && !!p.cwd;
 const askDraft = new Map();
@@ -330,7 +343,10 @@ reportEl.addEventListener('click', async e => {
   if (a === 'why') n.showWhy = true;
   if (a === 'dismiss') notices = notices.filter(x => x !== n);
   if (a === 'allow' || a === 'deny') { await permit(n.ref.task, a === 'allow', false); return renderNotices(); }
-  if (a === 'apply' && n.ref.ext && n.ref.rec) { // outside session: the choice goes into its request box, used on the next request sent from here
+  if (a === 'apply' && n.ref.ext && n.ref.rec) {
+    const p = data.people.find(x => x.id === n.ref.agent);
+    if (p && canSwitch(p)) { const r = await switchTo(p, n.ref.rec); n.body = (r.ok ? '✓ ' + T.tasks.switchOk : '⚠ ' + (T.tasks.switchFail[r.reason] || r.reason)) + ' — ' + n.body; n.showWhy = true; saveNotices(); return renderNotices(); }
+    // not in a terminal (VS Code, the app): the choice goes into its request box, used on the next request sent from here
     askDraft.set(n.ref.agent, { ...(askDraft.get(n.ref.agent) || {}), model: n.ref.rec.model, effort: n.ref.rec.effort }); saveNotices();
     closeReport(); selected = n.ref.agent; renderOverlay(); renderPanel();
     const box = panelBody.querySelector('.pask'); if (box) { box.scrollIntoView({ block: 'center' }); box.querySelector('textarea').focus(); }
@@ -429,7 +445,7 @@ function recCardHtml(t, p) {
     <div class="rc-row"><span>${esc(X.rcRecommended)}</span><b>${rec ? esc(`${(t ? mname(t, rec.model) : rec.model || X.cliDefault)} · ${rec.effort}`) + ` <small>(${esc(X.profiles[rec.profile])})</small>` : esc(taskData.privacy ? X.rcPrivate : X.rcLoading)}</b></div>
     ${rec ? `<p class="rc-why">${esc(rec.why.map(w => X.recWhy[w] || w).join(' · '))}${rec.similar ? ' · ' + esc(X.similar(rec.similar)) : ''}</p>` : ''}
     ${missing.length ? `<p class="rc-miss">${esc(X.rcMissing)}: ${esc(missing.join('; '))}</p>` : ''}
-    ${t ? (rec && !same ? `<button class="btn small" data-rcapply="${esc(t.id)}">💡 ${esc(T.notices.apply)}: ${esc(mname(t, rec.model))} · ${esc(rec.effort)}</button>${t.state === 'running' ? ` <small class="note">${esc(X.next)}</small>` : ''}` : rec ? `<p class="ok">✓ ${esc(X.rcAlready)}</p>` : '') : `<p class="note">${canAsk(p) ? '💡 ' + esc(X.rcExternal) : '🔒 ' + esc(X.rcNoAsk)}</p>`}</div>`;
+    ${t ? (rec && !same ? `<button class="btn small" data-rcapply="${esc(t.id)}">💡 ${esc(T.notices.apply)}: ${esc(mname(t, rec.model))} · ${esc(rec.effort)}</button>${t.state === 'running' ? ` <small class="note">${esc(X.next)}</small>` : ''}` : rec ? `<p class="ok">✓ ${esc(X.rcAlready)}</p>` : '') : (canSwitch(p) && rec ? `<p><button class="btn small" data-pswitch="${esc(p.id)}">⌨ ${esc(X.switchTerm)}: ${esc(switchModel(p, rec))} · ${esc(rec.effort)}</button></p><p class="note" data-pswitch-msg="${esc(p.id)}">${esc(X.switchHow)}</p>` : '') + `<p class="note">${canAsk(p) ? '💡 ' + esc(X.rcExternal) : '🔒 ' + esc(X.rcNoAsk)}</p>`}</div>`;
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-rcapply]'); if (!b) return;

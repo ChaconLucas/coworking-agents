@@ -204,6 +204,107 @@ async function sendText(person, text) {
   return { ok: false, reason: res.fail || 'notfound', app: app.name, detail: res.detail };
 }
 
+// switching model and effort of a session running in a terminal, by typing what the user would type.
+// Claude takes `/model <alias>` and `/effort <level>`. Codex only has a picker: `/model`, the model's number,
+// then Up to the top, Down to the effort and `s` ("this session only", so Codex does not save it as the default).
+const CODEX_EFFORTS = 4; // the picker lists the first four levels; the rest sit behind "More reasoning…"
+function codexKeys(model, effort, cache) {
+  const list = (cache && Array.isArray(cache.models) ? cache.models : []).filter(m => m.visibility === 'list').sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  const i = list.findIndex(m => m.slug === model); if (i < 0 || i > 8) return null;
+  const e = (list[i].supported_reasoning_levels || []).map(r => r.effort).slice(0, CODEX_EFFORTS).indexOf(effort); if (e < 0) return null;
+  return [{ text: '/model' }, { key: 'enter' }, { text: String(i + 1) }, ...Array(6).fill({ key: 'up' }), ...Array(e).fill({ key: 'down' }), { text: 's' }];
+}
+const KEYCODE = { enter: 36, up: 126, down: 125 }, ESCSEQ = { up: '\x1b[A', down: '\x1b[B' };
+const KEYS_SCRIPT = {
+  // Terminal has no "type without Enter": the tab is brought forward and System Events types (needs Accessibility)
+  Terminal: `on run argv
+  set theTty to item 1 of argv
+  tell application "Terminal"
+    repeat with w in windows
+      repeat with t in tabs of w
+        if tty of t is theTty then
+          set selected of t to true
+          set index of w to 1
+          activate
+          delay 0.3
+          tell application "System Events"
+            repeat with i from 2 to count of argv
+              set k to item i of argv
+              if k starts with "#" then
+                key code ((text 2 thru -1 of k) as integer)
+              else
+                keystroke k
+              end if
+              delay 0.35
+            end repeat
+          end tell
+          return "ok"
+        end if
+      end repeat
+    end repeat
+  end tell
+  return "notfound"
+end run`,
+  iTerm2: `on run argv
+  set theTty to item 1 of argv
+  tell application "iTerm2"
+    repeat with w in windows
+      repeat with t in tabs of w
+        repeat with s in sessions of t
+          if tty of s is theTty then
+            repeat with i from 2 to count of argv
+              set k to item i of argv
+              if k is "#36" then
+                tell s to write text ""
+              else if k is "#126" then
+                tell s to write text ((ASCII character 27) & "[A") newline no
+              else if k is "#125" then
+                tell s to write text ((ASCII character 27) & "[B") newline no
+              else
+                tell s to write text k newline no
+              end if
+              delay 0.35
+            end repeat
+            return "ok"
+          end if
+        end repeat
+      end repeat
+    end repeat
+  end tell
+  return "notfound"
+end run`,
+};
+async function sendKeys(person, keys) {
+  const info = await run('ps', ['-o', 'tty=,stat=', '-p', String(person.pid)]);
+  const m = info && /^(\S+)\s+(\S+)$/.exec(info.trim());
+  if (!m || m[1] === '?' || m[1] === '??') return { ok: false, reason: 'notty' };
+  if (!m[2].includes('+')) return { ok: false, reason: 'notforeground' };
+  const panes = await run('tmux', ['list-panes', '-a', '-F', '#{pane_tty} #{pane_id}']);
+  const pane = panes && panes.split('\n').map(l => l.split(' ')).find(([tty]) => tty === '/dev/' + m[1]);
+  if (pane) {
+    for (const k of keys) { await run('tmux', ['send-keys', '-t', pane[1], ...(k.text ? ['-l', k.text] : [{ enter: 'Enter', up: 'Up', down: 'Down' }[k.key]])]); await new Promise(r => setTimeout(r, 350)); }
+    return { ok: true, app: 'tmux' };
+  }
+  if (process.platform !== 'darwin') return { ok: false, reason: 'platform' };
+  const chain = await ancestry(person.pid), term = APPS.find(a => chain.some(c => a.re.test(c)));
+  if (!term || !KEYS_SCRIPT[term.name]) return { ok: false, reason: 'unsupported', app: term && term.name };
+  const res = await osa(['-e', KEYS_SCRIPT[term.name], '/dev/' + m[1], ...keys.map(k => k.text || '#' + KEYCODE[k.key])]);
+  if (res.out === 'ok') return { ok: true, app: term.name };
+  return { ok: false, reason: /1002|1719|25211|assistive|not allowed/i.test(res.detail || '') ? 'accessibility' : res.fail || 'notfound', app: term.name, detail: res.detail };
+}
+async function switchCfg(person, model, effort) {
+  if (!person.pid || !['claude', 'codex'].includes(person.agent) || ['claude-desktop', 'claude-vscode'].includes(person.entrypoint)) return { ok: false, reason: 'unsupported' };
+  if (person.agent === 'claude') {
+    if (!/^[a-z0-9.\[\]-]{2,40}$/i.test(model || '') || !/^(low|medium|high|xhigh|max)$/.test(effort || '')) return { ok: false, reason: 'text' };
+    const a = await sendText(person, '/model ' + model); if (!a.ok) return a;
+    await new Promise(r => setTimeout(r, 600));
+    return sendText(person, '/effort ' + effort);
+  }
+  let cache = null; try { cache = JSON.parse(require('fs').readFileSync(require('path').join(process.env.CODEX_HOME || require('path').join(require('os').homedir(), '.codex'), 'models_cache.json'), 'utf8')); } catch {}
+  const keys = codexKeys(model, effort, cache); if (!keys) return { ok: false, reason: 'text' };
+  return sendKeys(person, keys);
+}
+
 // open a new terminal tab in a folder and start an AI there (macOS Terminal/iTerm). Only an existing folder
 // and one of two fixed commands: nothing typed by the page reaches the shell except the quoted path.
 const LAUNCH = { claude: 'claude', codex: 'codex' };
@@ -217,4 +318,4 @@ async function launch(dir, agent) {
   return res.out === 'ok' ? { ok: true, app: 'Terminal' } : { ok: false, reason: res.fail || 'unknown' };
 }
 
-module.exports = { deepLink, focus, sendText, launch };
+module.exports = { switchCfg, codexKeys, deepLink, focus, sendText, launch };
