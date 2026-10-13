@@ -11,8 +11,9 @@ const crypto = require('crypto');
 
 const DIR = path.join(__dirname, '..', 'public', 'phone');
 // what a phone needs to put the panel on its home screen: no data in any of them, so no code needed
-const PUBLIC = { '/manifest.webmanifest': ['phone.webmanifest', 'application/manifest+json'], '/icon-192.png': ['../icon-192.png', 'image/png'], '/icon-512.png': ['../icon-512.png', 'image/png'], '/apple-touch-icon.png': ['../apple-touch-icon.png', 'image/png'] };
+const PUBLIC = { '/fonts/silkscreen-400.woff2': ['../fonts/silkscreen-400.woff2', 'font/woff2'], '/fonts/silkscreen-700.woff2': ['../fonts/silkscreen-700.woff2', 'font/woff2'], '/logo.svg': ['../logo.svg', 'image/svg+xml'], '/art.js': ['../art.js', 'text/javascript; charset=utf-8'], '/manifest.webmanifest': ['phone.webmanifest', 'application/manifest+json'], '/icon-192.png': ['../icon-192.png', 'image/png'], '/icon-512.png': ['../icon-512.png', 'image/png'], '/apple-touch-icon.png': ['../apple-touch-icon.png', 'image/png'] };
 const FILES = { '/': ['index.html', 'text/html; charset=utf-8'], '/i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], '/phone.js': ['phone.js', 'text/javascript; charset=utf-8'], '/phone.css': ['phone.css', 'text/css; charset=utf-8'] };
+const BUILD = Date.now().toString(36);
 const OPS = new Set(['permit', 'reply', 'conclude', 'cancel', 'retry']);
 // visits: a read-only link that expires, showing only a picture of the office (drawn without names) and how many are working
 const VISIT_FILES = { '': ['visit.html', 'text/html; charset=utf-8'], 'i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], 'visit.js': ['visit.js', 'text/javascript; charset=utf-8'], 'phone.css': ['phone.css', 'text/css; charset=utf-8'] };
@@ -86,7 +87,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
           res.writeHead(302, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/${kept ? '; Max-Age=31536000' : ''}`, Location: '/' }); return res.end();
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
-        if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
+        if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, url.pathname === '/' ? String(d).replace(/__V__/g, BUILD) : d))); } // files named with this run, so a home-screen icon never keeps an old page
         if (url.pathname === '/api/m' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(view({ snapshot, tasks, privacy, extra }))); }
         if (url.pathname === '/frame.png' && req.method === 'GET') { phoneSeen = Date.now(); return frame ? (res.writeHead(200, { 'Content-Type': 'image/png' }), res.end(frame)) : send(res, 404, 'text/plain', 'no picture yet'); } // the office drawn without names
         if (url.pathname === '/api/m' && req.method === 'POST') {

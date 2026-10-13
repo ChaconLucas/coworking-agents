@@ -19,13 +19,13 @@ function nowTab() {
   if (!need.length && !asking.length) h.push(`<p class="empty">✓ ${esc(P.nothing)}</p>`);
   for (const t of asking) h.push(`<div class="card need"><b>🔐 ${esc(t.title)}</b><small>${esc(X.permAsk(t.ask.tool))}</small>${t.ask.what ? `<pre>${esc(t.ask.what)}</pre>` : ''}
     <div class="row"><button data-op="permit" data-id="${esc(t.id)}" data-allow="1">✓ ${esc(X.permAllow)}</button><button class="bad" data-op="permit" data-id="${esc(t.id)}">✕ ${esc(X.permDeny)}</button></div><p class="msg" data-msg="${esc(t.id)}"></p></div>`);
-  for (const p of need) h.push(`<div class="card need"><b>${esc(p.name)}</b><small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.title ? ' · ' + esc(p.title) : ''}</small>${p.ask ? `<pre>${esc(p.ask)}</pre>` : ''}
-    ${p.options ? `<div class="row">${p.options.map((o, i) => `<button class="ghost" data-op="answer" data-id="${esc(p.id)}" data-choice="${i + 1}">${i + 1}. ${esc(o)}</button>`).join('')}</div>` : `<p class="msg">${esc(P.openOffice)}</p>`}<p class="msg" data-msg="${esc(p.id)}"></p></div>`);
+  for (const p of need) h.push(`<div class="card need"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><b>${esc(p.name)}</b><small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.title ? ' · ' + esc(p.title) : ''}</small>${p.ask ? `<pre>${esc(p.ask)}</pre>` : ''}
+    ${p.options ? `<div class="row">${p.options.map((o, i) => `<button class="ghost" data-op="answer" data-id="${esc(p.id)}" data-choice="${i + 1}">${i + 1}. ${esc(o)}</button>`).join('')}</div>` : `<p class="msg">${esc(P.openOffice)}</p>`}<p class="msg" data-msg="${esc(p.id)}"></p></div></div></div>`);
   h.push(`<h2>${esc(P.agents)} <small>${others.length}</small></h2>`);
   if (!others.length) h.push(`<p class="empty">${esc(P.noAgents)}</p>`);
-  for (const p of others) h.push(`<div class="card agent"><div class="line"><b>${esc(p.name)}</b>${pill(stateCls(p.state), T.states[p.state] || p.state)}</div>
+  for (const p of others) h.push(`<div class="card agent"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><div class="line"><b>${esc(p.name)}</b>${pill(stateCls(p.state), T.states[p.state] || p.state)}</div>
     <small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.branch ? ' · ' + esc(p.branch) : ''}${p.since ? ' · ' + esc(ago(d.now - p.since)) : ''}</small>
-    ${p.doing && working(p) ? `<p class="doing">${esc(p.doing)}</p>` : p.title ? `<p class="doing dim">${esc(p.title)}</p>` : ''}</div>`);
+    ${p.doing && working(p) ? `<p class="doing">${esc(p.doing)}</p>` : p.title ? `<p class="doing dim">${esc(p.title)}</p>` : ''}</div></div></div>`);
   return h.join('');
 }
 function tasksTab() {
@@ -67,6 +67,8 @@ function render() {
   tabsEl.innerHTML = [['now', '●', P.tabNow, n], ['tasks', '☰', P.tabTasks, d.tasks.filter(t => ['blocked', 'failed'].includes(t.state)).length], ['office', '▦', P.tabOffice, 0], ['usage', '$', P.tabUsage, 0]]
     .map(([k, icon, label, badge]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span class="ic">${icon}</span>${esc(label)}${badge ? `<i>${badge}</i>` : ''}</button>`).join('');
   app.innerHTML = tab === 'tasks' ? tasksTab() : tab === 'office' ? officeTab() : tab === 'usage' ? usageTab() : nowTab();
+  // each agent's face, drawn by the office's own pixel art (the same look as on the computer)
+  if (window.Art) app.querySelectorAll('[data-face]').forEach(el => { try { el.appendChild(Art.portrait(el.dataset.face)); } catch {} });
 }
 async function load(force) {
   const a = document.activeElement;
