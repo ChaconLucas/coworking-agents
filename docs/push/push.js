@@ -11,6 +11,9 @@ const link = (label, href, ghost) => { const a = document.createElement('a'); a.
 
 // key and way back: from the link, kept for when the app is opened from its icon
 const h = new URLSearchParams(location.hash.slice(1));
+// opened from a notice: straight on to the office panel (only a local address with its code)
+const goOn = () => { const g = new URLSearchParams(location.hash.slice(1)).get('go') || ''; if (/^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)[0-9.]+(:\d+)?\/\?t=[0-9a-f]{32}$/.test(g)) { history.replaceState(null, '', location.pathname); location.href = g; return true; } return false; };
+addEventListener('hashchange', goOn);
 let key = h.get('k') || '', back = h.get('b') || '';
 if (/^[A-Za-z0-9_-]{80,100}$/.test(key) && LAN.test(back)) { try { localStorage.setItem('cw.push', JSON.stringify({ key, back })); } catch {} }
 else { try { const s = JSON.parse(localStorage.getItem('cw.push') || '{}'); key = s.key || ''; back = s.back || ''; } catch {} }
@@ -51,4 +54,4 @@ async function show() {
     } catch { say(P.error); }
   });
 }
-show().then(() => diag(), () => { say(P.error); diag(); });
+if (!goOn()) show().then(() => diag(), () => { say(P.error); diag(); });

@@ -9,8 +9,13 @@ self.addEventListener('push', e => {
   if ('setAppBadge' in self.navigator) jobs.push((m.badge ? self.navigator.setAppBadge(Number(m.badge) || 0) : self.navigator.clearAppBadge()).catch(() => {}));
   e.waitUntil(Promise.all(jobs));
 });
+// a notice can only open this app (iOS opens no other one), so this app goes on to the office panel by itself;
+// the panel's address travels in the #fragment, never to GitHub
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || './';
-  e.waitUntil(self.clients.openWindow(url));
+  const url = (e.notification.data && e.notification.data.url) || '', target = new URL(url ? './#go=' + encodeURIComponent(url) : './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const c = list[0];
+    return c ? c.focus().then(w => (w || c).navigate(target)).catch(() => self.clients.openWindow(target)) : self.clients.openWindow(target);
+  }));
 });
