@@ -136,11 +136,14 @@ const SEND = {
   Terminal: `on run argv
   set theTty to item 1 of argv
   set theText to item 2 of argv
+  set theAgent to item 3 of argv
   tell application "Terminal"
     repeat with w in windows
       try
         repeat with t in tabs of w
           if tty of t is theTty then
+            -- checked again at the moment of typing: if the agent is gone, the text would land in the shell
+            if (processes of t as text) does not contain theAgent then return "notforeground"
             do script theText in t
             return "ok"
           end if
@@ -199,7 +202,7 @@ async function sendText(person, text) {
   const chain = await ancestry(person.pid);
   const app = APPS.find(a => chain.some(c => a.re.test(c)));
   if (!app || !SEND[app.name]) return { ok: false, reason: 'unsupported', app: app && app.name };
-  const res = await osa(['-e', SEND[app.name], '/dev/' + m[1], text]);
+  const res = await osa(['-e', SEND[app.name], '/dev/' + m[1], text, person.agent]);
   if (res.out === 'ok') return { ok: true, app: app.name };
   return { ok: false, reason: res.fail || 'notfound', app: app.name, detail: res.detail };
 }

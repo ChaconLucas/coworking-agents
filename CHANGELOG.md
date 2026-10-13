@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Security: typing into Terminal re-checks, at that moment, that the agent still owns the tab (never into a bare shell); the heavy routes (search in logs, gh, cleanup) run one at a time
 - TV mode (☰ → 📺 or `?tv=1`): full screen with only the office and big counters; Esc leaves
 - Waiting on you today (daily report and the pasted summary): measured time the agents waited on your answers and office tasks stood blocked on you, with the longest waits
 - Budgets per day and per repository: once reached, new office tasks wait and running ones stop

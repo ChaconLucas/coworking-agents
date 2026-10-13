@@ -51,6 +51,9 @@ function privateUsage(u, privacy) {
   return strip(u);
 }
 
+// one at a time for the heavy ones (reading days of logs, calling gh, removing worktrees): a burst of requests cannot pile up
+const inFlight = new Set();
+async function once(key, fn) { if (inFlight.has(key)) return { ok: false, reason: 'busy' }; inFlight.add(key); try { return await fn(); } finally { inFlight.delete(key); } }
 function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token, phone = false } = {}) {
   tasks.startQueue({ demo });
   token = token || crypto.randomBytes(24).toString('hex');
@@ -239,7 +242,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
       let body = '';
       req.on('data', c => { body += c; if (body.length > 1e4) req.destroy(); });
-      req.on('end', async () => { let m = {}; try { m = JSON.parse(body); } catch {} try { const out = privacy ? { ok: false, reason: 'private' } : m.op === 'issues' ? await tasks.ghIssues(m.dir) : m.op === 'review' ? await tasks.ghReviewPr(m.dir, m.n, ['claude', 'codex', 'auto'].includes(m.agent) ? m.agent : 'auto') : { ok: false, reason: 'op' }; send(res, 200, 'application/json', JSON.stringify(out)); } catch { send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); } });
+      req.on('end', async () => { let m = {}; try { m = JSON.parse(body); } catch {} try { const out = privacy ? { ok: false, reason: 'private' } : await once('gh', () => m.op === 'issues' ? tasks.ghIssues(m.dir) : m.op === 'review' ? tasks.ghReviewPr(m.dir, m.n, ['claude', 'codex', 'auto'].includes(m.agent) ? m.agent : 'auto') : { ok: false, reason: 'op' }); send(res, 200, 'application/json', JSON.stringify(out)); } catch { send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); } });
       return;
     }
     if (url.pathname === '/api/cleanup' && req.method === 'POST') { // list or remove finished worktrees (rules in tasks.cleanup)
@@ -247,7 +250,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
       let body = '';
       req.on('data', c => { body += c; if (body.length > 1e4) req.destroy(); });
-      req.on('end', async () => { let m = {}; try { m = JSON.parse(body); } catch {} try { const out = privacy ? { ok: false, reason: 'private' } : m.op === 'run' ? await tasks.cleanup(Array.isArray(m.ids) ? m.ids.map(String).slice(0, 200) : []) : await tasks.cleanupList(); send(res, 200, 'application/json', JSON.stringify(out)); } catch { send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); } });
+      req.on('end', async () => { let m = {}; try { m = JSON.parse(body); } catch {} try { const out = privacy ? { ok: false, reason: 'private' } : await once('cleanup', () => m.op === 'run' ? tasks.cleanup(Array.isArray(m.ids) ? m.ids.map(String).slice(0, 200) : []) : tasks.cleanupList()); send(res, 200, 'application/json', JSON.stringify(out)); } catch { send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); } });
       return;
     }
     if (url.pathname === '/api/task-ship' && req.method === 'POST') { // check before concluding, commit, open a PR (same guards as every POST)
@@ -261,7 +264,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id'), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }
     if (url.pathname === '/api/said' && req.method === 'GET') { // search in what was asked and answered (off in private mode)
       if (privacy || demo) return send(res, 200, 'application/json', JSON.stringify(demo ? [{ agent: 'claude', id: 'demo-0-Refactor checkout flow', role: 'assistant', at: Date.now() - 6e5, snippet: '…the migration adds a nullable column first, then backfills…' }] : []));
-      require('./said').search(url.searchParams.get('q') || '').then(r => send(res, 200, 'application/json', JSON.stringify(r))).catch(() => send(res, 200, 'application/json', '[]'));
+      once('said', () => require('./said').search(url.searchParams.get('q') || '')).then(r => send(res, 200, 'application/json', JSON.stringify(Array.isArray(r) ? r : []))).catch(() => send(res, 200, 'application/json', '[]'));
       return;
     }
     if (url.pathname === '/api/search' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(searchAll(url.searchParams.get('q') || '', privacy, demo)));
