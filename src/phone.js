@@ -101,7 +101,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
               if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}');
               if (OPS.has(m.op)) return send(res, 200, 'application/json', JSON.stringify(tasks.op({ op: m.op, id: String(m.id || ''), allow: !!m.allow, text: String(m.text || '').slice(0, 4000) })));
               // notices on this phone: its subscription (checked: a known push service, real keys), a test, or all off
-              if (m.op === 'push-add') return send(res, 200, 'application/json', JSON.stringify(push.add(m.sub)));
+              if (m.op === 'push-add') { const r = push.add(m.sub); console.log(`phone: notices ${r.ok ? 'turned on for a device' : 'refused (' + r.reason + ')'}`); return send(res, 200, 'application/json', JSON.stringify(r)); }
               if (m.op === 'push-off') return send(res, 200, 'application/json', JSON.stringify(push.clear()));
               if (m.op === 'push-test') return send(res, 200, 'application/json', JSON.stringify(await push.send({ title: String(m.title || '').slice(0, 80), body: String(m.text || '').slice(0, 200), tag: 'test', url: `http://${host}/?t=${token}` })));
               if (m.op === 'create') { // only in a folder your agents or tasks already use, isolated in its own worktree
