@@ -1,17 +1,28 @@
-/* the phone app in the office's own look: Silkscreen pixel font, hard pixel borders and shadows, the same palette */
+/* the phone app in the office's own look: Silkscreen pixel font, hard pixel borders and shadows, the same palette.
+   Layout for iPhone and Android: the page never scrolls; a shell pinned to the screen holds the header (below the notch),
+   the content (the only thing that scrolls, with its bounce kept inside) and the tab bar (on the bottom edge, above the home bar). */
 @font-face { font-family: 'Silkscreen'; src: url(fonts/silkscreen-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Silkscreen'; src: url(fonts/silkscreen-700.woff2) format('woff2'); font-weight: 700; font-display: swap; }
-:root { --bg: #17151a; --surface: #211e24; --edge: #0b0a0e; --ink: #ece7df; --muted: #9a9187; --line: #332f37; --accent: #d97757; --ok: #63c74d; --warn: #feae34; --bad: #e43b44; --work: #2ce8f5; --pix: 'Silkscreen', ui-monospace, Menlo, monospace; }
+:root { --bg: #17151a; --surface: #211e24; --edge: #0b0a0e; --ink: #ece7df; --muted: #9a9187; --line: #332f37; --accent: #d97757; --ok: #63c74d; --warn: #feae34; --bad: #e43b44; --pix: 'Silkscreen', ui-monospace, Menlo, monospace; }
 * { box-sizing: border-box; }
-html, body { overflow-x: hidden; max-width: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, sans-serif; -webkit-text-size-adjust: 100%;
-  padding: 0 max(14px, env(safe-area-inset-right)) calc(84px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
-header { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--bg);
-  padding: calc(10px + env(safe-area-inset-top)) 0 10px; margin: 0 0 12px; border-bottom: 2px dashed var(--line); }
-.brand { display: flex; align-items: center; gap: 8px; min-width: 0; } .brand img { image-rendering: pixelated; flex: none; }
-.brand b { font: 700 12px/1 var(--pix); letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#status { font: 400 10px/1.3 var(--pix); color: var(--muted); text-align: right; min-width: 0; }
-h2 { display: flex; align-items: center; gap: 8px; font: 700 11px/1 var(--pix); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; }
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--bg); }
+body { color: var(--ink); font: 15px/1.45 system-ui, -apple-system, sans-serif; -webkit-text-size-adjust: 100%; }
+
+#shell { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; background: var(--bg); }
+header { flex: none; display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px; background: var(--bg); border-bottom: 2px dashed var(--line);
+  padding: calc(10px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left)); }
+main#app { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+  padding: 14px max(14px, env(safe-area-inset-right)) 20px max(14px, env(safe-area-inset-left)); }
+nav#tabs { flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; background: #1d1a22; border-top: 2px solid var(--edge);
+  padding: 8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+
+.brand { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brand img { image-rendering: pixelated; flex: none; }
+.brand b { font: 700 13px/1 var(--pix); letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#status { flex: 1 1 100%; font: 400 10px/1.3 var(--pix); color: var(--muted); }
+
+h2 { display: flex; align-items: center; gap: 8px; font: 700 11px/1 var(--pix); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 10px; }
+h2:first-child { margin-top: 2px; }
 h2::after { content: ''; flex: 1; border-top: 2px dashed var(--line); }
 h2 small { font-weight: 400; }
 .card { background: var(--surface); border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; padding: 12px; margin: 0 0 12px; overflow-wrap: anywhere; min-width: 0; }
@@ -21,62 +32,50 @@ h2 small { font-weight: 400; }
 .card pre { white-space: pre-wrap; word-break: break-word; font: 12px/1.45 ui-monospace, Menlo, monospace; background: #120f16; border: 2px solid var(--edge); padding: 8px; border-radius: 2px; margin: 8px 0 0; max-height: 220px; overflow: auto; }
 .who { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
 .who .face { flex: none; width: 40px; height: 45px; background: #2a2630; border: 2px solid var(--edge); border-radius: 2px; overflow: hidden; }
-.who .face canvas { width: 36px; height: 41px; margin: 0 0 0 0; image-rendering: pixelated; display: block; }
+.who .face canvas { width: 36px; height: 41px; image-rendering: pixelated; display: block; }
 .who .txt { flex: 1; min-width: 0; }
 .line { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
 .line b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doing { margin: 6px 0 0; font: 12px/1.4 ui-monospace, Menlo, monospace; color: var(--ink); overflow-wrap: anywhere; }
+.doing { margin: 6px 0 0; font: 12px/1.4 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
 .doing.dim, .msg.dim { color: var(--muted); }
 .pill { flex: none; font: 700 9px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; padding: 4px 6px; border: 2px solid var(--edge); border-radius: 2px; background: #3b3640; color: #fff; }
 .pill.work { background: #1f6f7a; } .pill.need { background: var(--bad); } .pill.idle { background: #3b5dc9; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-button { font: 700 11px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--accent); border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 3px; padding: 12px 12px; min-height: 44px; }
+button { font: 700 11px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--accent); border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 3px; padding: 12px; min-height: 44px; }
 button:active { transform: translate(2px, 2px); box-shadow: none; }
 button.ghost { background: var(--surface); color: var(--ink); }
 button.bad { background: var(--bad); }
 button:disabled { opacity: .5; }
 textarea, select { width: 100%; max-width: 100%; font: 16px/1.4 system-ui, -apple-system, sans-serif; background: #120f16; color: var(--ink); border: 2px solid var(--edge); border-radius: 2px; padding: 10px; margin-top: 8px; }
 textarea { min-height: 84px; resize: vertical; }
-details.new summary { font: 700 12px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; list-style: none; padding: 4px 0; } details.new summary::-webkit-details-marker { display: none; }
+details.new summary { font: 700 12px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; list-style: none; padding: 4px 0; }
+details.new summary::-webkit-details-marker { display: none; }
 .empty { color: var(--muted); }
 .msg { color: var(--warn); font-size: 13px; margin: 6px 0 0; }
 .counts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .counts span { font: 700 10px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; background: var(--surface); border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 3px; padding: 8px 10px; }
 .counts .red { background: var(--bad); color: #fff; }
 .frame { display: block; width: 100%; height: auto; image-rendering: pixelated; border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; background: #000; }
-.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .tiles div { background: var(--surface); border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; padding: 12px; min-width: 0; }
-.tiles b { display: block; font: 700 18px/1.2 var(--pix); } .tiles small { font: 400 10px/1.2 var(--pix); color: var(--muted); text-transform: uppercase; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tiles div { background: var(--surface); border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; padding: 12px; min-width: 0; }
+.tiles b { display: block; font: 700 18px/1.2 var(--pix); }
+.tiles small { font: 400 10px/1.2 var(--pix); color: var(--muted); text-transform: uppercase; }
 .meter { background: var(--surface); border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; padding: 10px 12px; margin: 12px 0; }
-.meter .line b { font: 700 10px/1.2 var(--pix); text-transform: uppercase; } .meter .line span { font: 700 12px/1 var(--pix); } .meter small { color: var(--muted); font-size: 12px; }
-.bar { height: 12px; background: #120f16; border: 2px solid var(--edge); margin: 8px 0 4px; display: flex; gap: 2px; padding: 1px; }
-.bar i { display: block; height: 100%; background: var(--ok); } .bar i.mid { background: var(--warn); } .bar i.hi { background: var(--bad); }
-/* tab bar: pixel buttons above the home indicator */
-nav#tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; background: #1d1a22; border-top: 2px solid var(--edge);
-  padding: 8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+.meter .line b { font: 700 10px/1.2 var(--pix); text-transform: uppercase; }
+.meter .line span { font: 700 12px/1 var(--pix); }
+.meter small { color: var(--muted); font-size: 12px; }
+.bar { display: block; height: 12px; background: #120f16; border: 2px solid var(--edge); margin: 8px 0 4px; padding: 1px; }
+.bar i { display: block; height: 100%; min-width: 2px; background: var(--ok); }
+.bar i.mid { background: var(--warn); } .bar i.hi { background: var(--bad); }
+
 nav#tabs button { background: var(--surface); color: var(--muted); box-shadow: none; min-height: 54px; padding: 6px 2px; font-size: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative; min-width: 0; }
 nav#tabs button .ic { font: 400 16px/1 system-ui; }
 nav#tabs button.on { background: var(--accent); color: #fff; }
 nav#tabs button i { position: absolute; top: -6px; right: 4px; background: var(--bad); color: #fff; font: 700 9px/1 var(--pix); font-style: normal; border: 2px solid var(--edge); border-radius: 2px; padding: 2px 4px; }
-body.visit { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+
+/* the visit page is a plain scrolling page */
+html.visit, html.visit body { height: auto; overflow: auto; }
+body.visit { padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+body.visit header { padding-left: 0; padding-right: 0; }
 body.visit main { padding-top: 8px; }
 body.visit #frame { display: block; width: 100%; height: auto; image-rendering: pixelated; border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; background: #000; }
-header { flex-wrap: wrap; row-gap: 6px; }
-.brand { flex: 1 1 100%; } .brand b { font-size: 13px; }
-#status { flex: 1 1 100%; text-align: left; }
-.bar { display: block; padding: 1px; } .bar i { height: 100%; min-width: 2px; }
-/* app shell: the page itself never scrolls (iOS moves fixed and sticky bars after the keyboard or a pull);
-   header on top, tabs at the bottom, only the middle scrolls; heights follow the visible screen */
-html, body { height: 100%; }
-body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; padding: 0; }
-header { position: static; flex: none; margin: 0; padding: calc(8px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left)); }
-main#app { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 12px max(14px, env(safe-area-inset-right)) 18px max(14px, env(safe-area-inset-left)); }
-nav#tabs { position: static; flex: none; }
-body.visit { overflow-y: auto; height: auto; display: block; padding: 0 max(14px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
-body.visit header { position: static; }
-header { border-bottom: 2px dashed var(--line); }
-/* the screen pinned to the phone's four real edges (iOS can leave 100dvh short of the bottom edge in a home-screen app);
-   backgrounds reach the edges, only the content keeps clear of the notch and the home bar */
-html { height: 100%; background: var(--bg); }
-body:not(.visit) { position: fixed; top: 0; right: 0; bottom: 0; left: 0; height: auto; width: auto; }
-header { background: var(--bg); box-shadow: 0 -60px 0 60px var(--bg); position: relative; z-index: 5; }
-nav#tabs { margin-top: auto; }
