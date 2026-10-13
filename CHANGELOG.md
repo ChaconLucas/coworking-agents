@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- Ask any Claude or Codex session from the office, even one opened in VS Code or the app: the request continues the same conversation with the model and effort you choose (the recommended ones come pre-picked)
+- Sessions opened outside show their real effort (Codex from its log, Claude from its settings)
+- Task detail shows current, pending and recommended config once, in the recommendation card
+- Update check every hour and when the releases tab opens
+
 ## 0.5.0 — 2026-10-11
 - Agent panel: tasks started by the office show running vs pending model and effort, cost and Save / More capacity / Apply recommendation; monitored sessions show the recommendation as not applied
 - Codex models and efforts come from Codex's own model list; Claude efforts low to max

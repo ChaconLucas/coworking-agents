@@ -435,6 +435,16 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   tasks.op({ op: 'reply', id: t6.id, text: 'go on' }); await tasks._idle();
   assert.deepStrictEqual(lastArgs().slice(0, 3), ['exec', 'resume', 'T1'], 'Codex resumes its thread');
 
+  // a request sent from the office to a session opened outside continues that same conversation, never in a worktree
+  const ext = 'b1c2d3e4-0000-4000-8000-123456789abc';
+  const tx = tasks.op({ op: 'create', dir: proj, desc: 'from the office', agent: 'claude', resume: ext, worktree: true, model: 'haiku', effort: 'low' }).task;
+  assert.ok(tx.adopted && !tx.worktree, 'adopted, no worktree'); await tasks._idle();
+  const a7 = lastArgs(); assert.ok(a7[a7.indexOf('--resume') + 1] === ext && a7[a7.indexOf('--model') + 1] === 'haiku' && a7.includes('from the office'), 'Claude resumes the outside session with the chosen model');
+  tasks.op({ op: 'create', dir: plain, desc: 'codex from the office', agent: 'codex', resume: 'T-outside-123' }); await tasks._idle();
+  const a8 = lastArgs(); assert.deepStrictEqual(a8.slice(0, 3), ['exec', 'resume', 'T-outside-123'], 'Codex resumes the outside thread');
+  assert.ok(a8.includes('sandbox_mode="workspace-write"'), 'and may still edit files');
+  assert.ok(!tasks.op({ op: 'create', dir: proj, desc: 'x', agent: 'claude', resume: '../../etc' }).task.adopted, 'a bad id is not resumed');
+
   // a Codex turn that failed must not leave the next successful attempt marked as failed
   mode('cfail'); const t6b = tasks.op({ op: 'create', dir: plain, desc: 'codex fail', agent: 'codex' }).task; await tasks._idle();
   assert.strictEqual(T(t6b.id).state, 'failed');

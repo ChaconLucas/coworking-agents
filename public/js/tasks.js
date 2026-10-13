@@ -53,12 +53,10 @@ function optsFor(agent, model) {
   return { models: o.models, efforts, def: o.def };
 }
 const mname = (t, m) => m || (optsFor(t.agent).def ? optsFor(t.agent).def + ' (' + TT().cliDefault + ')' : TT().cliDefault);
+// current, pending and recommended live in the recommendation card; this only confirms a change that just took effect
 function cfgHtml(t) {
-  const X = TT(), r = t.running, pend = t.state === 'running' && r && (r.model !== t.model || r.effort !== t.effort);
-  const ev = (t.events || []).filter(e => e.kind === 'applied').slice(-1)[0];
-  return `<p class="tcfgnow"><b>${esc(t.state === 'running' ? X.runningCfg : X.currentCfg)}:</b> ${esc(mname(t, r && t.state === 'running' ? r.model : t.model))} · ${esc(r && t.state === 'running' ? r.effort : t.effort)} <small class="note">(${esc(X.profiles[t.profile] || '')})</small>
-    ${pend ? `<br><b class="warn">${esc(X.pendingCfg)}:</b> ${esc(mname(t, t.model))} · ${esc(t.effort)} <small class="note">${esc(X.next)}</small>` : ''}
-    ${ev && Date.now() - ev.at < 6e5 ? `<br><span class="ok">✓ ${esc(X.appliedOk(mname(t, ev.to.model), ev.to.effort))}</span>` : ''}</p>`;
+  const X = TT(), ev = (t.events || []).filter(e => e.kind === 'applied').slice(-1)[0];
+  return ev && Date.now() - ev.at < 6e5 ? `<p class="tcfgnow"><span class="ok">✓ ${esc(X.appliedOk(mname(t, ev.to.model), ev.to.effort))}</span></p>` : '';
 }
 function costHtml(t) {
   const X = TT(), known = t.cost || 0;
@@ -78,14 +76,44 @@ function taskCardHtml(p) {
   const X = TT(), t = taskOfPerson(p.id);
   if (!t) {
     return `<section class="card tcard"><small>${esc(X.monitored)}</small><p class="note">${esc(X.monitoredWhy)}</p>
-      ${recCardHtml(null, p)}
-      ${['claude', 'codex'].includes(p.agent) && p.cwd ? `<p><button class="btn small" data-pnew="${esc(p.id)}">＋ ${esc(X.asTask)}</button></p>` : ''}</section>`;
+      ${recCardHtml(null, p)}${canAsk(p) ? askHtml(p) : ''}
+      ${canAsk(p) ? `<p><button class="btn small ghost" data-pnew="${esc(p.id)}">＋ ${esc(X.asTask)}</button></p>` : ''}</section>`;
   }
   return `<section class="card tcard managed"><small>${esc(X.managed)} · <a href="#" data-popen="${esc(t.id)}">${esc(X.openTask)}</a></small>
     <p><b>${esc(t.title)}</b> · ${esc(X.states[t.state])}${t.state === 'blocked' ? ' · ' + esc(X.reasons[t.reason] || '') : ''}</p>
     ${recCardHtml(t)}<div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out</small></div><div><b>${esc(X.attempts(t.attempts))}</b><small>${esc(X.src)}</small></div></div>
     ${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}</p>` : ''}${ctlHtml(t, 'p')}</section>`;
 }
+// a session opened outside (terminal, VS Code, the app) takes a request that continues the same conversation in the background
+const canAsk = p => ['claude', 'codex'].includes(p.agent) && !!p.cwd;
+const askDraft = new Map();
+function askHtml(p) {
+  const X = TT(), hit = recOf.get('p:' + p.id), rec = hit && hit.rec, d = askDraft.get(p.id) || {}, busy = !['idle', 'asleep'].includes(p.state);
+  const model = d.model !== undefined ? d.model : rec ? rec.model : '', o = optsFor(p.agent, model), effort = d.effort || (rec && rec.effort) || p.effort || 'medium';
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label || v)}</option>`;
+  return `<div class="pask"><b>${esc(X.askTitle)}</b><textarea data-pask-text="${esc(p.id)}" rows="3" maxlength="8000" placeholder="${esc(X.askPh)}">${esc(d.text || '')}</textarea>
+    <div class="pask-row"><select data-pask-model="${esc(p.id)}" aria-label="${esc(X.model || 'model')}">${o.models.map(m => opt(m, model, m || (o.def ? o.def + ' (' + X.cliDefault + ')' : X.cliDefault))).join('')}</select>
+    <select data-pask-effort="${esc(p.id)}" aria-label="${esc(X.effort || 'effort')}">${o.efforts.map(e => opt(e, effort)).join('')}</select>
+    <button class="btn small" data-pask="${esc(p.id)}"${busy ? ' disabled' : ''}>➤ ${esc(X.askSend)}</button></div>
+    <p class="note" data-pask-msg>${esc(busy ? X.askBusy : X.askHow)}</p></div>`;
+}
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-pask-text],[data-pask-model],[data-pask-effort]'); if (!el) return;
+  const id = el.dataset.paskText || el.dataset.paskModel || el.dataset.paskEffort, d = askDraft.get(id) || {};
+  if (el.dataset.paskText) d.text = el.value; else if (el.dataset.paskModel) { d.model = el.value; askDraft.set(id, d); return renderPanel(); } else d.effort = el.value;
+  askDraft.set(id, d);
+});
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-pask]'); if (!b) return;
+  const p = data.people.find(x => x.id === b.dataset.pask), box = b.closest('.pask'), X = TT(); if (!p || !box) return;
+  const text = box.querySelector('textarea').value.trim(); if (!text) return box.querySelector('textarea').focus();
+  const hit = recOf.get('p:' + p.id), rec = hit && hit.rec;
+  b.disabled = true;
+  const r = await api('api/tasks', { op: 'create', resume: p.id, dir: p.cwd, agent: p.agent, desc: text, title: (p.title || p.name).slice(0, 70),
+    profile: rec ? rec.profile : '', model: box.querySelector('[data-pask-model]').value, effort: box.querySelector('[data-pask-effort]').value });
+  if (r && r.ok) { askDraft.delete(p.id); await pollTasks(); renderPanel(); }
+  else { b.disabled = false; box.querySelector('[data-pask-msg]').textContent = '⚠ ' + ((X.fail || {})[r && r.reason] || (r && r.reason) || '?'); }
+});
 async function applyCfg(t, act, extra = {}) {
   let body = { op: 'config', id: t.id, ...extra };
   if (act === 'save' || act === 'more') body = { op: 'config', id: t.id, step: act === 'more' ? 1 : -1, why: act };
@@ -339,7 +367,7 @@ function recCardHtml(t, p) {
     api('api/tasks', t ? { op: 'recommend', id: t.id } : { op: 'recommend', desc: [p.title, p.lastPrompt].filter(Boolean).join('\n'), agent: p.agent })
       .then(r => { recOf.set(t ? t.id : 'p:' + p.id, { key, rec: r.ok ? r.rec : null }); if (t && reportTab === 'tasks' && taskSel === t.id && !reportEl.hidden) renderTasks(); if (selected && data) renderPanel(); });
   }
-  const rec = hit && hit.rec, cur = t ? `${mname(t, t.running && t.state === 'running' ? t.running.model : t.model)} · ${t.running && t.state === 'running' ? t.running.effort : t.effort}` : `${p.model || X.unknownModel} · ${X.unknownEffort}`;
+  const rec = hit && hit.rec, cur = t ? `${mname(t, t.running && t.state === 'running' ? t.running.model : t.model)} · ${t.running && t.state === 'running' ? t.running.effort : t.effort}` : `${p.model || X.unknownModel} · ${p.effort || X.unknownEffort}`;
   const pend = t && t.state === 'running' && t.running && (t.running.model !== t.model || t.running.effort !== t.effort) ? `${mname(t, t.model)} · ${t.effort}` : '';
   const same = rec && t && rec.model === t.model && rec.effort === t.effort;
   const missing = rec ? (rec.missing || []).map(m => X.missing[m] || m) : [];
@@ -348,7 +376,7 @@ function recCardHtml(t, p) {
     <div class="rc-row"><span>${esc(X.rcRecommended)}</span><b>${rec ? esc(`${(t ? mname(t, rec.model) : rec.model || X.cliDefault)} · ${rec.effort}`) + ` <small>(${esc(X.profiles[rec.profile])})</small>` : esc(taskData.privacy ? X.rcPrivate : X.rcLoading)}</b></div>
     ${rec ? `<p class="rc-why">${esc(rec.why.map(w => X.recWhy[w] || w).join(' · '))}${rec.similar ? ' · ' + esc(X.similar(rec.similar)) : ''}</p>` : ''}
     ${missing.length ? `<p class="rc-miss">${esc(X.rcMissing)}: ${esc(missing.join('; '))}</p>` : ''}
-    ${t ? (rec && !same ? `<button class="btn small" data-rcapply="${esc(t.id)}">💡 ${esc(T.notices.apply)}: ${esc(mname(t, rec.model))} · ${esc(rec.effort)}</button>${t.state === 'running' ? ` <small class="note">${esc(X.next)}</small>` : ''}` : rec ? `<p class="ok">✓ ${esc(X.rcAlready)}</p>` : '') : `<p class="note">🔒 ${esc(X.rcExternal)}</p>`}</div>`;
+    ${t ? (rec && !same ? `<button class="btn small" data-rcapply="${esc(t.id)}">💡 ${esc(T.notices.apply)}: ${esc(mname(t, rec.model))} · ${esc(rec.effort)}</button>${t.state === 'running' ? ` <small class="note">${esc(X.next)}</small>` : ''}` : rec ? `<p class="ok">✓ ${esc(X.rcAlready)}</p>` : '') : `<p class="note">${canAsk(p) ? '💡 ' + esc(X.rcExternal) : '🔒 ' + esc(X.rcNoAsk)}</p>`}</div>`;
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-rcapply]'); if (!b) return;

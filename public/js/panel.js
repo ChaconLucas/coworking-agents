@@ -77,6 +77,7 @@ function renderPanel() {
   }
   const p = data.people.find(x => x.id === selected);
   if (!p) { selected = null; panel.hidden = true; return; }
+  if (panelBody.contains(document.activeElement) && /^(TEXTAREA|INPUT|SELECT)$/.test(document.activeElement.tagName)) return; // don't wipe what is being typed
   const col = KIND_COLOR[p.state] || '#888';
   const ctxMax = p.ctxMax || 0, ctxPct = ctxMax ? Math.min(1, p.ctx / ctxMax) : 0;
   const certs = certsOf(p);

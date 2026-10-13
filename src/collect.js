@@ -8,6 +8,17 @@ const path = require('path');
 const { processList } = require('./proc');
 const { resolveRepo, newest, dayKey } = require('./util');
 
+// Claude does not log the effort per session: it comes from the settings (project local > project > user)
+const effortCache = new Map();
+function claudeEffort(cwd) {
+  const hit = effortCache.get(cwd); if (hit && Date.now() - hit.at < 30000) return hit.v;
+  let v = '';
+  for (const f of [cwd && path.join(cwd, '.claude', 'settings.local.json'), cwd && path.join(cwd, '.claude', 'settings.json'), path.join(os.homedir(), '.claude', 'settings.json')].filter(Boolean)) {
+    try { const j = JSON.parse(require('fs').readFileSync(f, 'utf8')); if (typeof j.effortLevel === 'string') { v = j.effortLevel; break; } } catch {}
+  }
+  effortCache.set(cwd, { at: Date.now(), v }); return v;
+}
+
 const SOURCES = [require('./sources/claude'), require('./sources/codex'), require('./sources/process')];
 
 const PENDING_STALE_MS = 6000;           // tool stalled this long = running or waiting for permission
@@ -95,7 +106,7 @@ function person(s, now) {
     title: st ? st.title : '', cwd, branch: st ? st.branch : '',
     repo: repo ? { name: repo.name, path: repo.repo, worktree: repo.worktree, isWorktree: repo.isWorktree } : null,
     git: repo ? gitState(repo.worktree) : null,
-    model: st ? st.model : '', ctx: st ? st.ctx : 0, ctxMax: st ? st.ctxMax : 0, turns: st ? st.turns : 0,
+    model: st ? st.model : '', effort: (st && st.effort) || (s.agent === 'claude' ? claudeEffort(cwd) : ''), ctx: st ? st.ctx : 0, ctxMax: st ? st.ctxMax : 0, turns: st ? st.turns : 0,
     doing: pend ? { tool: pend.name, what: pend.what, kind: pend.kind, for: now - pend.ts, ask: pend.ask || '', options: pend.options || null, multi: !!pend.multi, qcount: pend.qcount || 0 } : null,
     timeline: st ? segments(st.events, now - 3600 * 1000, now, true) : [],
     files: st ? [...st.files.entries()].filter(([, at]) => now - at < EDIT_WINDOW_MS).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([f, at]) => ({ ...relFile(f), at })) : [],

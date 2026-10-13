@@ -158,6 +158,8 @@ function create(m) {
   const dir = validDir(m.dir); if (!dir) return { ok: false, reason: 'nodir' };
   const desc = s(m.desc, 12000).trim(); if (!desc) return { ok: false, reason: 'nodesc' };
   const agent = !m.agent || m.agent === 'auto' ? pickAgent() : m.agent; if (!AGENTS.includes(agent)) return { ok: false, reason: 'unsupported' };
+  // continue a conversation opened outside (terminal, VS Code, the app): same session id, no worktree
+  const resume = /^[\w-]{8,64}$/.test(m.resume || '') ? m.resume : '';
   const rec = recommend(desc, agent), profile = PROFILES[m.profile] ? m.profile : rec.profile, opt = options(agent);
   const t = {
     id: Math.random().toString(36).slice(2, 10), title: s(m.title, 80).trim() || s(desc.split('\n')[0], 60), desc, dir, agent, profile,
@@ -166,8 +168,8 @@ function create(m) {
     role: ROLES[m.role] ? m.role : '', lean: m.lean === undefined ? profile === 'eco' : !!m.lean,
     perm: ['acceptEdits', 'plan', 'default'].includes(m.perm) ? m.perm : 'acceptEdits',
     priority: Math.min(3, Math.max(1, Number(m.priority) || 2)), budget: Math.max(0, Number(m.budget) || 0),
-    testCmd: s(m.testCmd, 300), worktree: !!m.worktree, dependsOn: tasks.some(x => x.id === m.dependsOn) ? m.dependsOn : '',
-    from: s(m.from, 12), state: 'pending', reason: '', created: now(), updated: now(), sessionId: '', cwd: dir, baseCommit: '', pid: 0,
+    testCmd: s(m.testCmd, 300), worktree: !!m.worktree && !resume, dependsOn: tasks.some(x => x.id === m.dependsOn) ? m.dependsOn : '',
+    from: s(m.from, 12), state: 'pending', reason: '', created: now(), updated: now(), sessionId: resume, adopted: !!resume, cwd: dir, baseCommit: '', pid: 0,
     cost: 0, costUnknown: false, byModel: {}, costByDay: {}, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     attempts: 0, turns: 0, subagents: 0, result: '', files: [], denials: [], allowed: [], configLog: [], running: null,
   };
@@ -274,7 +276,7 @@ async function run(t) {
     ? ['-p', prompt, '--output-format', 'stream-json', '--verbose', '--permission-mode', t.perm, ...(t.model ? ['--model', t.model] : []), '--effort', t.effort,
       ...(sys ? ['--append-system-prompt', sys] : []), ...(t.allowed.length ? ['--allowedTools', t.allowed.join(',')] : []), ...(t.sessionId ? ['--resume', t.sessionId] : [])]
     : ['exec', ...(t.sessionId ? ['resume', t.sessionId] : []), '--json', '--skip-git-repo-check', ...(t.model ? ['-m', t.model] : []), '-c', `model_reasoning_effort="${t.effort}"`,
-      ...(t.sessionId ? [] : ['--sandbox', 'workspace-write']), sys && !t.sessionId ? `${sys}\n\n${prompt}` : prompt];
+      ...(t.sessionId ? ['-c', 'sandbox_mode="workspace-write"'] : ['--sandbox', 'workspace-write']), sys && !t.sessionId ? `${sys}\n\n${prompt}` : prompt];
   t.live = { model: t.agent === 'codex' ? t.model || opt.def : t.model, usd: 0, unknown: false, msgs: new Set(), seen: new Map(), byModel: new Map(), committed: false };
   log(t, { kind: 'start', model: t.model || opt.def, effort: t.effort, attempt: t.attempts, resume: !!t.sessionId });
   let c; try { c = child(t, t.agent, a, { cwd: t.cwd }); } catch (e) { return finish(t, 1, 'spawn failed: ' + e.message); }

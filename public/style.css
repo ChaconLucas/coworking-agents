@@ -831,3 +831,8 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .rc-row { display: flex; justify-content: space-between; gap: 8px; } .rc-row span { opacity: .75; } .rc-row b { text-align: right; }
 .rc-why { margin: 4px 0; font-size: 12px; opacity: .85; } .rc-miss { margin: 4px 0; font-size: 12px; color: #f7b733; }
 .reccard .btn { margin-top: 6px; } .menu-panel span[aria-hidden] { width: 16px; text-align: center; }
+.pask { background: rgba(0,0,0,.22); border: 2px solid #3a3045; padding: 8px 10px; margin: 8px 0; display: grid; gap: 6px; font-size: 13px; }
+.pask textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; font: inherit; background: #120f16; color: inherit; border: 2px solid #3a3045; padding: 6px; }
+.pask-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pask-row select { min-width: 0; flex: 1 1 90px; }
+.pask .note { margin: 0; }

@@ -53,6 +53,7 @@ function absorb(st, d) {
   } else if (d.type === 'turn_context') {
     if (p.cwd) st.cwd = p.cwd;
     if (p.model) st.model = p.model;
+    if (p.effort) st.effort = p.effort;
   } else if (d.type === 'event_msg') {
     const t = p.type;
     if (t === 'task_started') { st.busy = true; st.since = ts; event(st, ts, 'thinking'); if (p.model_context_window) st.ctxMax = Number(p.model_context_window) || 0; }
