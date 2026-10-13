@@ -96,7 +96,7 @@ function costHtml(t) {
 function ctlHtml(t, scope) {
   const X = TT(), o = optsFor(t.agent, t.model);
   const sel = (name, list, v) => `<select data-${scope}cfg="${name}">${list.map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(x || mname(t, ''))}</option>`).join('')}</select>`;
-  return `<div class="tcfg"><button class="btn small" data-${scope}act="save" title="${esc(X.saveTip)}">🪙 ${esc(X.save)}</button><button class="btn small" data-${scope}act="more" title="${esc(X.moreTip)}">🚀 ${esc(X.more)}</button><button class="btn small" data-${scope}act="applyRec">💡 ${esc(X.applyRec)}</button>
+  return `<div class="tcfg"><button class="btn small ghost" data-${scope}act="save" title="${esc(X.saveTip)}">🪙 ${esc(X.save)}</button><button class="btn small ghost" data-${scope}act="more" title="${esc(X.moreTip)}">🚀 ${esc(X.more)}</button>
     <label>${esc(X.model)} ${sel('model', o.models, t.model)}</label><label>${esc(X.effort)} ${sel('effort', o.efforts, t.effort)}</label></div>`;
 }
 
@@ -240,9 +240,10 @@ function formHtml() {
     <p><button class="btn small" data-tact="recommend">💡 ${esc(X.rec)}</button> <button class="btn" data-tact="create">➤ ${esc(X.create)}</button> <button class="btn small ghost" data-tact="saveTpl">💾 ${esc(X.tplSave)}</button></p><p class="note" id="tmsg">${esc(taskWhy)}</p></details>`;
 }
 function rowHtml(t) {
-  const X = TT(), why = t.state === 'blocked' || t.reason === 'restart' || t.reason === 'detached' ? ' · ' + (X.reasons[t.reason] || '') : '';
-  return `<li class="trow-item st-${t.state}" data-topen="${esc(t.id)}"><span class="tdot"></span><span><b>${esc(t.title)}</b><br><small>${esc(X.states[t.state])}${esc(why)} · ${esc(t.agent)} · ${esc(X.profiles[t.profile] || '')} · ${esc(mname(t, t.model))} · ${esc(t.effort)}</small></span>
-    <span class="q-side"><small>${t.costUnknown && !t.cost ? '?' : esc(fmtUSD(t.cost || 0)) + (t.costUnknown ? '+?' : '')}</small><small>⌛ ${esc(ago(Date.now() - t.updated))}</small></span></li>`;
+  const X = TT(), why = t.reason && ['blocked', 'failed'].includes(t.state) || t.reason === 'restart' || t.reason === 'detached' ? X.reasons[t.reason] || '' : '';
+  return `<li class="trow-item st-${t.state}" data-topen="${esc(t.id)}"><span class="tdot"></span><span class="tmainc"><b>${esc(t.title)}</b>
+    <small><span class="tpill st-${t.state}">${esc(X.states[t.state])}</span>${why ? ' ' + esc(why) + ' ·' : ''} ${esc(t.agent)} · ${esc(mname(t, t.model))} · ${esc(t.effort)}${t.ask ? ' · 🔐 ' + esc(t.ask.tool) : ''}</small></span>
+    <span class="q-side"><b class="tcost">${t.costUnknown && !t.cost ? '?' : esc(fmtUSD(t.cost || 0)) + (t.costUnknown ? '+?' : '')}</b><small>${esc(ago(Date.now() - t.updated))}</small></span></li>`;
 }
 // "ready to ship?": tests, review, files, what is not committed and the branch, then commit / PR / conclude
 let taskShip = null;
@@ -273,7 +274,11 @@ function renderTaskList(X, body) {
   body.innerHTML = tabsHtml() + `<p class="sub">${esc(X.sub)}</p>${taskData.privacy ? `<p class="note">🔒 ${esc(X.privateNote)}</p>` : ''}` + formHtml() + settingsHtml()
     + `<div class="trow"><label style="flex:2">🔎 <input data-tsearch placeholder="${esc(X.search)}"></label></div>`
     + (taskSearch.length ? `<ul class="queue">${taskSearch.map(r => `<li ${r.kind === 'task' ? `data-topen="${esc(r.id)}"` : r.live ? `data-tperson="${esc(r.id)}"` : ''}><b>${esc(r.title)}</b> <small>${esc(kindL[r.kind] || r.kind)} · ${esc(r.agent || '')}${r.state ? ' · ' + esc(X.states[r.state] || T.states[r.state] || r.state) : ''}</small></li>`).join('')}</ul>` : '')
-    + (list.length ? `<ul class="queue tlist">${list.map(rowHtml).join('')}</ul>` : `<p class="note">${esc(X.empty)}</p>`) + rankingHtml();
+    + (list.length ? [['need', ['blocked', 'failed']], ['active', ['running', 'pending']], ['done', ['done', 'cancelled']]].map(([g, sts]) => {
+      const items = list.filter(t => sts.includes(t.state)); if (!items.length) return '';
+      const ul = `<ul class="queue tlist">${items.map(rowHtml).join('')}</ul>`;
+      return g === 'done' ? `<details class="tgroup"><summary><h4>${esc(X.groups[g])} <small>${items.length}</small></h4></summary>${ul}</details>` : `<div class="tgroup"><h4>${esc(X.groups[g])} <small>${items.length}</small></h4>${ul}</div>`;
+    }).join('') : `<p class="note">${esc(X.empty)}</p>`) + rankingHtml();
 }
 function renderTaskDetail(body) {
   const X = TT(), t = taskDetail, ev = t.events || [], live = t.state === 'running';
@@ -281,35 +286,42 @@ function renderTaskDetail(body) {
     const txt = e.kind === 'compacted' ? (e.pre ? `${fmtK(e.pre)} → ${fmtK(e.post)} tokens` : '') : e.kind === 'ask' || e.kind === 'permit' ? `${e.tool}${e.text ? ': ' + e.text : ''}${e.kind === 'permit' ? ' — ' + (e.allow ? (e.always ? X.permAlways(e.tool) : X.permAllow) : X.permDeny) : ''}` : e.kind === 'warn' ? warnText(e) : e.kind === 'config' ? `${mname(t, e.from.model)}/${e.from.effort} → ${mname(t, e.to.model)}/${e.to.effort} (${e.applies === 'next' ? X.next : X.now}; ${e.why})` : e.kind === 'applied' ? X.appliedOk(mname(t, e.to.model), e.to.effort) : e.kind === 'test' ? X.tests(e.code) + '\n' + (e.text || '') : e.kind === 'tool' ? `${e.name} ${e.text || ''}` : e.kind === 'state' ? `${X.states[e.state] || e.state}${e.reason ? ' · ' + (X.reasons[e.reason] || e.reason) : ''}` : e.kind === 'start' ? `${mname(t, e.model)} · ${e.effort} · #${e.attempt}${e.resume ? ' · ' + X.resumed : ''}` : e.text || '';
     return `<li class="ev-${esc(e.kind)}"><small>${esc(new Date(e.at).toLocaleTimeString())} · ${esc(X.ev[e.kind] || e.kind)}</small>${txt ? `<pre>${esc(String(txt).slice(0, 1500))}</pre>` : ''}</li>`;
   }).join('');
-  const models = Object.entries(t.byModel || {});
-  body.innerHTML = tabsHtml() + `<p><button class="btn small" data-tact="back">${esc(X.back)}</button></p>
-    <h3>${esc(t.title)} <small class="note">${esc(X.states[t.state])}${t.reason ? ' · ' + esc(X.reasons[t.reason] || t.reason) : ''}</small></h3>
-    <p class="note">${esc(t.agent)}${t.role ? ' · ' + esc(X.roles[t.role] || t.role) : ''}${t.lean ? ' · ' + esc(X.leanOn) : ''} · ${esc(t.cwd)}${t.sessionId ? ' · ' + esc(t.sessionId.slice(0, 8)) : ''} · ${esc(X.attempts(t.attempts))}${t.subagents ? ' · ' + esc(X.subagents(t.subagents)) : ''}</p>
-    <div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out ${esc(X.tokens)}</small></div><div><b>${fmtK(t.tokens.input + t.tokens.cacheWrite)}</b><small>in</small></div><div><b>${fmtK(t.tokens.cacheRead)}</b><small>cache</small></div></div>
-    ${models.length ? `<p class="note">${models.map(([m, v]) => `${esc(m)}: ${v.unpriced ? '?' : esc(fmtUSD(v.usd))}`).join(' · ')} — ${esc(t.agent === 'claude' ? X.srcClaude : X.srcCodex)}</p>` : ''}
-    ${askPermHtml(t)}${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}
-    <label class="tchk"><input type="checkbox" data-tcfg="lean" ${t.lean ? 'checked' : ''}> ${esc(X.lean)}</label>
-    ${t.result ? `<pre class="tresult">${esc(t.result)}</pre>` : ''}
-    ${taskShip && taskShip.id === t.id ? shipHtml(t, taskShip) : ''}
-    ${t.pr ? `<p>🔗 PR: <a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr)}</a></p>` : ''}
-    ${t.review ? `<div class="treview"><b>🔎 ${esc(X.reviewTitle)}</b> · <a href="#" data-popen="${esc(t.review.id)}">${esc(X.openTask)}</a>${t.review.text ? `<pre>${esc(t.review.text)}</pre>` : `<p class="note">${esc(X.reviewRunning)}</p>`}</div>` : ''}
-    ${t.reviewOf ? `<p class="note">🔎 ${esc(X.reviewOfNote)} · <a href="#" data-popen="${esc(t.reviewOf)}">${esc(X.openTask)}</a></p>` : ''}
-    ${t.tests ? `<p class="${t.tests.code === 0 ? 'ok' : 'warn'}">${esc(X.tests(t.tests.code))}</p>` : ''}
-    ${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}${t.warn.rec ? ` <button class="btn small" data-tact="applyWarn">${esc(T.notices.apply)}: ${esc(X.profiles[t.warn.rec.profile])}</button>` : ''}</p>` : ''}
-    ${t.denials && t.denials.length ? `<p><b>${esc(X.denied)}:</b> ${t.denials.map(d => `<code>${esc(d.tool)}</code> <small>${esc(d.what)}</small>`).join(', ')}</p><p><button class="btn" data-tact="approve">✔ ${esc(X.approve)}</button></p>` : ''}
-    ${t.files && t.files.length ? `<p><b>${esc(X.files)}:</b> ${t.files.slice(0, 30).map(f => `<code>${esc(f)}</code>`).join(' ')}</p>` : ''}
-    ${['blocked', 'failed'].includes(t.state) ? `<div class="office-name"><textarea data-treply rows="2" placeholder="${esc(X.reply)}"></textarea></div><p><button class="btn" data-tact="reply">➤ ${esc(X.send)}</button></p>` : ''}
-    <p>${['blocked', 'failed', 'done'].includes(t.state) && !taskData.privacy ? `<button class="btn small" data-tact="diff">${esc(X.diff)}</button>` : ''}
-      ${t.state === 'blocked' ? `<button class="btn small" data-tact="checkShip">✔ ${esc(X.conclude)}…</button>` : ''}
-      ${['failed', 'cancelled', 'blocked'].includes(t.state) ? `<button class="btn small" data-tact="retry">↻ ${esc(X.retry)}</button>` : ''}
-      ${['failed', 'blocked'].includes(t.state) && t.sessionId ? `<button class="btn small" data-tact="compact" title="${esc(X.compactTip)}">⤓ ${esc(X.compactNow)}</button>` : ''}
-      ${['failed', 'blocked'].includes(t.state) ? `<button class="btn small" data-tact="fresh" title="${esc(X.freshTip)}">✦ ${esc(X.fresh)}</button>` : ''}
-      ${['blocked', 'failed', 'done'].includes(t.state) ? `<button class="btn small" data-tact="handoff">↪ ${esc(X.handoff)}</button>` : ''}
-      ${['running', 'pending', 'blocked'].includes(t.state) ? `<button class="btn small warn" data-tact="cancel">✖ ${esc(X.cancel)}</button>` : ''}
-      ${!live ? `<button class="btn small" data-tact="delete">🗑 ${esc(X.del)}</button>` : ''}</p><p class="note" id="tmsg"></p>
-    ${taskDiff ? taskDiff.ok ? `<pre class="tdiff">${esc(taskDiff.base ? X.since(taskDiff.base.slice(0, 8)) + '\n' : '')}${esc(taskDiff.stat)}${taskDiff.untracked && taskDiff.untracked.length ? '\n' + esc(X.newFiles) + ': ' + esc(taskDiff.untracked.join(', ')) : ''}\n\n${esc(taskDiff.diff)}</pre>` : `<p class="note">${esc(X.fail[taskDiff.reason] || X.fail.state)}</p>` : ''}
-    ${t.configLog && t.configLog.length ? `<h4>${esc(X.configLog)}</h4><ul class="note">${t.configLog.slice(-8).map(c => `<li>${esc(new Date(c.at).toLocaleString())}: ${esc(mname(t, c.from.model))}/${esc(c.from.effort)} → ${esc(mname(t, c.to.model))}/${esc(c.to.effort)} (${esc(c.why)})</li>`).join('')}</ul>` : ''}
-    <h4>${esc(X.events)}</h4><ul class="tevents">${evHtml}</ul>`;
+  const models = Object.entries(t.byModel || {}), st = t.state;
+  const btn = (show, a, label, cls = 'ghost', title = '') => show ? `<button class="btn small ${cls}" data-tact="${a}"${title ? ` title="${esc(title)}"` : ''}>${label}</button>` : '';
+  body.innerHTML = tabsHtml() + `<div class="tdhead"><button class="tback" data-tact="back">${esc(X.back)}</button>
+    <div class="tdtitle"><h2>${esc(t.title)}</h2><span class="tpill big st-${st}">${esc(X.states[st])}${t.reason ? ' · ' + esc(X.reasons[t.reason] || t.reason) : ''}</span></div>
+    <p class="tdmeta">${esc(t.agent)}${t.role ? ' · ' + esc(X.roles[t.role] || t.role) : ''}${t.lean ? ' · ' + esc(X.leanOn) : ''} · <code>${esc(t.cwd)}</code>${t.sessionId ? ' · ' + esc(t.sessionId.slice(0, 8)) : ''} · ${esc(X.attempts(t.attempts))}${t.subagents ? ' · ' + esc(X.subagents(t.subagents)) : ''}</p></div>
+    ${askPermHtml(t)}
+    ${t.warn ? `<div class="talert">⚠ ${esc(warnText(t.warn))}${t.warn.rec ? ` <button class="btn small" data-tact="applyWarn">${esc(T.notices.apply)}: ${esc(X.profiles[t.warn.rec.profile])}</button>` : ''}</div>` : ''}
+    ${t.denials && t.denials.length ? `<div class="talert"><b>${esc(X.denied)}:</b> ${t.denials.map(d => `<code>${esc(d.tool)}</code> <small>${esc(d.what)}</small>`).join(', ')} <button class="btn small" data-tact="approve">✔ ${esc(X.approve)}</button></div>` : ''}
+    <div class="tdgrid"><div class="tdmain">
+      ${t.result ? `<section class="tsec"><h4>${esc(X.resultTitle)}</h4><pre class="tresult">${esc(t.result)}</pre>${t.tests ? `<p class="${t.tests.code === 0 ? 'ok' : 'warn'}">${esc(X.tests(t.tests.code))}</p>` : ''}</section>`
+        : `<section class="tsec"><p class="note">${esc(st === 'running' ? X.workingNow : st === 'pending' ? X.queuedNow : X.noResult)}</p></section>`}
+      ${taskShip && taskShip.id === t.id ? shipHtml(t, taskShip) : ''}
+      ${t.review ? `<div class="treview"><b>🔎 ${esc(X.reviewTitle)}</b> · <a href="#" data-popen="${esc(t.review.id)}">${esc(X.openTask)}</a>${t.review.text ? `<pre>${esc(t.review.text)}</pre>` : `<p class="note">${esc(X.reviewRunning)}</p>`}</div>` : ''}
+      ${t.reviewOf ? `<p class="note">🔎 ${esc(X.reviewOfNote)} · <a href="#" data-popen="${esc(t.reviewOf)}">${esc(X.openTask)}</a></p>` : ''}
+      ${t.pr ? `<p>🔗 PR: <a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr)}</a></p>` : ''}
+      ${t.files && t.files.length ? `<section class="tsec"><h4>${esc(X.files)} <small>${t.files.length}</small></h4><p class="tfiles">${t.files.slice(0, 30).map(f => `<code>${esc(f)}</code>`).join(' ')}</p>${btn(['blocked', 'failed', 'done'].includes(st) && !taskData.privacy, 'diff', esc(X.diff))}</section>` : ''}
+      ${taskDiff ? taskDiff.ok ? `<pre class="tdiff">${esc(taskDiff.base ? X.since(taskDiff.base.slice(0, 8)) + '\n' : '')}${esc(taskDiff.stat)}${taskDiff.untracked && taskDiff.untracked.length ? '\n' + esc(X.newFiles) + ': ' + esc(taskDiff.untracked.join(', ')) : ''}\n\n${esc(taskDiff.diff)}</pre>` : `<p class="note">${esc(X.fail[taskDiff.reason] || X.fail.state)}</p>` : ''}
+      ${['blocked', 'failed'].includes(st) ? `<section class="tsec treply"><h4>${esc(X.replyTitle)}</h4><textarea data-treply rows="3" placeholder="${esc(X.reply)}"></textarea><p><button class="btn small" data-tact="reply">➤ ${esc(X.send)}</button></p></section>` : ''}
+    </div><aside class="tdside">
+      <section class="tsec"><h4>${esc(X.costTitle)}</h4><div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out</small></div><div><b>${fmtK(t.tokens.input + t.tokens.cacheWrite)}</b><small>in</small></div><div><b>${fmtK(t.tokens.cacheRead)}</b><small>cache</small></div></div>
+        ${models.length ? `<p class="note">${models.map(([m, v]) => `${esc(m)}: ${v.unpriced ? '?' : esc(fmtUSD(v.usd))}`).join(' · ')}</p>` : ''}</section>
+      <section class="tsec"><h4>${esc(X.cfgTitle)}</h4>${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}<label class="tchk"><input type="checkbox" data-tcfg="lean" ${t.lean ? 'checked' : ''}> ${esc(X.lean)}</label></section>
+    </aside></div>
+    <div class="tdactions">
+      ${st === 'blocked' ? `<button class="btn" data-tact="checkShip">✔ ${esc(X.conclude)}…</button>` : ''}
+      ${btn(['failed', 'cancelled', 'blocked'].includes(st), 'retry', '↻ ' + esc(X.retry))}
+      ${btn(['failed', 'blocked'].includes(st) && t.sessionId, 'compact', '⤓ ' + esc(X.compactNow), 'ghost', X.compactTip)}
+      ${btn(['failed', 'blocked'].includes(st), 'fresh', '✦ ' + esc(X.fresh), 'ghost', X.freshTip)}
+      ${btn(['blocked', 'failed', 'done'].includes(st), 'handoff', '↪ ' + esc(X.handoff))}
+      <span class="tdspacer"></span>
+      ${btn(['running', 'pending', 'blocked'].includes(st), 'cancel', '✖ ' + esc(X.cancel), 'danger')}
+      ${btn(!live, 'delete', '🗑 ' + esc(X.del), 'ghost danger')}
+    </div><p class="note" id="tmsg"></p>
+    <details class="tsec tlog"><summary><h4>${esc(X.events)} <small>${ev.length}</small></h4></summary>
+      ${t.configLog && t.configLog.length ? `<p class="note"><b>${esc(X.configLog)}:</b> ${t.configLog.slice(-8).map(c => `${esc(new Date(c.at).toLocaleTimeString())} ${esc(mname(t, c.from.model))}/${esc(c.from.effort)} → ${esc(mname(t, c.to.model))}/${esc(c.to.effort)} (${esc(c.why)})`).join(' · ')}</p>` : ''}
+      <ul class="tevents">${evHtml}</ul></details>`;
 }
 const tfVal = () => { const o = {}; reportEl.querySelectorAll('[data-tf]').forEach(el => { o[el.dataset.tf] = el.type === 'checkbox' ? el.checked : el.value; }); return o; };
 const tFail = r => (TT().fail[r.reason] || TT().fail.state);

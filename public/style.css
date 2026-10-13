@@ -857,3 +857,36 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tship ul { list-style: none; padding: 0; margin: 6px 0; }
 .tship li { margin: 2px 0; }
 .tship textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+/* ---- tasks: hierarchy (one primary action, quiet secondary ones, a red cancel), two columns, grouped list ---- */
+.btn.small.ghost { background: transparent; color: var(--text, #ece7df); border-color: #4a4058; box-shadow: none; }
+.btn.small.ghost:hover { background: rgba(255,255,255,.06); }
+.btn.small.danger { background: #b8333b; }
+.btn.small.ghost.danger { background: transparent; color: #ff8a8f; border-color: #6b3036; }
+.tpill { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #3a3f5c; color: #fff; vertical-align: 1px; }
+.tpill.big { font-size: 12px; padding: 3px 10px; }
+.tpill.st-blocked { background: #b9831f; } .tpill.st-running { background: #2f6fb8; } .tpill.st-pending { background: #5a5f78; }
+.tpill.st-failed { background: #b8333b; } .tpill.st-done { background: #3d8a36; } .tpill.st-cancelled { background: #4a4a55; }
+.tgroup { margin: 14px 0 4px; } .tgroup h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; opacity: .75; display: inline; }
+.tgroup h4 small, .tsec h4 small { opacity: .7; font-weight: 400; margin-left: 4px; }
+.tgroup summary { cursor: pointer; list-style: none; margin-bottom: 6px; } .tgroup summary::-webkit-details-marker { display: none; } .tgroup summary::before { content: '▸ '; opacity: .7; } .tgroup[open] summary::before { content: '▾ '; }
+.tlist .trow-item { border-left: 4px solid #5a5f78; } .tlist .st-blocked { border-left-color: #e4a03b; } .tlist .st-running { border-left-color: #3b8be0; } .tlist .st-failed { border-left-color: #e43b44; } .tlist .st-done { border-left-color: #63c74d; }
+.tlist .tmainc { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .tlist .tmainc small { opacity: .85; }
+.tlist .q-side { justify-items: end; } .tlist .tcost { font-size: 14px; }
+.tdhead { margin: 4px 0 12px; } .tback { background: none; border: 0; color: #a59fb0; cursor: pointer; padding: 0; font: inherit; font-size: 13px; } .tback:hover { color: #fff; }
+.tdtitle { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 4px; } .tdtitle h2 { font: 700 20px/1.25 system-ui, sans-serif; margin: 0; text-transform: none; letter-spacing: 0; }
+.tdmeta { margin: 0; font-size: 12px; opacity: .75; overflow-wrap: anywhere; }
+.talert { border: 2px solid #e4a03b; background: rgba(228,160,59,.1); padding: 8px 10px; margin: 8px 0; font-size: 13px; color: #f7c66b; }
+.tdgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); gap: 12px; align-items: start; }
+@media (max-width: 860px) { .tdgrid { grid-template-columns: minmax(0, 1fr); } }
+.tsec { background: rgba(0,0,0,.18); border: 2px solid #3a3045; border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; font-size: 13px; }
+.tsec > h4, .tsec summary h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .7; display: inline-block; }
+.tsec .tresult { margin: 0; max-height: 320px; overflow: auto; }
+.tsec .tbig { margin: 0; } .tsec .tbig b { font-size: 16px; }
+.tsec .reccard { background: transparent; border: 0; padding: 0; margin: 6px 0; }
+.tsec .tcfg { margin: 8px 0 4px; } .tsec .tchk { display: flex; gap: 6px; align-items: center; margin-top: 6px; font-size: 12px; }
+.tsec.treply textarea { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; background: rgba(0,0,0,.25); color: inherit; border: 1px solid #3a3045; padding: 6px; }
+.tfiles code { display: inline-block; margin: 0 4px 4px 0; }
+.tdactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-top: 2px solid #3a3045; padding-top: 10px; margin-top: 4px; }
+.tdspacer { flex: 1; }
+.tlog summary { cursor: pointer; list-style: none; } .tlog summary::-webkit-details-marker { display: none; }
+.tdetail-wrap .treview, .tdmain .treview, .tdmain .tship { margin-top: 0; }
