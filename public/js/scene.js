@@ -443,6 +443,7 @@ function drawScene(t, dt) {
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());
   drawCatExtras(t);
   drawConfetti(t);
+  drawOfficeRain(t);
   drawSurprise(t);
   // ceiling lights: every room and shared area is lit, except the nap corner (it's a rest room)
   if (lightsOn) {

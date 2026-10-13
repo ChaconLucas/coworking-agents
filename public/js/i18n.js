@@ -106,7 +106,7 @@ const I18N = {
         dj: { name: 'DJ', desc: n => `ligar o rádio ${n} vez${n > 1 ? 'es' : ''}` },
         cat: { name: 'Amigo do gato', desc: n => `fazer carinho no gato ${n} vez${n > 1 ? 'es' : ''}` },
       } },
-    mood: { rush: 'ON AIR piscando: a maioria do escritório está trabalhando', normal: 'ON AIR aceso: tem gente trabalhando', calm: 'ON AIR apagado: ninguém trabalhando agora' },
+    mood: { stuck: 'Escritório travado: vários agentes esperando você ou parados sem novidade (por isso o tom cinza-azulado)', rush: 'ON AIR piscando: a maioria do escritório está trabalhando', normal: 'ON AIR aceso: tem gente trabalhando', calm: 'ON AIR apagado: ninguém trabalhando agora' },
     decorOn: 'Decoração de datas comemorativas ligada', decorOff: 'Decoração de datas comemorativas desligada',
     office: { tab: 'Personalizar', sub: 'Deixe o escritório com a sua cara. Fica salvo no seu arquivo de progresso.', name: 'Nome do escritório', namePh: 'ex.: Tiix HQ', save: 'Salvar', you: 'Você', youRoll: 'Trocar meu visual', preview: 'Prévia ao vivo do escritório',
       groups: { floor: 'Piso', wall: 'Paredes', rooms: 'Carpete das salas', desk: 'Mesas', view: 'Vista da janela', sky: 'Céu', light: 'Iluminação', mascot: 'Mascote', plants: 'Plantas', station: 'Estação do rádio', accent: 'Cor de destaque' },
@@ -331,7 +331,7 @@ const I18N = {
         dj: { name: 'DJ', desc: n => `turn on the radio ${n} time${n > 1 ? 's' : ''}` },
         cat: { name: 'Cat friend', desc: n => `pet the cat ${n} time${n > 1 ? 's' : ''}` },
       } },
-    mood: { rush: 'ON AIR blinking: most of the office is working', normal: 'ON AIR lit: someone is working', calm: 'ON AIR off: nobody working right now' },
+    mood: { stuck: 'Office stuck: several agents waiting on you or silent (hence the grey-blue tone)', rush: 'ON AIR blinking: most of the office is working', normal: 'ON AIR lit: someone is working', calm: 'ON AIR off: nobody working right now' },
     decorOn: 'Holiday decor on', decorOff: 'Holiday decor off',
     office: { tab: 'Customise', sub: 'Make the office yours. Saved in your progress file.', name: 'Office name', namePh: 'e.g. Tiix HQ', save: 'Save', you: 'You', youRoll: 'New look for me', preview: 'Live preview of the office',
       groups: { floor: 'Floor', wall: 'Walls', rooms: 'Room carpets', desk: 'Desks', view: 'Window view', sky: 'Sky', light: 'Lighting', mascot: 'Mascot', plants: 'Plants', station: 'Radio station', accent: 'Accent colour' },
@@ -518,6 +518,7 @@ if (!Object.prototype.hasOwnProperty.call(I18N, lang)) lang = 'pt';
   Object.assign(I18N.pt.tasks, { cmp: { title: 'Comparar modelos', sub: 'Nas suas tarefas terminadas: quanto cada combinação custou, quantas tentativas precisou, se os testes passaram e quantas terminaram bem.', model: 'IA · modelo · esforço', n: 'Tarefas', cost: 'Custo médio', att: 'Tentativas', tests: 'Testes ok', ok: 'Terminou bem', few: 'poucos dados' } });
   Object.assign(I18N.pt.tasks, { saidTitle: n => `${n} trecho${n > 1 ? 's' : ''} das conversas (últimos 7 dias)`, saidYou: 'você pediu', saidAgent: 'o agente disse', saidLive: 'aberta agora' });
   Object.assign(I18N.pt.tasks, { moreDirs: 'Repetir em outras pastas (opcional, uma por linha)', moreDirsPh: '/caminho/outro-repo', batchDone: n => `${n} tarefas criadas, uma por pasta.`, batchFail: f => `Não deu em: ${f}` });
+  Object.assign(I18N.pt.tasks, { evPr: 'PR aberto!' });
   Object.assign(I18N.pt.tasks, { dayBudget: 'Orçamento do dia (US$, 0 = sem limite)', dayStopped: (s, b) => `Orçamento do dia atingido (${s} de ${b}): as tarefas novas esperam até amanhã ou até você aumentar o limite.` });
   Object.assign(I18N.pt.tasks.warn, { dayBudget: 'Parou: o orçamento do dia foi atingido.', repoBudget: 'Parou: o orçamento do dia deste repositório foi atingido.' });
   Object.assign(I18N.pt.tasks, { gh: { fromIssue: 'Da issue', reviewPr: 'Revisar PR', review: 'Revisar', loading: 'consultando o GitHub…', noIssues: 'Nenhuma issue aberta neste repositório.', pick: n => `${n} issue(s) abertas: escolha uma`, fail: { gh: 'o gh não respondeu (está instalado e logado? gh auth login)', nodir: 'escolha uma pasta da sua pasta pessoal', pr: 'número do PR inválido', demo: 'modo demonstração', private: 'desligado no modo privado' } } });
@@ -541,6 +542,7 @@ if (!Object.prototype.hasOwnProperty.call(I18N, lang)) lang = 'pt';
   Object.assign(I18N.en.tasks, { cmp: { title: 'Compare models', sub: 'On your finished tasks: what each combination cost, how many attempts it needed, whether tests passed and how many ended well.', model: 'AI · model · effort', n: 'Tasks', cost: 'Avg cost', att: 'Attempts', tests: 'Tests ok', ok: 'Ended well', few: 'little data' } });
   Object.assign(I18N.en.tasks, { saidTitle: n => `${n} excerpt${n > 1 ? 's' : ''} from conversations (last 7 days)`, saidYou: 'you asked', saidAgent: 'the agent said', saidLive: 'open now' });
   Object.assign(I18N.en.tasks, { moreDirs: 'Repeat in other folders (optional, one per line)', moreDirsPh: '/path/other-repo', batchDone: n => `${n} tasks created, one per folder.`, batchFail: f => `Failed in: ${f}` });
+  Object.assign(I18N.en.tasks, { evPr: 'PR opened!' });
   Object.assign(I18N.en.tasks, { dayBudget: 'Day budget (US$, 0 = no limit)', dayStopped: (s, b) => `Day budget reached (${s} of ${b}): new tasks wait until tomorrow or until you raise the limit.` });
   Object.assign(I18N.en.tasks.warn, { dayBudget: 'Stopped: the day budget was reached.', repoBudget: "Stopped: this repository's day budget was reached." });
   Object.assign(I18N.en.tasks, { gh: { fromIssue: 'From an issue', reviewPr: 'Review PR', review: 'Review', loading: 'asking GitHub…', noIssues: 'No open issue in this repository.', pick: n => `${n} open issue(s): pick one`, fail: { gh: 'gh did not answer (installed and logged in? gh auth login)', nodir: 'pick a folder in your home', pr: 'invalid PR number', demo: 'demo mode', private: 'off in private mode' } } });

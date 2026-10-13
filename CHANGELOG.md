@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Office events: confetti when a task's tests pass, a PR is opened or a week ends under the cost goal; rain inside the office when tests or a task fail (calmer with reduced motion)
+- Office mood: *stuck* when many agents wait on you or sit silent — the room turns grey-blue and the radio slows; a warm tone when everything flows
 - Files touched most (Repositories panel): the files agent sessions edited most over the last 7 days, by repo and AI (off in private mode)
 - Security: typing into Terminal re-checks, at that moment, that the agent still owns the tab (never into a bare shell); the heavy routes (search in logs, gh, cleanup) run one at a time
 - TV mode (☰ → 📺 or `?tv=1`): full screen with only the office and big counters; Esc leaves

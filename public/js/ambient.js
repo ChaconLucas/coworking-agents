@@ -101,7 +101,7 @@ function radioNote(freq, at, len, wave, vol) {
 }
 function radioTick() {
   if (!radioOn || !soundOn) return;
-  const mood = officeMood(), bpm = mood === 'rush' ? 132 : mood === 'calm' ? 78 : 104, step = 60 / bpm / 2;
+  const mood = officeMood(), bpm = mood === 'rush' ? 132 : mood === 'calm' ? 78 : mood === 'stuck' ? 66 : 104, step = 60 / bpm / 2;
   const st = STATIONS[radioStation()];
   while (radioNext < audio.currentTime + .25) {
     const bar = Math.floor(radioStep / 16), beat = radioStep % 16, chord = [0, 3, 4, 2][bar % 4];

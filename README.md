@@ -211,6 +211,8 @@ The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *
 
 - **📦 Repositories:** who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity.
 - **📣 Message several agents:** one request to the agents you pick, typed into terminal sessions that are waiting and continued in the background for VS Code and app conversations; busy ones are left out.
+- **Office events and mood:** confetti for tests passing, a PR opened or a week under the cost goal; rain when tests or a task fail; the room turns grey-blue when many agents are stuck on you and warm when everything flows.
+- **Files touched most** (Repositories): what agent sessions edited most this week.
 - **📺 TV mode** (or `?tv=1`): full screen, only the office and big counters; Esc leaves.
 - **Waiting on you today** in the daily report: measured time the agents waited on your answers and tasks stood blocked on you.
 - **Sounds and do not disturb** (Personalise): each sound on or off, and a daily quiet window that mutes sounds and system notifications.

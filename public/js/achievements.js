@@ -220,7 +220,7 @@ function checkAchievements() {
     if (goal) {
       const keys = Array.from({ length: 7 }, (_, i) => { const d = new Date(Date.now() - (i + 1) * 864e5); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
       const worked = keys.filter(k => days[k] && days[k].tools >= 10).length, spent = keys.reduce((n, k) => n + ((days[k] && days[k].usd) || 0), 0);
-      if (worked >= 3 && spent <= goal * 7 / 30) achAdd('underGoal', keys[keys.length - 1]); // one per finished 7-day window
+      if (worked >= 3 && spent <= goal * 7 / 30) { const n0 = achCount('underGoal'); achAdd('underGoal', keys[keys.length - 1]); if (achCount('underGoal') > n0) confettiAt = Date.now(); } // one per finished 7-day window, celebrated
     } }
   const need = live.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
   if (achQueueWas >= 2 && need === 0) achBump('zeroQueue');
@@ -305,8 +305,20 @@ const shadeHex = (hex, f) => Art.shade(hex, f);
     if (at === seq.length) { at = 0; achBump('konami'); confettiAt = Date.now(); checkAchievements(); }
   });
 }
-// confetti over the office (konami, or any legend-tier unlock)
-let confettiAt = 0;
+// confetti over the office (konami, any legend-tier unlock, tests passing, a PR opened, a week under the cost goal)
+let confettiAt = 0, officeRainAt = 0;
+const reducedMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
+// rain inside the office when tests fail or a task fails: a grey cloud and drops for a few seconds
+function drawOfficeRain(t) {
+  const age = Date.now() - officeRainAt; if (age > 4500) return;
+  const fade = age < 400 ? age / 400 : age > 3800 ? (4500 - age) / 700 : 1;
+  ctx.fillStyle = `rgba(30, 40, 60, ${(.32 * fade).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+  if (reducedMotion()) return;
+  for (let i = 0; i < 120; i++) {
+    const h = Art.hash('rn' + i), x = (h % W) + (age / 25) % 8, y = ((h >>> 8) % H + age / 1000 * (260 + (h >>> 16) % 160)) % H;
+    r(x, y, 1, 6, `rgba(170, 210, 255, ${(.8 * fade).toFixed(3)})`);
+  }
+}
 function drawConfetti(t) {
   const age = Date.now() - confettiAt;
   if (age > 4000) return;

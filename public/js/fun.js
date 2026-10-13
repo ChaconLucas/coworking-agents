@@ -113,9 +113,12 @@ function drawHolidayWindow(x, y, w, h, t, sky) {
 // ---- office mood: how busy the office is changes the room ----
 // rush = most of the office working (the ON AIR sign lights, the coffee machine never stops),
 // calm = nobody working (the lights dim a little and the robot vacuum gets to work)
+// stuck = many agents waiting on you or silent while "working" (the room goes grey-blue and the radio slows down)
 function officeMood() {
   if (!data) return 'normal';
   const live = data.people.filter(p => !p.leaving);
+  const blocked = live.filter(p => ['needs_you', 'waiting'].includes(p.state) || (p.lastActivity && !['idle', 'asleep'].includes(p.state) && data.now - p.lastActivity > 10 * 60000)).length;
+  if (blocked >= 2 && blocked / Math.max(1, live.length) >= .4) return 'stuck';
   const work = live.filter(p => !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length;
   if (work >= 3 && work / Math.max(1, live.length) >= .6) return 'rush';
   if (live.length && work === 0) return 'calm';
@@ -133,8 +136,10 @@ let moodBox = null;
 // lit things on the wall are redrawn over the night shade (like the LED panel)
 let wallLit = [];
 function moodShade() { // drawn over everything but the lit things, before the lights
-  if (officeMood() !== 'calm') return;
-  ctx.fillStyle = 'rgba(20, 18, 40, .12)'; ctx.fillRect(0, 0, W, H);
+  const m = officeMood();
+  if (m === 'calm') { ctx.fillStyle = 'rgba(20, 18, 40, .12)'; ctx.fillRect(0, 0, W, H); }
+  if (m === 'stuck') { ctx.fillStyle = 'rgba(40, 58, 92, .28)'; ctx.fillRect(0, 0, W, H); } // grey-blue: things are stuck on you
+  if (m === 'rush') { ctx.fillStyle = 'rgba(255, 176, 84, .05)'; ctx.fillRect(0, 0, W, H); } // warm: it flows
 }
 
 // ---- the cat: visits whoever has been waiting on you the longest, and likes being petted ----

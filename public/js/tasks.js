@@ -43,10 +43,24 @@ function watchOutside() {
   }
 }
 const ORDER_UP = (a, b) => ['eco', 'bal', 'deep'].indexOf(b) > ['eco', 'bal', 'deep'].indexOf(a);
+// office events from what tasks really did: confetti for tests passing or a PR opened, rain for tests failing or a task failing
+let evSeen = null;
+function officeEvents(list) {
+  const first = !evSeen; evSeen = evSeen || new Map();
+  for (const t of list) {
+    const was = evSeen.get(t.id) || {}, now = { tests: t.tests ? t.tests.at + ':' + t.tests.code : '', pr: t.pr || '', state: t.state };
+    evSeen.set(t.id, now);
+    if (first || !evSeen) continue;
+    if (now.pr && now.pr !== was.pr) { confettiAt = Date.now(); playTune('trophy'); toast(`<b>🎉 ${esc(T.tasks.evPr)}</b>${esc(t.title)}`, 'ok'); }
+    else if (now.tests && now.tests !== was.tests) { if (t.tests.code === 0) { confettiAt = Date.now(); playTune('done'); } else officeRainAt = Date.now(); }
+    else if (now.state === 'failed' && was.state && was.state !== 'failed') officeRainAt = Date.now();
+  }
+}
 function warnText(w) { const W = T.tasks.warn; return w.why === 'loop' ? W.loop(w.name) : typeof W[w.why] === 'function' ? W[w.why](w) : W[w.why] || ''; }
 async function pollTasks() {
   const d = await api('api/tasks'); if (!d || !Array.isArray(d.tasks)) return;
   taskData = d;
+  officeEvents(d.tasks);
   for (const t of d.tasks) {
     noticeTask(t);
     if (t.ask && noticed['a' + t.id] !== t.ask.at) {

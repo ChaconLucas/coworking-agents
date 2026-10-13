@@ -292,6 +292,18 @@ sleepK.kill();
   run(`store.set('quiet', { on: false, from: '22:00', to: '08:00' })`); assert.strictEqual(run("quietNow(new Date('2026-01-01T23:30:00'))"), false, 'off means off');
   run('store.get = __sg; store.set = __ss');
 
+  // office events and mood come from what really happened
+  run(`evSeen = null; confettiAt = 0; officeRainAt = 0; officeEvents([{ id: 'e1', state: 'running', title: 'x' }]); officeEvents([{ id: 'e1', state: 'blocked', title: 'x', tests: { at: 5, code: 0 } }])`);
+  assert.ok(run('confettiAt > 0 && officeRainAt === 0'), 'tests passing → confetti');
+  run(`confettiAt = 0; officeEvents([{ id: 'e1', state: 'blocked', title: 'x', tests: { at: 9, code: 1 } }])`);
+  assert.ok(run('officeRainAt > 0 && confettiAt === 0'), 'tests failing → rain');
+  run(`evSeen = null; confettiAt = 0; officeRainAt = 0; officeEvents([{ id: 'e2', state: 'blocked', title: 'x', tests: { at: 1, code: 1 } }])`);
+  assert.ok(run('officeRainAt === 0'), 'nothing fires for what was already true when the page opened');
+  run(`data = { now: Date.now(), people: [{ state: 'needs_you' }, { state: 'waiting' }, { state: 'thinking', lastActivity: Date.now() }], limits: {} }`);
+  assert.strictEqual(run('officeMood()'), 'stuck', 'two of three waiting on you → stuck');
+  run(`data.people = [{ state: 'thinking', lastActivity: Date.now() }, { state: 'editing', lastActivity: Date.now() }, { state: 'thinking', lastActivity: Date.now() }]`);
+  assert.strictEqual(run('officeMood()'), 'rush', 'all working → rush');
+
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
   run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
     data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);

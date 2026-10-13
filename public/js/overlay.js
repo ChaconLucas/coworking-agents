@@ -97,7 +97,7 @@ function renderOverlay() {
   if (typeof officeTips === 'function') { const o = officeTips(); box(costBox, 'data-tab="usage"', o.costs); box(noticesBox, 'data-tab="notices"', o.notices); box(historyBox, 'data-tab="feed"', o.history); box(releaseBox, 'data-tab="version"', o.releases); }
   for (const g of gameHits) box(g, g.attr, g.title);
   { const working = data ? data.people.filter(p => !p.leaving && !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length : 0;
-    box(moodBox, 'data-mood="1"', T.mood[!working ? 'calm' : officeMood() === 'rush' ? 'rush' : 'normal']); }
+    box(moodBox, 'data-mood="1"', T.mood[officeMood() === 'stuck' ? 'stuck' : !working ? 'calm' : officeMood() === 'rush' ? 'rush' : 'normal']); }
   box(radioBox, 'data-radio="1"', radioOn ? T.radio.on : T.radio.off);
   box(neonBox, 'data-neon="1"', '</>');
   if (surprise) box(surpriseBox, 'data-surprise="1"', T.surprise.hint);
