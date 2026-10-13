@@ -60,7 +60,7 @@ function quietAt(q, d = new Date()) {
 // one at a time for the heavy ones (reading days of logs, calling gh, removing worktrees): a burst of requests cannot pile up
 const inFlight = new Set();
 async function once(key, fn) { if (inFlight.has(key)) return { ok: false, reason: 'busy' }; inFlight.add(key); try { return await fn(); } finally { inFlight.delete(key); } }
-function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token, phone = false, menubar = false } = {}) {
+function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token, phone = false, menubar = false, phoneToken, onPhoneToken } = {}) {
   tasks.startQueue({ demo });
   const keepToken = !!token; // only the normal run keeps its token across restarts (not demo, not private)
   token = token || crypto.randomBytes(24).toString('hex');
@@ -306,6 +306,15 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
     // the phone link and its QR code, only to this machine (the phone server itself never serves this)
     if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')), visit: visitNow && visitNow.until > Date.now() ? { ...visitNow, qr: require('./qr').encode(visitNow.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : null } : { on: false, reason: phoneReason }));
+    if (url.pathname === '/api/appinstall' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ on: require('./appinstall').installed(), platform: process.platform, demo }));
+    if (url.pathname === '/api/appinstall' && req.method === 'POST') { // create or remove the app on this computer
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 1e3) req.destroy(); });
+      req.on('end', () => { let m = {}; try { m = JSON.parse(body); } catch {} if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}'); try { const a = require('./appinstall'), r = m.on ? a.install(require('./update').installMode()) : a.uninstall(); if (m.on) tasks.op({ op: 'settings', appChoice: 'app' }); send(res, 200, 'application/json', JSON.stringify({ ...r, on: a.installed() })); } catch { send(res, 200, 'application/json', '{"ok":false,"reason":"write"}'); } });
+      return;
+    }
     if (url.pathname === '/api/autostart' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ on: require('./autostart').enabled(), platform: process.platform, demo }));
     if (url.pathname === '/api/autostart' && req.method === 'POST') { // start with the computer (writes the system's own login entry; one click to undo)
       const origin = req.headers.origin || '';
@@ -322,6 +331,12 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       let body = '';
       req.on('data', c => { body += c; if (body.length > 1e3) req.destroy(); });
       req.on('end', () => { let m = {}; try { m = JSON.parse(body); } catch {} if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}'); const on = !!m.on; tasks.op({ op: 'settings', menubar: on }); const r = on ? mb.start({ base: baseUrl, token }) : (mb.stop(), { ok: true }); if (on) mb.write(snapshot({ privacy }), mbExtra()); send(res, 200, 'application/json', JSON.stringify({ ...r, on: mb.running() })); });
+      return;
+    }
+    if (url.pathname === '/api/phone-rotate' && req.method === 'POST') { // a new phone code: every phone has to scan the QR again
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      req.resume(); req.on('end', () => { if (!phoneInfo) return send(res, 200, 'application/json', '{"ok":false,"reason":"nophone"}'); phoneInfo.url = phoneInfo.rotate(); send(res, 200, 'application/json', '{"ok":true}'); });
       return;
     }
     if (url.pathname === '/api/visit' && req.method === 'POST') { // start/stop a visit and send its picture: same guards as every POST, and only with the phone panel on
@@ -361,7 +376,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       const base = `http://${host === '0.0.0.0' ? 'localhost' : host}:${server.address().port}`; baseUrl = base;
       if (!demo && (menubar || tasks.list().settings.menubar)) { mb.start({ base, token }); try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }
       if (phone) { // opt-in: a separate, restricted server on the LAN address (see src/phone.js)
-        try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
+        try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
         catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; }
       }
       resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); clearInterval(mbTimer); mb.stop(); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });

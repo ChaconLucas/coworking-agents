@@ -133,7 +133,8 @@ function renderOffice() {
     ${row('station', STYLE.station)}
     ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}
     <h3>📲 ${esc(T.appx.title)}</h3><p class="note">${esc(T.appx.sub)}</p>
-    <p><button class="btn small" data-appinstall ${matchMedia('(display-mode: standalone)').matches ? 'disabled' : ''}>📲 ${esc(matchMedia('(display-mode: standalone)').matches ? T.appx.installed : T.appx.install)}</button> <small class="note" data-app-msg></small></p>
+    <p><button class="btn small" data-appmake>🧩 ${esc(T.appx.make)}</button> <button class="btn small ghost" data-appremove hidden>${esc(T.appx.remove)}</button> <small class="note" data-appmake-msg></small></p>
+    <p><button class="btn small ghost" data-appinstall ${matchMedia('(display-mode: standalone)').matches ? 'disabled' : ''}>📲 ${esc(matchMedia('(display-mode: standalone)').matches ? T.appx.installed : T.appx.install)}</button> <small class="note" data-app-msg></small></p>
     <p class="opts"><span class="note">${esc(T.appx.opensIn)}</span> <button class="opt ${((taskData.settings || {}).appChoice || '') === 'app' ? 'on' : ''}" data-appchoice="app">${esc(T.appx.optApp)}</button><button class="opt ${((taskData.settings || {}).appChoice || '') !== 'app' ? 'on' : ''}" data-appchoice="browser">${esc(T.appx.optBrowser)}</button></p>
     <p><label class="tchk"><input type="checkbox" data-autostart disabled> ${esc(T.appx.autostart)}</label> <small class="note" data-as-msg></small></p>
     <p class="note">${esc(T.appx.cli)} <code>npx coworking-agents --app</code></p>
@@ -232,10 +233,10 @@ document.addEventListener('click', async e => {
   const box = document.getElementById('app-ask'), auto = !!(box && box.querySelector('[data-appask-auto]:checked')), m = box && box.querySelector('[data-appask-msg]');
   if (b.dataset.appask === 'browser') { await chooseApp('browser', auto); if (box) box.remove(); return; }
   await chooseApp('app', auto);
-  if (installPrompt) { installPrompt.prompt(); await installPrompt.userChoice.catch(() => {}); installPrompt = null; if (box) box.remove(); return; }
-  // no install prompt here (Safari, Firefox, or already installed): next time it opens in an app window anyway
-  if (m) m.textContent = T.appx.nextTime + ' ' + (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? T.appx.safari : /Firefox/.test(navigator.userAgent) ? '' : T.appx.chrome);
-  setTimeout(() => box && box.remove(), 9000);
+  // the app made on this computer (Applications / Start Menu / app menu): works with any browser
+  b.disabled = true; const r = await fetch('api/appinstall', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: true }) }).then(x => x.json()).catch(() => ({ ok: false }));
+  if (m) m.textContent = r.ok ? T.appx.madeNow + ' ' + (T.appx.made[navigator.platform && /Win/.test(navigator.platform) ? 'win32' : /Mac/.test(navigator.platform || '') ? 'darwin' : 'linux']) : T.appx.nextTime;
+  setTimeout(() => box && box.remove(), 10000);
 });
 // installing as an app: the browser's own prompt when it offers one, instructions otherwise
 let installPrompt = null;
@@ -256,3 +257,14 @@ document.addEventListener('change', async e => {
   c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-as-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.appx.asOn : T.appx.asOff) : '⚠';
 });
 document.addEventListener('click', async e => { const o = e.target.closest('[data-appchoice]'); if (!o) return; await chooseApp(o.dataset.appchoice, false); await (typeof pollTasks === 'function' ? pollTasks() : null); renderReport(); });
+// the app made on this computer (Applications / Start Menu / app menu)
+function syncAppMade() {
+  fetch('api/appinstall').then(r => r.json()).then(d => { const mk = document.querySelector('[data-appmake]'), rm = document.querySelector('[data-appremove]'), m = document.querySelector('[data-appmake-msg]'); if (!mk) return; mk.disabled = !!d.demo; if (rm) rm.hidden = !d.on; if (m && d.on) m.textContent = T.appx.made[d.platform] || T.appx.made.linux; }).catch(() => {});
+}
+document.addEventListener('click', async e => {
+  const mk = e.target.closest('[data-appmake]'), rm = e.target.closest('[data-appremove]'); if (!mk && !rm) return;
+  const b = mk || rm; b.disabled = true;
+  const r = await fetch('api/appinstall', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: !!mk }) }).then(x => x.json()).catch(() => ({ ok: false }));
+  b.disabled = false; const m = document.querySelector('[data-appmake-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.appx.madeNow : T.appx.removed) : '⚠ ' + (T.appx.fail[r.reason] || r.reason || '');
+  syncAppMade(); if (typeof pollTasks === 'function') pollTasks();
+});

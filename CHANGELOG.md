@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Create the app on this computer (free, no store, no signing): `coworking-agents install-app` or Personalise — a Coworking Agents app in Applications (macOS), the Start Menu and Desktop (Windows) or the applications menu (Linux); opening it starts the office if needed in an app window. `uninstall-app` removes it
+- The phone panel goes on the home screen like an app (iPhone and Android); its code is kept across restarts, and *Change the phone code* cuts every phone off
 - First run asks once: *Install as an app* (and optionally start with the computer) or *Keep the browser*; the answer decides how it opens from the terminal next time and can be changed in Personalise
 - Use it as an app, if you want: *Install as an app* (its own window and Dock/taskbar icon; nothing cached), `--app` for an app window of Chrome/Edge/Brave/Chromium, and *Start with the computer* (`coworking-agents autostart on|off`): hidden at login with the tray icon, through each system's own login entry, no shell. The browser keeps working as before
 - Tray icon on Windows (PowerShell + Windows Forms: red dot, menu, balloons) and Linux (zenity icon and tooltip, or notify-send notices); on macOS a red count, today's spend, limits, who is working and tasks asking permission; system notifications when nobody has the office open, outside quiet hours

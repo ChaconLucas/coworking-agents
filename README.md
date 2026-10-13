@@ -211,6 +211,8 @@ The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *
 
 The office works in any browser. If you prefer an app:
 
+- **Create the app** (Personalise, or `npx coworking-agents install-app`): a *Coworking Agents* app made on your computer — free, no store, no signing — in Applications (macOS), the Start Menu and Desktop (Windows) or the applications menu (Linux). Opening it starts the office if needed and shows it in an app window. `uninstall-app` removes it.
+- **On the phone:** with `--phone`, add the phone panel to the home screen (Safari → Share → Add to Home Screen; Chrome → Add to Home screen). It opens full screen on the same Wi-Fi; the code is kept, and *Change the phone code* cuts every phone off.
 - **Install as an app** (Personalise, or Chrome/Edge's install icon): its own window, no tabs, an icon in the Dock or taskbar. Nothing is cached; it is the same live office.
 - **`npx coworking-agents --app`** opens it in an app window of Chrome, Edge, Brave or Chromium without installing anything.
 - **Start with the computer:** `npx coworking-agents autostart on` (or the switch in Personalise) starts it hidden at login with the tray icon; `autostart off` undoes it. It uses each system's own login entry (macOS LaunchAgent, Windows Startup folder, Linux XDG autostart) with the program and its arguments, never a shell line.

@@ -13,10 +13,16 @@ const LABEL = 'io.coworking-agents';
 const BIN = path.join(__dirname, '..', 'bin', 'coworking-agents.js');
 const ARGS = ['--no-open', '--menubar'];
 
+// node by its stable path (Homebrew's /opt/homebrew/bin/node survives upgrades; the versioned Cellar path does not)
+function stableNode() {
+  try { const r = require('child_process').spawnSync(process.platform === 'win32' ? 'where' : 'which', ['node'], { encoding: 'utf8' }); const p = r.status === 0 && r.stdout.split(/\r?\n/)[0].trim(); if (p && fs.existsSync(p)) return p; } catch {}
+  return process.execPath;
+}
 // the program to run at login, as a list (never a shell line)
 function command(mode) {
-  if (mode === 'source' || mode === 'global') return [process.execPath, BIN, ...ARGS];
-  const npx = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
+  const node = stableNode();
+  if (mode === 'source' || mode === 'global') return [node, BIN, ...ARGS];
+  const npx = path.join(path.dirname(node), process.platform === 'win32' ? 'npx.cmd' : 'npx');
   return [npx, '-y', 'coworking-agents@latest', ...ARGS];
 }
 const xml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

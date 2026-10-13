@@ -736,6 +736,14 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await post({}, { op: 'permit' })).status, 403, 'phone: POST needs the header');
     assert.strictEqual((await post({ 'X-Coworking': '1', Origin: 'http://evil.example' }, { op: 'permit' })).status, 403, 'phone: and its own origin');
     assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'delete', id: 'x' })).json()).reason, 'op', 'phone: only allow, reply, conclude, cancel and answer');
+    // home screen: the manifest and icons need no code; the code can be replaced, and the old one stops working
+    assert.strictEqual((await get('/manifest.webmanifest')).status, 200, 'phone manifest is public (no data)');
+    assert.strictEqual((await get('/icon-192.png')).status, 200);
+    const newUrl = ph.rotate(); assert.ok(!newUrl.includes(tok), 'a new code');
+    assert.strictEqual((await get('/api/m', ck)).status, 401, 'the old code no longer works');
+    const ck2 = { Cookie: 'cwp=' + newUrl.split('t=')[1] }; assert.strictEqual((await get('/api/m', ck2)).status, 200, 'the new one does');
+    const ph2 = await startPhone({ port: 0, demo: true, snapshot: () => ({ people: [] }), tasks, sendText: async () => ({ ok: true }), people: () => [], token: 'c'.repeat(32) });
+    assert.ok(ph2.url.endsWith('t=' + 'c'.repeat(32)), 'a kept code is reused'); ph2.close();
     // visits: own token in the path, read-only, nothing but the picture and counts, gone when ended
     const vi = ph.addVisit(60), vpath = vi.url.replace(base, '');
     assert.strictEqual((await get(vpath)).status, 302, 'visit: link redirects under itself');
@@ -812,6 +820,15 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(!lastArgs().join(' ').includes('Use pnpm here.'), 'not in another repo');
   assert.deepStrictEqual(tasks.list({ privacy: true }).settings.repoNotes, {}, 'hidden in private mode');
   tasks.op({ op: 'repoNote', dir: proj, text: '' }); assert.ok(!tasks.list().settings.repoNotes[proj], 'empty removes it');
+
+  // the app made on this computer: launcher quoted, entries quoted, an icon, and a full undo
+  { const ap = require('../src/appinstall'), evil = ["/Apps/O'Brien/node", '/x/$(rm -rf ~)/bin.js', '--app'];
+    const l = ap.macLauncher(evil, "/usr/bin:/x'y");
+    assert.ok(l.includes("exec '/Apps/O'\\''Brien/node' '/x/$(rm -rf ~)/bin.js' '--app'") && l.includes("export PATH='/usr/bin:/x'\\''y'"), 'macOS launcher: single-quoted, $( ) stays text: ' + l);
+    assert.ok(ap.desktopEntry(evil, '/i.png').includes('"/x/\\$(rm -rf ~)/bin.js"'), 'Linux entry quoted');
+    const ico = ap.icoFromPng(Buffer.from('89504e47', 'hex')); assert.deepStrictEqual([ico.readUInt16LE(2), ico.readUInt16LE(4), ico.readUInt32LE(18)], [1, 1, 22], 'ico header');
+    assert.deepStrictEqual(ap.appCommand('source').slice(-2), ['--app', '--menubar']);
+    if (process.platform !== 'win32') { const r = ap.install('source'); assert.ok(r.ok && ap.installed() && r.where.startsWith(os.homedir()), 'app created in your home: ' + r.where); ap.uninstall(); assert.ok(!ap.installed(), 'and removed'); } }
 
   // first-run choice: app or browser, only those two values
   tasks.op({ op: 'settings', appChoice: 'evil' }); assert.ok(!tasks.list().settings.appChoice, 'unknown choice ignored');

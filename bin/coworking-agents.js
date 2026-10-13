@@ -18,6 +18,7 @@ if (flag('-h') || flag('--help')) {
   --no-open   don't open the browser
   --private   hide session titles, paths and file names (screen sharing)
   --app       open in an app window (Chrome, Edge, Brave or Chromium) instead of a browser tab
+  install-app       create the Coworking Agents app on this computer (uninstall-app removes it)
   autostart on|off  start hidden with the computer, with the tray icon
   --menubar   show a menu bar icon with who needs you (macOS; also a switch in Personalise)
   --phone     also serve a small phone panel on your Wi-Fi (own token, QR code in the terminal; trusted networks only)
@@ -29,6 +30,9 @@ if (flag('-h') || flag('--help')) {
 }
 
 if (args[0] === 'mcp') { require('../src/mcp').serve(); return; }
+// the app: `coworking-agents install-app` / `uninstall-app` (made on this computer, free, no store)
+if (args[0] === 'install-app') { const r = require('../src/appinstall').install(require('../src/update').installMode()); console.log(`Created: ${r.where}\nOpen "Coworking Agents" like any app. Remove it with: coworking-agents uninstall-app`); return; }
+if (args[0] === 'uninstall-app') { require('../src/appinstall').uninstall(); console.log('Removed the Coworking Agents app.'); return; }
 // start with the computer: `coworking-agents autostart on | off | status`
 if (args[0] === 'autostart') {
   const a = require('../src/autostart');
@@ -91,20 +95,22 @@ async function reuse() {
     if (s) { console.log(`coworking-agents already running → ${s.base}/?t=${s.token}`); if (!flag('--no-open')) open(`${s.base}/?t=${s.token}`); return; }
   }
   // keep the same token across restarts so an open tab keeps working (file is 0600, only yours)
-  let token;
-  if (!demo && !privacy) { try { const prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (/^[0-9a-f]{48}$/.test(prev.token)) token = prev.token; } catch {} }
+  let token, phoneToken;
+  if (!demo && !privacy) { try { const prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (/^[0-9a-f]{48}$/.test(prev.token)) token = prev.token; if (/^[0-9a-f]{32}$/.test(prev.phoneToken || '')) phoneToken = prev.phoneToken; } catch {} }
+  // the phone code is kept with the office token (0600 file) so a home-screen icon keeps working; "new code" replaces it
+  const onPhoneToken = t => { phoneToken = t; try { const cur = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); fs.writeFileSync(STATE_FILE, JSON.stringify({ ...cur, phoneToken: t }), { mode: 0o600 }); } catch {} };
   let hq;
   const phone = flag('--phone');
   const menubar = flag('--menubar');
-  try { hq = await start({ port, privacy, demo, token, phone, menubar }); }
+  try { hq = await start({ port, privacy, demo, token, phone, menubar, phoneToken, onPhoneToken }); }
   catch (e) {
     if (e.code !== 'EADDRINUSE') throw e;
-    hq = await start({ port: 0, privacy, demo, token, phone, menubar }); // port taken by something else: use a free one
+    hq = await start({ port: 0, privacy, demo, token, phone, menubar, phoneToken, onPhoneToken }); // port taken by something else: use a free one
   }
   if (!demo && !privacy) {
     try {
       fs.mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 });
-      fs.writeFileSync(STATE_FILE, JSON.stringify({ pid: process.pid, base: hq.base, token: hq.token }), { mode: 0o600 });
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ pid: process.pid, base: hq.base, token: hq.token, phoneToken: hq.phone ? hq.phone.url.split('t=')[1] : phoneToken }), { mode: 0o600 });
       // the file stays on exit: it keeps the token for the next run (reuse() pings before trusting it)
       const bye = () => process.exit(0);
       process.on('SIGINT', bye); process.on('SIGTERM', bye);

@@ -696,6 +696,7 @@ async function renderPhone() {
   if (!d || !d.on) { body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.how)}</p><p><code>npx coworking-agents --phone</code></p><p class="note">${esc(P.warn)}</p>`; return; }
   body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.scan)}</p><canvas class="qr" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.url)}</code></p><p class="note">${esc(P.warn)}</p>`;
   drawQr(body.querySelector('canvas.qr'), d.qr);
+  body.insertAdjacentHTML('beforeend', `<h3>📲 ${esc(T.phone.homeTitle)}</h3><p class="note">${esc(T.phone.homeIos)}</p><p class="note">${esc(T.phone.homeAndroid)}</p><p class="note">${esc(T.phone.homeNote)}</p><p><button class="btn small ghost" data-phonerotate>🔄 ${esc(T.phone.rotate)}</button> <small class="note" data-phonerotate-msg></small></p>`);
   const V = T.visit; visitUntil = d.visit ? d.visit.until : 0;
   body.insertAdjacentHTML('beforeend', `<h3>👀 ${esc(V.title)}</h3><p class="note">${esc(V.sub)}</p>${d.visit
     ? `<p class="ok">${esc(V.live(new Date(d.visit.until).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' })))}</p><canvas class="qr qr-visit" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.visit.url)}</code></p><p><button class="btn small danger" data-visit="stop">✕ ${esc(V.stop)}</button></p>`
@@ -707,6 +708,11 @@ function drawQr(c, qr) {
   c.width = c.height = (n + q * 2) * s; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#000';
   qr.forEach((row, r) => [...row].forEach((x, k) => { if (x === '1') g.fillRect((k + q) * s, (r + q) * s, s, s); }));
 }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-phonerotate]'); if (!b || !confirm(T.phone.rotateSure)) return;
+  b.disabled = true; const r = await fetch('api/phone-rotate', { method: 'POST', headers: { 'X-Coworking': '1' } }).then(x => x.json()).catch(() => ({ ok: false }));
+  if (r.ok) renderPhone(); else b.disabled = false;
+});
 // while a visit is open, this page sends a picture of the office drawn without names every 5 seconds
 let visitUntil = 0;
 document.addEventListener('click', async e => {

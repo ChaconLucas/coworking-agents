@@ -10,6 +10,8 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DIR = path.join(__dirname, '..', 'public', 'phone');
+// what a phone needs to put the panel on its home screen: no data in any of them, so no code needed
+const PUBLIC = { '/manifest.webmanifest': ['phone.webmanifest', 'application/manifest+json'], '/icon-192.png': ['../icon-192.png', 'image/png'], '/icon-512.png': ['../icon-512.png', 'image/png'], '/apple-touch-icon.png': ['../apple-touch-icon.png', 'image/png'] };
 const FILES = { '/': ['index.html', 'text/html; charset=utf-8'], '/i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], '/phone.js': ['phone.js', 'text/javascript; charset=utf-8'], '/phone.css': ['phone.css', 'text/css; charset=utf-8'] };
 const OPS = new Set(['permit', 'reply', 'conclude', 'cancel']);
 // visits: a read-only link that expires, showing only a picture of the office (drawn without names) and how many are working
@@ -38,10 +40,10 @@ function view({ snapshot, tasks, privacy }) {
   return { now: Date.now(), privacy, people, tasks: list };
 }
 
-function startPhone({ port = 4778, privacy = false, demo = false, snapshot, tasks, sendText, people }) {
+function startPhone({ port = 4778, privacy = false, demo = false, snapshot, tasks, sendText, people, token: kept, onToken }) {
   const ip = lanIp();
   if (!ip) return Promise.resolve({ ok: false, reason: 'nolan' });
-  const token = crypto.randomBytes(16).toString('hex');
+  let token = /^[0-9a-f]{32}$/.test(kept || '') ? kept : crypto.randomBytes(16).toString('hex'); // kept across restarts so the home-screen icon keeps working
   return new Promise((resolve, reject) => {
     let host = '';
     const server = http.createServer((req, res) => {
@@ -62,9 +64,10 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
           if (VISIT_FILES[f]) { const [file, type] = VISIT_FILES[f]; return fs.readFile(path.join(DIR, file), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
           return send(res, 404, 'text/plain', 'not found');
         }
+        if (PUBLIC[url.pathname] && req.method === 'GET') { const [f, type] = PUBLIC[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
         if (url.pathname === '/' && url.searchParams.has('t')) {
           if (!same(url.searchParams.get('t'), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code again.');
-          res.writeHead(302, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' }); return res.end();
+          res.writeHead(302, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/${kept ? '; Max-Age=31536000' : ''}`, Location: '/' }); return res.end();
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
         if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
@@ -96,6 +99,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
     server.listen(port, ip, () => {
       host = `${ip}:${server.address().port}`;
       resolve({ ok: true, url: `http://${host}/?t=${token}`, host, close: () => { visits.clear(); server.close(); },
+        rotate: () => { token = crypto.randomBytes(16).toString('hex'); if (onToken) onToken(token); return `http://${host}/?t=${token}`; }, // every phone has to scan again
         addVisit: minutes => { const t = crypto.randomBytes(16).toString('hex'), until = Date.now() + Math.min(240, Math.max(5, Number(minutes) || 60)) * 60000; visits.set(t, { until }); return { url: `http://${host}/v/${t}`, until }; },
         endVisits: () => { visits.clear(); frame = null; },
         visiting: () => [...visits.values()].some(v => v.until > Date.now()),
