@@ -184,6 +184,7 @@ Open **Tasks** and describe the work, pick a folder, an agent (Claude Code, Code
 
 - **Permissions mid-run:** when the agent wants a tool it may not use (Claude) or to step outside its sandbox (Codex), the run pauses and the office asks: *Allow*, *Always allow* (for that task) or *Deny*, on the card, in the task and as a 🔔 notice. **Answer** its questions; it resumes the same session. **Retry**, start a **new session with a summary**, or **hand off** to the other agent with the decisions, tests and open items.
 - **Review** everything since the task started: commits, staged and unstaged changes and new files, plus your test command's output (filtered to the failing lines and the tail).
+- **Automatic review** (opt-in in the settings): a task that finishes with changes gets a read-only reviewer with the same AI (Claude in plan mode, Codex in a read-only sandbox; edits are refused automatically); the verdict, problems with file:line and missing tests show on the original task.
 - **Templates:** save a request you repeat (folder, agent, profile, role, test command) and fire it again with one click.
 - **Queue:** priority, "after task X" dependencies, how many agents run at once and how many attempts a task gets.
 - **Model and effort:** Claude `haiku`/`sonnet`/`opus` with efforts low → max; Codex models and efforts from Codex's own model list. *Save*, *More capacity*, *Apply recommendation* or pick by hand. A change made while a step runs is shown as **pending** and marked **applied** when the next step starts.

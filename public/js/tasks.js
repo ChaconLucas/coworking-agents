@@ -213,6 +213,7 @@ function settingsHtml() {
     <label>${esc(X.parallel)}<input type="number" min="1" max="6" value="${Number(st.maxParallel) || 2}" data-tset="maxParallel"></label>
     <label>${esc(X.maxAttempts)}<input type="number" min="1" max="10" value="${Number(st.maxAttempts) || 3}" data-tset="maxAttempts"></label></div>
     <label class="tchk"><input type="checkbox" data-tset="autoApply" ${st.autoApply ? 'checked' : ''}> ${esc(X.autoApply)}</label>
+    <label class="tchk"><input type="checkbox" data-tset="autoReview" ${st.autoReview ? 'checked' : ''}> ${esc(X.autoReview)}</label>
     <div class="trow"><label>${esc(X.autoMax)}<select data-tset="autoMax">${['eco', 'bal', 'deep'].map(k => `<option value="${k}" ${st.autoMax === k ? 'selected' : ''}>${esc(X.profiles[k])}</option>`).join('')}</select></label>
     <label>${esc(X.autoPerTask)}<input type="number" min="0" max="5" value="${Number(st.autoPerTask) || 0}" data-tset="autoPerTask"></label></div><p class="note">${esc(X.autoNote)}</p></details>`;
 }
@@ -273,6 +274,8 @@ function renderTaskDetail(body) {
     ${askPermHtml(t)}${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}
     <label class="tchk"><input type="checkbox" data-tcfg="lean" ${t.lean ? 'checked' : ''}> ${esc(X.lean)}</label>
     ${t.result ? `<pre class="tresult">${esc(t.result)}</pre>` : ''}
+    ${t.review ? `<div class="treview"><b>🔎 ${esc(X.reviewTitle)}</b> · <a href="#" data-popen="${esc(t.review.id)}">${esc(X.openTask)}</a>${t.review.text ? `<pre>${esc(t.review.text)}</pre>` : `<p class="note">${esc(X.reviewRunning)}</p>`}</div>` : ''}
+    ${t.reviewOf ? `<p class="note">🔎 ${esc(X.reviewOfNote)} · <a href="#" data-popen="${esc(t.reviewOf)}">${esc(X.openTask)}</a></p>` : ''}
     ${t.tests ? `<p class="${t.tests.code === 0 ? 'ok' : 'warn'}">${esc(X.tests(t.tests.code))}</p>` : ''}
     ${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}${t.warn.rec ? ` <button class="btn small" data-tact="applyWarn">${esc(T.notices.apply)}: ${esc(X.profiles[t.warn.rec.profile])}</button>` : ''}</p>` : ''}
     ${t.denials && t.denials.length ? `<p><b>${esc(X.denied)}:</b> ${t.denials.map(d => `<code>${esc(d.tool)}</code> <small>${esc(d.what)}</small>`).join(', ')}</p><p><button class="btn" data-tact="approve">✔ ${esc(X.approve)}</button></p>` : ''}

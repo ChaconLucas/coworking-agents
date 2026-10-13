@@ -491,6 +491,15 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(!JSON.stringify(tasks.list({ privacy: true }).settings.templates).includes('run the tests'), 'templates hidden in private mode');
   tasks.op({ op: 'untemplate', name: 'tests' }); assert.strictEqual(tasks.list().settings.templates.length, 0);
 
+  // automatic review: finished work with changes gets a read-only reviewer; the verdict lands on the original task
+  tasks.op({ op: 'settings', autoReview: true }); mode('ok');
+  const tr = tasks.op({ op: 'create', dir: proj, desc: 'change something', agent: 'claude' }).task; await tasks._idle();
+  const rv = tasks.list().tasks.find(x => x.reviewOf === tr.id);
+  assert.ok(rv && rv.readOnly && rv.perm === 'plan' && rv.role === 'reviewer' && rv.agent === 'claude', 'a read-only reviewer was created with the same agent');
+  assert.ok(T(tr.id).review && T(tr.id).review.text === 'done' && T(tr.id).events.some(e => e.kind === 'review'), 'its verdict is on the original task');
+  assert.ok(!tasks.list().tasks.some(x => x.reviewOf === rv.id), 'a review is never reviewed');
+  tasks.op({ op: 'settings', autoReview: false });
+
   // failure, then a clean retry
   mode('fail'); let t2 = tasks.op({ op: 'create', dir: proj, desc: 'break', agent: 'claude' }).task; await tasks._idle();
   assert.strictEqual(T(t2.id).state, 'failed');

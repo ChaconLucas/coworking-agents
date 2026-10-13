@@ -172,7 +172,7 @@ function create(m) {
     perm: ['acceptEdits', 'plan', 'default'].includes(m.perm) ? m.perm : 'acceptEdits',
     priority: Math.min(3, Math.max(1, Number(m.priority) || 2)), budget: Math.max(0, Number(m.budget) || 0),
     testCmd: s(m.testCmd, 300), worktree: !!m.worktree && !resume, dependsOn: tasks.some(x => x.id === m.dependsOn) ? m.dependsOn : '',
-    from: s(m.from, 12), state: 'pending', reason: '', created: now(), updated: now(), sessionId: resume, adopted: !!resume, compactOnly: !!(m.compact && resume), cwd: dir, baseCommit: '', pid: 0,
+    from: s(m.from, 12), reviewOf: tasks.some(x => x.id === m.reviewOf) ? m.reviewOf : '', readOnly: !!m.readOnly, state: 'pending', reason: '', created: now(), updated: now(), sessionId: resume, adopted: !!resume, compactOnly: !!(m.compact && resume), cwd: dir, baseCommit: '', pid: 0,
     cost: 0, costUnknown: false, byModel: {}, costByDay: {}, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     attempts: 0, turns: 0, subagents: 0, result: '', files: [], denials: [], allowed: [], configLog: [], running: null,
   };
@@ -199,6 +199,7 @@ function op(m = {}) {
     if (m.maxParallel !== undefined) settings.maxParallel = Math.min(6, Math.max(1, Number(m.maxParallel) || 2));
     if (m.maxAttempts !== undefined) settings.maxAttempts = Math.min(10, Math.max(1, Number(m.maxAttempts) || 3));
     if (m.autoApply !== undefined) settings.autoApply = !!m.autoApply;
+    if (m.autoReview !== undefined) settings.autoReview = !!m.autoReview;
     if (ORDER.includes(m.autoMax)) settings.autoMax = m.autoMax;
     if (m.autoPerTask !== undefined) settings.autoPerTask = Math.min(5, Math.max(0, Number(m.autoPerTask) || 0));
     save(); tick(); return { ok: true, settings };
@@ -324,6 +325,8 @@ function ask(t, tool, what, answer) {
 function control(t, c, j) {
   const r = j.request || {}, send = response => { try { c.stdin.write(JSON.stringify({ type: 'control_response', response }) + '\n'); } catch {} };
   if (r.subtype !== 'can_use_tool') return send({ subtype: 'error', request_id: j.request_id, error: 'unsupported' });
+  const deny = message => send({ subtype: 'success', request_id: j.request_id, response: { behavior: 'deny', message } });
+  if (t.readOnly && /^(ExitPlanMode|Write|Edit|MultiEdit|NotebookEdit)$/.test(r.tool_name)) return deny('Review only: do not change anything, answer with your findings.');
   ask(t, s(r.tool_name, 60), r.description || toolWhat(r.input), allow => send({ subtype: 'success', request_id: j.request_id,
     response: allow ? { behavior: 'allow', updatedInput: r.input || {} } : { behavior: 'deny', message: 'The user denied this from the office.' } }));
 }
@@ -336,7 +339,7 @@ function runCodex(t, prompt, sys) {
   const call = (method, params) => { write({ id: ++rid, method, params }); return rid; };
   const end = () => { if (over) return; over = true; try { c.stdin.end(); } catch {} setTimeout(() => { if (procs.get(t.id) === c) c.kill('SIGTERM'); }, 3000).unref(); };
   const fail = msg => { t.failedTurn = true; log(t, { kind: 'error', text: s(msg, 400) }); end(); };
-  const policy = { cwd: t.cwd, approvalPolicy: 'on-request', sandbox: 'workspace-write', ...(t.model ? { model: t.model } : {}), ...(sys ? { developerInstructions: sys } : {}) };
+  const policy = { cwd: t.cwd, approvalPolicy: 'on-request', sandbox: t.readOnly ? 'read-only' : 'workspace-write', ...(t.model ? { model: t.model } : {}), ...(sys ? { developerInstructions: sys } : {}) };
   const ids = { init: call('initialize', { clientInfo: { name: 'coworking-agents', version: require('../package.json').version } }) };
   const seen = new Set();
   c.stdin.on('error', () => {});
@@ -394,6 +397,7 @@ function codexRequest(t, j, write) {
   const p = j.params || {}, m = j.method, reply = result => write({ id: j.id, result });
   const v1 = m === 'execCommandApproval' || m === 'applyPatchApproval', decide = (allow, always) => reply({ decision: v1 ? (allow ? (always ? 'approved_for_session' : 'approved') : 'denied') : allow ? (always ? 'acceptForSession' : 'accept') : 'decline' });
   if (m === 'item/commandExecution/requestApproval' || m === 'execCommandApproval') return ask(t, 'command', [Array.isArray(p.command) ? p.command.join(' ') : p.command, p.reason].filter(Boolean).join(' — '), decide);
+  if ((m === 'item/fileChange/requestApproval' || m === 'applyPatchApproval') && t.readOnly) return decide(false, false);
   if (m === 'item/fileChange/requestApproval' || m === 'applyPatchApproval') return ask(t, 'file_change', p.reason || p.grantRoot || 'file changes', decide);
   write({ id: j.id, error: { code: -32601, message: 'not supported by coworking-agents' } }); // anything else is refused, never approved silently
 }
@@ -478,6 +482,18 @@ async function finish(t, code, err) {
   }
   t.state = 'blocked'; t.reason = t.denials.length ? 'approval' : /\?\s*$/.test(t.result) ? 'question' : 'review';
   done(t);
+  reviewFlow(t);
+}
+// automatic review: finished work with changes gets a read-only reviewer (same agent); its verdict lands on the original task
+function reviewFlow(t) {
+  if (t.reviewOf) {
+    const o = tasks.find(x => x.id === t.reviewOf); if (!o) return;
+    o.review = { id: t.id, text: s(t.result, 4000), at: now(), ok: !t.failedTurn }; log(o, { kind: 'review', text: s(t.result, 2000) }); save(); return;
+  }
+  if (!settings.autoReview || t.reason !== 'review' || !t.files.length || (t.review && t.review.files === t.files.join())) return;
+  const r = create({ desc: `Review the work of the task "${t.title}" in ${t.cwd}: everything changed since commit ${t.baseCommit || 'HEAD'} (git diff ${t.baseCommit || 'HEAD'}, plus new files: ${t.files.slice(0, 30).join(', ')}).\nThe request was: ${s(t.desc, 1500)}\nDo not edit anything. Answer with: a one-line verdict (OK or NEEDS CHANGES), then concrete problems with file:line, risks and missing tests.`,
+    title: '🔎 ' + t.title, dir: t.cwd, agent: t.agent, profile: 'bal', role: 'reviewer', perm: 'plan', readOnly: true, priority: t.priority, from: t.id, reviewOf: t.id });
+  if (r.ok) { t.review = { id: r.task.id, pending: true, files: t.files.join(), at: now() }; log(t, { kind: 'review-asked', text: r.task.id }); save(); }
 }
 function done(t) { log(t, { kind: 'state', state: t.state, reason: t.reason }); save(); tick(); }
 

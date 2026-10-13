@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Automatic review (opt-in): when a task finishes with changes, a read-only reviewer with the same AI reads the diff and its verdict shows on the original task
 - Task templates: save a request you repeat with its folder and settings; fill the form or create and run with one click
 - The new-task form stays open and keeps what you typed across the periodic refresh
 - Daily report to paste: cost of the day's sessions, what each agent did, what is still open (tasks and agents waiting on you), as Markdown or Slack markup
