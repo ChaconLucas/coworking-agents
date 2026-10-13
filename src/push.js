@@ -99,14 +99,21 @@ const count = () => load().subs.length;
 // the link the phone opens to turn notices on: the key and the way back travel in the #fragment, never sent to GitHub
 const link = back => `${PAGE}#k=${publicKey()}&b=${encodeURIComponent(back)}`;
 
-// what is new since the last look: someone needing you, a task asking permission, a task that finished or got stuck
+// what is new since the last look: someone needing you, a task asking permission, a task that finished or got stuck, a limit filling up
 let seen = null;
-function changes(people, tasks, { pt = false } = {}) {
+function changes(people, tasks, { pt = false, limits = null } = {}) {
   const now = new Map(), need = people.filter(p => !p.leaving && ['needs_you', 'waiting'].includes(p.state)), asks = tasks.filter(t => t.ask);
   for (const p of need) now.set('p:' + p.id, { title: `${p.name} ${pt ? 'precisa de você' : 'needs you'}`, body: p.title || '', tag: 'p:' + p.id });
   for (const t of asks) now.set(`a:${t.id}:${t.ask.tool}:${t.ask.what || ''}`, { title: `🔐 ${t.title}`, body: pt ? `Pede permissão: ${t.ask.tool}` : `Asks permission: ${t.ask.tool}`, tag: 'a:' + t.id });
   for (const t of tasks) if (['done', 'failed', 'blocked'].includes(t.state)) now.set(`t:${t.id}:${t.state}`, { title: `${t.state === 'done' ? '✓' : '⚠'} ${t.title}`,
     body: pt ? { done: 'Tarefa concluída', failed: 'A tarefa falhou', blocked: 'A tarefa precisa de você' }[t.state] : { done: 'Task done', failed: 'The task failed', blocked: 'The task needs you' }[t.state], tag: 't:' + t.id });
+  // a limit crossing 80% or 95%: one notice per level (it shows on the watch too), again after it resets
+  const working = people.filter(p => !p.leaving && !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length;
+  for (const [ai, l] of Object.entries(limits || {})) for (const [w, v] of [['5h', l && l.primary], [pt ? 'semana' : 'week', l && l.secondary]]) {
+    const pct = v ? Math.round(v.usedPercent) : 0, level = pct >= 95 ? 95 : pct >= 80 ? 80 : 0; if (!level) continue;
+    const cells = Math.round(Math.min(100, pct) / 10), name = ai === 'claude' ? 'Claude' : ai === 'codex' ? 'Codex' : ai;
+    now.set(`l:${ai}:${w}:${level}`, { title: `⚠ ${name} ${w}: ${pct}%`, body: `${'▰'.repeat(cells)}${'▱'.repeat(10 - cells)} · ${pt ? `${working} trabalhando · ${need.length} precisa${need.length === 1 ? '' : 'm'} de você` : `${working} working · ${need.length} need${need.length === 1 ? 's' : ''} you`}`, tag: `l:${ai}:${w}` });
+  }
   const fresh = seen ? [...now].filter(([k]) => !seen.has(k)).map(([, m]) => m) : []; // nothing for what was already true at start
   seen = new Set(now.keys());
   return { fresh: fresh.slice(0, 3), badge: need.length + asks.length };

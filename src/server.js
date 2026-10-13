@@ -104,7 +104,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   const pushTimer = setInterval(() => {
     if (demo || !push.count()) return;
     try {
-      const st = tasks.list({ privacy }), c = push.changes(snapshot({ privacy }).people || [], st.tasks, { pt: ptLang });
+      const st = tasks.list({ privacy }), sn = snapshot({ privacy }), c = push.changes(sn.people || [], st.tasks, { pt: ptLang, limits: sn.limits });
       if (quietAt(st.settings.quiet)) return;
       for (const m of c.fresh) push.send({ ...m, badge: c.badge, url: phoneInfo ? phoneInfo.url : '' }).catch(() => {});
     } catch {}

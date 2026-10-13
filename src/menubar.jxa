@@ -49,7 +49,10 @@ function run(argv) {
     else staleSince = 0;
     const key = alive ? JSON.stringify([s.work, s.need, s.list, s.url, s.usd, s.limits, s.asks, s.workers]) : 'closed';
     if (key === last) return; last = key;
-    const title = !alive ? ' –' : s.need ? ` ❗${s.need}  ●${s.work}` : ` ●${s.work}`;
+    // the fullest limit as a small bar next to the counts (5 cells), so token use is visible without opening anything
+    const peak = alive ? Math.max(-1, ...(s.limits || []).map(l => l.pct)) : -1, cells = Math.round(Math.min(100, Math.max(0, peak)) / 20);
+    const bar = peak >= 0 ? `  ${'▰'.repeat(cells)}${'▱'.repeat(5 - cells)} ${peak}%` : '';
+    const title = !alive ? ' –' : (s.need ? ` ❗${s.need}  ●${s.work}` : ` ●${s.work}`) + bar;
     if (alive && s.need) { // red when someone needs you
       const attrs = $.NSMutableDictionary.alloc.init;
       attrs.setObjectForKey($.NSColor.systemRedColor, $.NSForegroundColorAttributeName);

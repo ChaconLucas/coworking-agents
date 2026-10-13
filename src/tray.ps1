@@ -81,7 +81,8 @@ $timer.add_Tick({
   } else {
     $script:url = [string]$s.url
     $tray.Icon = if ($s.need -gt 0) { $iconRed } else { $iconOk }
-    $tray.Text = Short ("coworking-agents · ●$($s.work)" + $(if ($s.need -gt 0) { " · ❗$($s.need)" } else { '' })) 63
+    $peak = (@($s.limits) | Where-Object { $_ } | Measure-Object -Property pct -Maximum).Maximum
+    $tray.Text = Short ("●$($s.work)" + $(if ($s.need -gt 0) { " · ❗$($s.need)" } else { '' }) + $(if ($null -ne $peak) { " · " + ('▰' * [math]::Round([math]::Min(100, $peak) / 20)) + ('▱' * (5 - [math]::Round([math]::Min(100, $peak) / 20))) + " $peak%" } else { '' }) + " · coworking-agents") 63
     Add-Item ("●$($s.work) · ❗$($s.need)" + $(if ($s.usd) { " · $($L.today) US$ " + ('{0:N2}' -f [double]$s.usd) } else { '' })) '' $false
     foreach ($l in @($s.limits)) { Add-Item "$($l.label): $($l.pct)%" '' $false }
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))

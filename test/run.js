@@ -745,7 +745,9 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.deepStrictEqual(push.changes(pp, tk, {}).fresh, [], 'push: nothing for what was true at start');
     const c = push.changes([{ ...pp[0], state: 'needs_you' }], [{ ...tk[0], state: 'done' }], { pt: true });
     assert.deepStrictEqual([c.fresh.map(m => m.title), c.badge], [['Ana precisa de você', '✓ Build'], 1], 'push: someone needing you and a finished task');
-    assert.deepStrictEqual(push.changes([{ ...pp[0], state: 'needs_you' }], [{ ...tk[0], state: 'done' }], {}).fresh, [], 'push: once each'); }
+    assert.deepStrictEqual(push.changes([{ ...pp[0], state: 'needs_you' }], [{ ...tk[0], state: 'done' }], {}).fresh, [], 'push: once each');
+    const lim = pct => ({ claude: { primary: { usedPercent: pct } } }), at = pct => push.changes(pp, tk, { pt: true, limits: lim(pct) }).fresh.map(m => m.title);
+    assert.deepStrictEqual([at(70), at(83), at(85), at(96), at(10), at(81)], [[], ['⚠ Claude 5h: 83%'], [], ['⚠ Claude 5h: 96%'], [], ['⚠ Claude 5h: 81%']], 'push: a limit at 80% and 95%, again after it resets'); }
   push.clear(); assert.strictEqual(push.count(), 0);
   // the notices page on GitHub Pages: its copies match the app's, no outside address, and the tap opens only the local panel
   { const { COPIES, out, root: pr } = require('../scripts/push-page');
