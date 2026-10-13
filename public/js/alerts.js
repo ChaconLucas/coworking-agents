@@ -1,7 +1,8 @@
 'use strict';
 // ---------------- alerts: rate limits filling up, contexts close to compaction, and the compact action ----------------
 const CTX_WARN = .75;               // from here a "compact" button shows over the agent
-const LIMIT_STEPS = [80, 95];       // notify once per window when usage crosses these
+const LIMIT_STEPS = [80, 95];
+const STALL_MS = 10 * 60000;   // working, but nothing new in its log for this long       // notify once per window when usage crosses these
 const WAIT_NUDGE = 5 * 60000;       // an agent waiting on you this long gets one reminder
 const waitStart = new Map();        // id → { state, at }: when it started waiting
 const alerted = new Set();
@@ -64,6 +65,16 @@ function checkAlerts() {
     if (pct >= .85 && !alerted.has(key)) {
       alerted.add(key);
       if (!firstAlertPass) { toast(`<b>${esc(A.context(Math.round(pct * 100)))}</b>${esc(p.name)} · ${esc(p.title || '')}`, 'warn'); notifyOS(A.context(Math.round(pct * 100)), p.name); }
+    }
+  }
+  // stalled: says it is working but wrote nothing to its log for a while (stuck, looping on a slow command, waiting on the network)
+  for (const p of data.people) {
+    if (p.leaving || !p.lastActivity || ['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)) continue;
+    const quiet = data.now - p.lastActivity, key = `stall:${p.id}:${p.lastActivity}`;
+    if (quiet >= STALL_MS && !alerted.has(key)) {
+      alerted.add(key); const mins = Math.round(quiet / 60000), what = p.doing ? `${p.doing.tool}${p.doing.what ? ' ' + p.doing.what : ''}` : '';
+      if (typeof pushNotice === 'function') pushNotice('stall:' + p.id, 'warn', A.stall(p.name, mins), A.stallWhy(what), { agent: p.id });
+      if (!firstAlertPass) notifyOS(A.stall(p.name, mins), A.stallWhy(what));
     }
   }
   // waiting on you for a while (a question or a command to approve): one reminder per wait

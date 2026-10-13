@@ -267,6 +267,10 @@ sleepK.kill();
   assert.ok(md.includes('1.50') && md.includes('Build — ') && md.includes('ada (docs)'), 'cost, open tasks and agents waiting go into the report');
   assert.ok(!sl.includes('##') && !sl.includes('**') && sl.includes('• '), 'Slack gets its own markup');
 
+  // stalled: working with nothing new in its log for 10 minutes gives one notice
+  run(`notices = []; data = { now: Date.now(), limits: {}, people: [{ id: 's1', name: 'ada', state: 'thinking', lastActivity: Date.now() - 11 * 60000, doing: { tool: 'Bash', what: 'npm test' } }, { id: 's2', name: 'bob', state: 'thinking', lastActivity: Date.now() - 60000 }] }; checkAlerts(); checkAlerts()`);
+  assert.deepStrictEqual(run("JSON.stringify(notices.filter(n => n.key.startsWith('stall:')).map(n => [n.key, n.n]))"), JSON.stringify([['stall:s1', 1]]), 'a quiet worker is flagged once, an active one is not');
+
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
   run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
     data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);

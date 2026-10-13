@@ -113,6 +113,7 @@ function person(s, now) {
     permissionMode: st ? st.permissionMode || '' : '',
     usage: st ? { ...st.usage } : null,
     cost: st && !(st.costUnpriced && !st.cost) ? { usd: st.cost, partial: !!st.costUnpriced } : null,
+    lastActivity: st ? st.lastTs || 0 : 0, // the last line the agent wrote to its log
     lastPrompt: st ? st.lastPrompt || '' : '', lastPromptAt: st ? st.lastPromptAt || 0 : 0,
     lastReply: st ? st.lastReply || '' : '', lastReplyLong: st ? st.lastReplyLong || '' : '', lastReplyAt: st ? st.lastReplyAt || 0 : 0,
     today: st ? todayStats(st, now) : null,
