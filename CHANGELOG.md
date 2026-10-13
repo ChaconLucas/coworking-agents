@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-10-13
 - Tasks redesigned: list grouped by waiting on you / running / done with coloured state pills; detail with a clear header, alerts on top, result and review on the left, cost and model on the right, one primary action, quiet secondary ones and a red cancel, activity folded
 - Backup: export and import templates, queue and economy settings, cost goal, decor, outfits and progress as one JSON file (Personalise tab)
 - Achievements: First try (tasks done without a retry), Approved (reviews that said OK), Penny-wise (weeks under the cost goal)
