@@ -95,6 +95,8 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     const st = tasks.list({ privacy }), q = st.settings.quiet;
     return { usd: usdToday, notify: clients.size === 0 && !quietAt(q), asks: st.tasks.filter(t => t.ask).map(t => ({ id: t.id, title: t.title, tool: t.ask.tool })), needsYou: ptLang ? 'precisa de você' : 'needs you', weekLabel: ptLang ? 'semana' : 'week' };
   };
+  // spend for the phone's Usage tab: today, this month and the month's goal (estimates from the logs)
+  const phoneUsage = () => { if (demo) return { today: 12.4, month: 318.9, goal: 400 }; mbExtra(); let month = 0; try { const u = usage(), k = new Date().toISOString().slice(0, 7); for (const [d, v] of Object.entries(u.days || {})) if (d.startsWith(k)) month += v.usd || 0; } catch {} return { today: usdToday, month, goal: Number(tasks.list().settings.monthGoal) || 0 }; };
   const mbTimer = setInterval(() => { if (mb.running()) try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }, 2000); mbTimer.unref();
 
   const server = http.createServer((req, res) => {
@@ -376,7 +378,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       const base = `http://${host === '0.0.0.0' ? 'localhost' : host}:${server.address().port}`; baseUrl = base;
       if (!demo && (menubar || tasks.list().settings.menubar)) { mb.start({ base, token }); try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }
       if (phone) { // opt-in: a separate, restricted server on the LAN address (see src/phone.js)
-        try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
+        try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken, extra: phoneUsage }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
         catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; }
       }
       resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); clearInterval(mbTimer); mb.stop(); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });

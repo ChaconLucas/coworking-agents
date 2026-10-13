@@ -721,16 +721,20 @@ document.addEventListener('click', async e => {
   const r = await fetch('api/visit?op=' + b.dataset.visit + '&min=60', { method: 'POST', headers: { 'X-Coworking': '1' } }).then(x => x.json()).catch(() => ({ ok: false }));
   visitUntil = r.ok && r.until ? r.until : 0; if (visitUntil) sendVisitFrame(); renderPhone();
 });
+let phoneOn = false, frameWanted = false, lastVisitFrame = 0;
 function sendVisitFrame() {
-  if (!visitUntil || Date.now() > visitUntil || typeof drawScene !== 'function' || !data) return;
+  const visit = visitUntil && Date.now() < visitUntil;
+  if ((!visit && !phoneOn) || typeof drawScene !== 'function' || !data) return;
+  if (!visit && !frameWanted && Date.now() - lastVisitFrame < 30000) return; // nobody looking: one picture every 30 s keeps the phone's tab fresh
+  lastVisitFrame = Date.now();
   const cv = document.getElementById('cv'); if (!cv) return;
   snapshotMode = true;
   try { drawScene(performance.now(), 0); } finally { snapshotMode = false; }
   const ppl = data.people || [], w = ppl.filter(p => !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length, n = ppl.filter(p => ['needs_you', 'waiting'].includes(p.state)).length;
-  cv.toBlob(blob => { if (!blob) return; fetch(`api/visit?op=frame&w=${w}&n=${n}&t=${ppl.length}`, { method: 'POST', headers: { 'Content-Type': 'image/png', 'X-Coworking': '1' }, body: blob }).then(x => x.json()).then(r => { if (r && r.active === false) visitUntil = 0; }).catch(() => {}); }, 'image/png');
+  cv.toBlob(blob => { if (!blob) return; fetch(`api/visit?op=frame&w=${w}&n=${n}&t=${ppl.length}`, { method: 'POST', headers: { 'Content-Type': 'image/png', 'X-Coworking': '1' }, body: blob }).then(x => x.json()).then(r => { frameWanted = !!(r && r.active); if (r && r.active === false && visitUntil && Date.now() > visitUntil) visitUntil = 0; }).catch(() => {}); }, 'image/png');
 }
 setInterval(sendVisitFrame, 5000);
-api('api/phone').then(d => { if (d && d.visit) visitUntil = d.visit.until; }).catch(() => {});
+api('api/phone').then(d => { if (d && d.visit) visitUntil = d.visit.until; phoneOn = !!(d && d.on); }).catch(() => {});
 // ?task=<id> (from the tray icon): open that task, on its permission question
 { const want = new URLSearchParams(location.search).get('task'); if (want) setTimeout(async () => { openReport('tasks'); await pollTasks(); taskSel = want; loadTask(want); }, 1200); }
 // the tray icon follows the quiet hours set in this browser

@@ -736,6 +736,13 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await post({}, { op: 'permit' })).status, 403, 'phone: POST needs the header');
     assert.strictEqual((await post({ 'X-Coworking': '1', Origin: 'http://evil.example' }, { op: 'permit' })).status, 403, 'phone: and its own origin');
     assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'delete', id: 'x' })).json()).reason, 'op', 'phone: only allow, reply, conclude, cancel and answer');
+    // a task from the phone: only in a folder already in use, never anywhere else
+    assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'create', dir: '/etc', text: 'x' })).json()).reason, 'nodir', 'phone: no task outside the folders in use');
+    const known = tasks.list().tasks.find(t => t.dir).dir;
+    const cr = await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'create', dir: known, text: 'from the phone', agent: 'claude' })).json();
+    assert.ok(cr.ok && cr.task.worktree && cr.task.from === 'phone', 'phone task created, in its own worktree');
+    tasks.op({ op: 'cancel', id: cr.task.id }); await tasks._idle();
+    const vw = await (await get('/api/m', ck)).json(); assert.ok(Array.isArray(vw.folders) && vw.folders.includes(known) && Array.isArray(vw.limits), 'phone view: folders and limits');
     // home screen: the manifest and icons need no code; the code can be replaced, and the old one stops working
     assert.strictEqual((await get('/manifest.webmanifest')).status, 200, 'phone manifest is public (no data)');
     assert.strictEqual((await get('/icon-192.png')).status, 200);

@@ -13,10 +13,10 @@ const DIR = path.join(__dirname, '..', 'public', 'phone');
 // what a phone needs to put the panel on its home screen: no data in any of them, so no code needed
 const PUBLIC = { '/manifest.webmanifest': ['phone.webmanifest', 'application/manifest+json'], '/icon-192.png': ['../icon-192.png', 'image/png'], '/icon-512.png': ['../icon-512.png', 'image/png'], '/apple-touch-icon.png': ['../apple-touch-icon.png', 'image/png'] };
 const FILES = { '/': ['index.html', 'text/html; charset=utf-8'], '/i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], '/phone.js': ['phone.js', 'text/javascript; charset=utf-8'], '/phone.css': ['phone.css', 'text/css; charset=utf-8'] };
-const OPS = new Set(['permit', 'reply', 'conclude', 'cancel']);
+const OPS = new Set(['permit', 'reply', 'conclude', 'cancel', 'retry']);
 // visits: a read-only link that expires, showing only a picture of the office (drawn without names) and how many are working
 const VISIT_FILES = { '': ['visit.html', 'text/html; charset=utf-8'], 'i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], 'visit.js': ['visit.js', 'text/javascript; charset=utf-8'], 'phone.css': ['phone.css', 'text/css; charset=utf-8'] };
-const visits = new Map(); let frame = null, frameAt = 0, counts = { working: 0, waiting: 0, total: 0 };
+const visits = new Map(); let frame = null, frameAt = 0, counts = { working: 0, waiting: 0, total: 0 }, phoneSeen = 0;
 
 function lanIp() {
   for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) {
@@ -29,18 +29,34 @@ const cookieOf = req => { const m = /(?:^|;\s*)cwp=([^;]+)/.exec(req.headers.coo
 const send = (res, code, type, body) => { res.writeHead(code, { 'Content-Type': type }); res.end(body); };
 
 // what the phone sees: short, and already private when the office is
-function view({ snapshot, tasks, privacy }) {
-  const snap = snapshot({ privacy });
+function view({ snapshot, tasks, privacy, extra }) {
+  const snap = snapshot({ privacy }), cut = (x, n) => String(x || '').slice(0, n);
   const people = snap.people.filter(p => !p.leaving).map(p => ({
-    id: p.id, name: p.name, agent: p.agent, state: p.state, title: privacy ? '' : p.title || '', cwd: '',
+    id: p.id, name: p.name, agent: p.agent, state: p.state, title: privacy ? '' : cut(p.title, 120),
+    doing: p.doing ? (privacy ? p.doing.tool : cut(`${p.doing.tool} ${p.doing.what || ''}`, 120)) : '',
+    repo: p.repo ? p.repo.name : '', branch: privacy ? '' : p.branch || '', since: p.since || 0,
     ask: p.doing && (p.state === 'needs_you' || p.state === 'waiting') ? (privacy ? '' : p.doing.ask || p.doing.what || p.doing.tool || '') : '',
     options: p.doing && p.doing.options && !p.doing.multi && p.doing.qcount === 1 ? p.doing.options.map(o => (privacy ? '' : String(o.label || o).slice(0, 80))) : null,
   }));
-  const list = tasks.list({ privacy }).tasks.map(t => ({ id: t.id, title: t.title, state: t.state, reason: t.reason, agent: t.agent, cost: t.cost, costUnknown: t.costUnknown, ask: t.ask || null, result: privacy ? '' : String(t.result || '').slice(0, 600), review: t.review && !privacy ? String(t.review.text || '').slice(0, 600) : '' }));
-  return { now: Date.now(), privacy, people, tasks: list };
+  const tl = tasks.list({ privacy });
+  const list = tl.tasks.map(t => ({ id: t.id, title: t.title, state: t.state, reason: t.reason, agent: t.agent, cost: t.cost, costUnknown: t.costUnknown, ask: t.ask || null, result: privacy ? '' : String(t.result || '').slice(0, 600), review: t.review && !privacy ? String(t.review.text || '').slice(0, 600) : '', updated: t.updated, attempts: t.attempts }));
+  return { now: Date.now(), privacy, people, tasks: list, folders: privacy ? [] : folders(snap, tl), usage: extra ? extra() : null, limits: limitsOf(snap), frameAt };
+}
+// folders a phone may start a task in: where your agents and tasks already work (the server still checks each one)
+function folders(snap, tl) {
+  const set = new Set();
+  for (const p of snap.people) if (p.cwd) set.add(p.cwd);
+  for (const t of tl.tasks) if (t.dir) set.add(t.dir);
+  for (const x of (tl.settings && tl.settings.templates) || []) if (x.dir) set.add(x.dir);
+  return [...set].slice(0, 30);
+}
+function limitsOf(snap) {
+  const out = [];
+  for (const [id, l] of Object.entries(snap.limits || {})) for (const [w, v] of [['5h', l && l.primary], ['week', l && l.secondary]]) if (v) out.push({ ai: id, window: w, pct: Math.round(v.usedPercent), resetsAt: v.resetsAt || 0 });
+  return out;
 }
 
-function startPhone({ port = 4778, privacy = false, demo = false, snapshot, tasks, sendText, people, token: kept, onToken }) {
+function startPhone({ port = 4778, privacy = false, demo = false, snapshot, tasks, sendText, people, token: kept, onToken, extra }) {
   const ip = lanIp();
   if (!ip) return Promise.resolve({ ok: false, reason: 'nolan' });
   let token = /^[0-9a-f]{32}$/.test(kept || '') ? kept : crypto.randomBytes(16).toString('hex'); // kept across restarts so the home-screen icon keeps working
@@ -71,7 +87,8 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
         if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
-        if (url.pathname === '/api/m' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(view({ snapshot, tasks, privacy })));
+        if (url.pathname === '/api/m' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(view({ snapshot, tasks, privacy, extra }))); }
+        if (url.pathname === '/frame.png' && req.method === 'GET') { phoneSeen = Date.now(); return frame ? (res.writeHead(200, { 'Content-Type': 'image/png' }), res.end(frame)) : send(res, 404, 'text/plain', 'no picture yet'); } // the office drawn without names
         if (url.pathname === '/api/m' && req.method === 'POST') {
           if (req.headers['x-coworking'] !== '1' || req.headers.origin !== 'http://' + host) { res.writeHead(403); return res.end(); }
           let body = '';
@@ -81,6 +98,10 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
             try {
               if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}');
               if (OPS.has(m.op)) return send(res, 200, 'application/json', JSON.stringify(tasks.op({ op: m.op, id: String(m.id || ''), allow: !!m.allow, text: String(m.text || '').slice(0, 4000) })));
+              if (m.op === 'create') { // only in a folder your agents or tasks already use, isolated in its own worktree
+                const dir = String(m.dir || ''); if (!folders(snapshot({ privacy }), tasks.list({ privacy })).includes(dir)) return send(res, 200, 'application/json', '{"ok":false,"reason":"nodir"}');
+                return send(res, 200, 'application/json', JSON.stringify(tasks.op({ op: 'create', dir, desc: String(m.text || '').slice(0, 8000), agent: ['claude', 'codex'].includes(m.agent) ? m.agent : 'auto', worktree: true, from: 'phone' })));
+              }
               if (m.op === 'answer') { // the same rule as the office: one single-choice question, a valid number
                 const p = people().find(x => x.id === String(m.id || '')), d = p && p.doing, n = Number(m.choice);
                 const out = !p ? { ok: false, reason: 'gone' } : p.state !== 'needs_you' || !d || !d.options || d.multi || d.qcount !== 1 ? { ok: false, reason: 'busy' }
@@ -102,7 +123,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         rotate: () => { token = crypto.randomBytes(16).toString('hex'); if (onToken) onToken(token); return `http://${host}/?t=${token}`; }, // every phone has to scan again
         addVisit: minutes => { const t = crypto.randomBytes(16).toString('hex'), until = Date.now() + Math.min(240, Math.max(5, Number(minutes) || 60)) * 60000; visits.set(t, { until }); return { url: `http://${host}/v/${t}`, until }; },
         endVisits: () => { visits.clear(); frame = null; },
-        visiting: () => [...visits.values()].some(v => v.until > Date.now()),
+        visiting: () => [...visits.values()].some(v => v.until > Date.now()) || Date.now() - phoneSeen < 60000, // someone is looking at the picture
         setFrame: (buf, c) => { frame = buf; frameAt = Date.now(); counts = { working: Number(c.working) || 0, waiting: Number(c.waiting) || 0, total: Number(c.total) || 0 }; } });
     });
   });

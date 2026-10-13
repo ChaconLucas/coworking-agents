@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Phone app redone: tabs for Now (who needs you, every agent and what it is doing), Tasks (reply, allow, conclude, retry, cancel, and a new task in a folder already in use), Office (the live picture without names) and Usage (today, month, goal, limits); respects the notch and the home bar
+- New app icon: an agent at its desk with the laptop and the speech bubble
 - Create the app on this computer (free, no store, no signing): `coworking-agents install-app` or Personalise — a Coworking Agents app in Applications (macOS), the Start Menu and Desktop (Windows) or the applications menu (Linux); opening it starts the office if needed in an app window. `uninstall-app` removes it
 - The phone panel goes on the home screen like an app (iPhone and Android); its code is kept across restarts, and *Change the phone code* cuts every phone off
 - First run asks once: *Install as an app* (and optionally start with the computer) or *Keep the browser*; the answer decides how it opens from the terminal next time and can be changed in Personalise
