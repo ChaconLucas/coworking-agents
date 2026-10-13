@@ -223,16 +223,23 @@ The office works in any browser. If you prefer an app:
 - **📣 Message several agents:** one request to the agents you pick, typed into terminal sessions that are waiting and continued in the background for VS Code and app conversations; busy ones are left out.
 - **Office events and mood:** confetti for tests passing, a PR opened or a week under the cost goal; rain when tests or a task fail; the room turns grey-blue when many agents are stuck on you and warm when everything flows.
 - **Files touched most** (Repositories): what agent sessions edited most this week.
-- **🖥 Tray icon** (Personalise or `--menubar`): how many are working, who needs you (red), today's spend, the limits, who is working on what and tasks asking permission; clicking opens the office on that agent or task, and it notifies you when nobody has the office open (outside quiet hours). macOS uses JavaScript for Automation, Windows uses PowerShell and Windows Forms, Linux uses `zenity` (icon and tooltip) or `notify-send` (notices only) — all part of the system or one package away. It reads a private status file the office writes and goes away when the office closes.
+- **🖥 Tray icon** (Personalise or `--menubar`): how many are working, who needs you (red), a small bar with the fullest token limit (`●2 ▰▰▱▱▱ 41%`), today's spend, the limits, who is working on what and tasks asking permission; clicking opens the office on that agent or task, and it notifies you when nobody has the office open (outside quiet hours). macOS uses JavaScript for Automation, Windows uses PowerShell and Windows Forms, Linux uses `zenity` (icon and tooltip) or `notify-send` (notices only) — all part of the system or one package away. It reads a private status file the office writes and goes away when the office closes.
 - **📺 TV mode** (or `?tv=1`): full screen, only the office and big counters; Esc leaves.
 - **Waiting on you today** in the daily report: measured time the agents waited on your answers and tasks stood blocked on you.
 - **Sounds and do not disturb** (Personalise): each sound on or off, and a daily quiet window that mutes sounds and system notifications.
 
 ## Phone panel (opt-in)
 
-`npx coworking-agents --phone` also serves a small page for your phone on the same Wi-Fi: who needs you, tasks with their permission questions (*Allow* / *Deny*), reply, conclude or cancel a task, and pick an option when an agent asks a single-choice question. Scan the QR code printed in the terminal or shown in ☰ → 📱 Phone.
+`npx coworking-agents --phone` also serves a small app for your phone on the same Wi-Fi, in the office's pixel look, updated live as things change. Scan the QR code printed in the terminal or shown in ☰ → 📱 Phone, then add it to the home screen.
 
-It is a separate server that only answers on your LAN address, with its own token (new each run), an exact Host and Origin check, and none of the office's other routes (files, diffs, launching, windows). The office itself stays on `127.0.0.1`. The local network link is plain HTTP, so use it only on networks you trust. With the phone panel on, **👀 Visit** creates a one-hour, read-only link (its own token) that shows only a picture of the office drawn without names and how many are working; end it any time.
+- **Now:** who needs you and every agent with what it is doing.
+- **Tap an agent** to see it in full: what it asks or does right now, your last request, its last answer, what it did, the files it touched, its helpers, model, context and cost. When it finished its turn you can **write to it**; the text is typed into its terminal, like the office does (not into the Claude app or VS Code).
+- **Tasks:** answer permission questions (*Allow* / *Deny*), reply, conclude, retry or cancel, **see the changes** (summary and coloured diff) and start a new task in a folder already in use.
+- **Office:** a picture of the office drawn without names. **Usage:** today's and the month's spend and the limits.
+
+In private mode the phone shows no texts.
+
+It is a separate server that only answers on your LAN address, with its own token (kept so the home-screen icon keeps working; *Change the phone code* replaces it), an exact Host and Origin check, and only the phone's own routes: none of the office's files, launching or windows (a task's diff is the one thing it reads, and not in private mode). The office itself stays on `127.0.0.1`. The local network link is plain HTTP, so use it only on networks you trust. With the phone panel on, **👀 Visit** creates a one-hour, read-only link (its own token) that shows only a picture of the office drawn without names and how many are working; end it any time.
 
 ## MCP (read-only)
 

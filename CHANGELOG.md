@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 — 2026-10-13
 - Phone app, live: the office pushes every change as it happens (the 3-second poll only runs while the stream is down)
 - Phone app: tap an agent to see it in full: what it is asking or doing now, your last request, its last answer, what it did, the files it touched, helpers, model, context, cost (texts hidden in private mode)
 - Phone app: write to an agent that finished its turn, typed into its terminal (same rule as the office)
