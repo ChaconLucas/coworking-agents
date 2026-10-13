@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Push notices on the phone, even with the app closed and away from home: turned on from the phone app through a small static page on GitHub Pages (iOS gives push only to an HTTPS home-screen app). Sent straight from your computer to the phone's push service, encrypted end to end and signed with a key made on your computer. Someone needing you, a task asking permission, a task done, failed or stuck; never in quiet hours
 - macOS notifications now come from a small hidden Coworking Agents app (the menu bar script compiled with osacompile, office icon, re-signed ad hoc), so they show its name and icon instead of Script Editor's
 - Phone tab bar sits lower, closer to the bottom edge
 - Phone app shell: the page no longer scrolls (only the middle does), so the header stays below the notch and the tab bar stays on the bottom on iPhone, even after the keyboard

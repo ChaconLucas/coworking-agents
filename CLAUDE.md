@@ -8,6 +8,7 @@
 - **Visual changes:** after any visual/design change run `npm run screenshots` and commit the updated `docs/*.png`.
 - **Security:**
   - bind to `127.0.0.1` only. The one exception is the opt-in `--phone` panel (`src/phone.js`): its own small server on the LAN address, with its own per-run token, an exact Host and Origin match, and only the few phone routes. Never widen it to the office routes;
+  - push notices (`src/push.js`, opt-in from the phone panel) go only to known push services, encrypted end to end (RFC 8291), signed with the local VAPID key. The page in `docs/push` (GitHub Pages) is static, holds no data and is never sent any; refresh its copies with `npm run push-page`;
   - keep the Host allowlist, the access-token cookie and the CSP in `src/server.js`;
   - never read credentials (`*.key`, `auth.json`, tokens);
   - escape everything rendered into HTML with `esc()`.
