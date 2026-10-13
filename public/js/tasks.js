@@ -48,6 +48,11 @@ async function pollTasks() {
   taskData = d;
   for (const t of d.tasks) {
     noticeTask(t);
+    if (t.ask && noticed['a' + t.id] !== t.ask.at) {
+      noticed['a' + t.id] = t.ask.at; try { store.set('taskNoticed', JSON.stringify(noticed)); } catch {}
+      pushNotice('ask:' + t.id, 'warn', T.tasks.permTitle(t.title, t.ask.tool), t.ask.what, { task: t.id, ask: true });
+      notifyOS(T.tasks.permTitle(t.title, t.ask.tool), t.agent);
+    }
     if (t.warn && taskWarnSeen.get(t.id) !== t.warn.at) {
       taskWarnSeen.set(t.id, t.warn.at);
       if (Date.now() - t.warn.at < 864e5 && noticed['w' + t.id] !== t.warn.at) {
@@ -107,7 +112,7 @@ function taskCardHtml(p) {
   return `<section class="card tcard managed"><small>${esc(X.managed)} · <a href="#" data-popen="${esc(t.id)}">${esc(X.openTask)}</a></small>
     <p><b>${esc(t.title)}</b> · ${esc(X.states[t.state])}${t.state === 'blocked' ? ' · ' + esc(X.reasons[t.reason] || '') : ''}</p>
     ${recCardHtml(t)}<div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out</small></div><div><b>${esc(X.attempts(t.attempts))}</b><small>${esc(X.src)}</small></div></div>
-    ${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}</p>` : ''}${ctlHtml(t, 'p')}</section>`;
+    ${askPermHtml(t)}${t.warn ? `<p class="warn">⚠ ${esc(warnText(t.warn))}</p>` : ''}${ctlHtml(t, 'p')}</section>`;
 }
 // a session opened outside (terminal, VS Code, the app) takes a request that continues the same conversation in the background
 const canAsk = p => ['claude', 'codex'].includes(p.agent) && !!p.cwd;
@@ -120,6 +125,7 @@ function askHtml(p) {
     <div class="pask-row"><select data-pask-model="${esc(p.id)}" aria-label="${esc(X.model || 'model')}">${o.models.map(m => opt(m, model, m || (o.def ? o.def + ' (' + X.cliDefault + ')' : X.cliDefault))).join('')}</select>
     <select data-pask-effort="${esc(p.id)}" aria-label="${esc(X.effort || 'effort')}">${o.efforts.map(e => opt(e, effort)).join('')}</select>
     <button class="btn small" data-pask="${esc(p.id)}"${busy ? ' disabled' : ''}>➤ ${esc(X.askSend)}</button></div>
+    ${p.ctxMax && p.ctx / p.ctxMax >= .5 ? `<p><button class="btn small ghost" data-pcompact="${esc(p.id)}"${busy ? ' disabled' : ''} title="${esc(X.compactTip)}">⤓ ${esc(X.compactNow)} · ${Math.round(p.ctx / p.ctxMax * 100)}%</button></p>` : ''}
     <p class="note" data-pask-msg>${esc(busy ? X.askBusy : X.askHow)}</p></div>`;
 }
 document.addEventListener('input', e => {
@@ -127,6 +133,12 @@ document.addEventListener('input', e => {
   const id = el.dataset.paskText || el.dataset.paskModel || el.dataset.paskEffort, d = askDraft.get(id) || {};
   if (el.dataset.paskText) d.text = el.value; else if (el.dataset.paskModel) { d.model = el.value; askDraft.set(id, d); return renderPanel(); } else d.effort = el.value;
   askDraft.set(id, d);
+});
+document.addEventListener('click', async e => {
+  const k = e.target.closest('[data-pcompact]'); if (!k) return;
+  const p = data.people.find(x => x.id === k.dataset.pcompact); if (!p) return; k.disabled = true;
+  const r = await api('api/tasks', { op: 'create', resume: p.id, compact: true, dir: p.cwd, agent: p.agent, desc: 'compact', title: (p.title || p.name).slice(0, 70) });
+  if (r && r.ok) { await pollTasks(); renderPanel(); } else { k.disabled = false; }
 });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-pask]'); if (!b) return;
@@ -139,6 +151,14 @@ document.addEventListener('click', async e => {
   if (r && r.ok) { askDraft.delete(p.id); await pollTasks(); renderPanel(); }
   else { b.disabled = false; box.querySelector('[data-pask-msg]').textContent = '⚠ ' + ((X.fail || {})[r && r.reason] || (r && r.reason) || '?'); }
 });
+// the agent stopped before a tool it may not use: answer from here, the run goes on
+function askPermHtml(t) {
+  if (!t.ask) return ''; const X = TT();
+  return `<div class="permask"><b>🔐 ${esc(X.permAsk(t.ask.tool))}</b>${t.ask.what ? `<code>${esc(t.ask.what)}</code>` : ''}
+    <div class="pask-row"><button class="btn small" data-tpermit="${esc(t.id)}" data-allow="1">✓ ${esc(X.permAllow)}</button><button class="btn small" data-tpermit="${esc(t.id)}" data-allow="1" data-always="1">✓✓ ${esc(X.permAlways(t.ask.tool))}</button><button class="btn small ghost" data-tpermit="${esc(t.id)}">✕ ${esc(X.permDeny)}</button></div></div>`;
+}
+async function permit(id, allow, always) { await api('api/tasks', { op: 'permit', id, allow, always }); notices = notices.filter(n => n.key !== 'ask:' + id); saveNotices(); await pollTasks(); if (selected) renderPanel(); if (taskSel === id && !reportEl.hidden) loadTask(id); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-tpermit]'); if (!b) return; b.disabled = true; permit(b.dataset.tpermit, !!b.dataset.allow, !!b.dataset.always); });
 async function applyCfg(t, act, extra = {}) {
   let body = { op: 'config', id: t.id, ...extra };
   if (act === 'save' || act === 'more') body = { op: 'config', id: t.id, step: act === 'more' ? 1 : -1, why: act };
@@ -220,7 +240,7 @@ function renderTasks() {
 function renderTaskDetail(body) {
   const X = TT(), t = taskDetail, ev = t.events || [], live = t.state === 'running';
   const evHtml = ev.slice(-60).reverse().map(e => {
-    const txt = e.kind === 'warn' ? warnText(e) : e.kind === 'config' ? `${mname(t, e.from.model)}/${e.from.effort} → ${mname(t, e.to.model)}/${e.to.effort} (${e.applies === 'next' ? X.next : X.now}; ${e.why})` : e.kind === 'applied' ? X.appliedOk(mname(t, e.to.model), e.to.effort) : e.kind === 'test' ? X.tests(e.code) + '\n' + (e.text || '') : e.kind === 'tool' ? `${e.name} ${e.text || ''}` : e.kind === 'state' ? `${X.states[e.state] || e.state}${e.reason ? ' · ' + (X.reasons[e.reason] || e.reason) : ''}` : e.kind === 'start' ? `${mname(t, e.model)} · ${e.effort} · #${e.attempt}${e.resume ? ' · ' + X.resumed : ''}` : e.text || '';
+    const txt = e.kind === 'compacted' ? (e.pre ? `${fmtK(e.pre)} → ${fmtK(e.post)} tokens` : '') : e.kind === 'ask' || e.kind === 'permit' ? `${e.tool}${e.text ? ': ' + e.text : ''}${e.kind === 'permit' ? ' — ' + (e.allow ? (e.always ? X.permAlways(e.tool) : X.permAllow) : X.permDeny) : ''}` : e.kind === 'warn' ? warnText(e) : e.kind === 'config' ? `${mname(t, e.from.model)}/${e.from.effort} → ${mname(t, e.to.model)}/${e.to.effort} (${e.applies === 'next' ? X.next : X.now}; ${e.why})` : e.kind === 'applied' ? X.appliedOk(mname(t, e.to.model), e.to.effort) : e.kind === 'test' ? X.tests(e.code) + '\n' + (e.text || '') : e.kind === 'tool' ? `${e.name} ${e.text || ''}` : e.kind === 'state' ? `${X.states[e.state] || e.state}${e.reason ? ' · ' + (X.reasons[e.reason] || e.reason) : ''}` : e.kind === 'start' ? `${mname(t, e.model)} · ${e.effort} · #${e.attempt}${e.resume ? ' · ' + X.resumed : ''}` : e.text || '';
     return `<li class="ev-${esc(e.kind)}"><small>${esc(new Date(e.at).toLocaleTimeString())} · ${esc(X.ev[e.kind] || e.kind)}</small>${txt ? `<pre>${esc(String(txt).slice(0, 1500))}</pre>` : ''}</li>`;
   }).join('');
   const models = Object.entries(t.byModel || {});
@@ -229,7 +249,7 @@ function renderTaskDetail(body) {
     <p class="note">${esc(t.agent)}${t.role ? ' · ' + esc(X.roles[t.role] || t.role) : ''}${t.lean ? ' · ' + esc(X.leanOn) : ''} · ${esc(t.cwd)}${t.sessionId ? ' · ' + esc(t.sessionId.slice(0, 8)) : ''} · ${esc(X.attempts(t.attempts))}${t.subagents ? ' · ' + esc(X.subagents(t.subagents)) : ''}</p>
     <div class="tbig"><div>${costHtml(t)}</div><div><b>${fmtK(t.tokens.output)}</b><small>out ${esc(X.tokens)}</small></div><div><b>${fmtK(t.tokens.input + t.tokens.cacheWrite)}</b><small>in</small></div><div><b>${fmtK(t.tokens.cacheRead)}</b><small>cache</small></div></div>
     ${models.length ? `<p class="note">${models.map(([m, v]) => `${esc(m)}: ${v.unpriced ? '?' : esc(fmtUSD(v.usd))}`).join(' · ')} — ${esc(t.agent === 'claude' ? X.srcClaude : X.srcCodex)}</p>` : ''}
-    ${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}
+    ${askPermHtml(t)}${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}
     <label class="tchk"><input type="checkbox" data-tcfg="lean" ${t.lean ? 'checked' : ''}> ${esc(X.lean)}</label>
     ${t.result ? `<pre class="tresult">${esc(t.result)}</pre>` : ''}
     ${t.tests ? `<p class="${t.tests.code === 0 ? 'ok' : 'warn'}">${esc(X.tests(t.tests.code))}</p>` : ''}
@@ -240,6 +260,7 @@ function renderTaskDetail(body) {
     <p>${['blocked', 'failed', 'done'].includes(t.state) && !taskData.privacy ? `<button class="btn small" data-tact="diff">${esc(X.diff)}</button>` : ''}
       ${t.state === 'blocked' ? `<button class="btn small" data-tact="conclude">✔ ${esc(X.conclude)}</button>` : ''}
       ${['failed', 'cancelled', 'blocked'].includes(t.state) ? `<button class="btn small" data-tact="retry">↻ ${esc(X.retry)}</button>` : ''}
+      ${['failed', 'blocked'].includes(t.state) && t.sessionId ? `<button class="btn small" data-tact="compact" title="${esc(X.compactTip)}">⤓ ${esc(X.compactNow)}</button>` : ''}
       ${['failed', 'blocked'].includes(t.state) ? `<button class="btn small" data-tact="fresh" title="${esc(X.freshTip)}">✦ ${esc(X.fresh)}</button>` : ''}
       ${['blocked', 'failed', 'done'].includes(t.state) ? `<button class="btn small" data-tact="handoff">↪ ${esc(X.handoff)}</button>` : ''}
       ${['running', 'pending', 'blocked'].includes(t.state) ? `<button class="btn small warn" data-tact="cancel">✖ ${esc(X.cancel)}</button>` : ''}
@@ -298,7 +319,7 @@ function renderNotices() {
   const N = T.notices, body = reportEl.querySelector('.report-body'), priv = !!(data && data.privacy) || taskData.privacy;
   const title = n => priv ? N.hidden : n.title;
   body.innerHTML = tabsHtml() + `<p class="sub">${esc(N.sub)}</p>${priv ? `<p class="note">🔒 ${esc(N.privateNote)}</p>` : ''}` + (notices.length ? `<p><button class="btn small" data-nall>${esc(N.readAll)}</button></p><ul class="queue notices">${notices.map((n, i) => `<li class="${n.read ? '' : 'urgent'} ${esc(n.kind)}"><span><b>${esc(title(n))}</b>${n.n > 1 ? ` <small>${esc(N.times(n.n))}</small>` : ''}<br><small>${esc(ago(Date.now() - n.at))}</small>${!priv && (n.showWhy || !n.ref.rec) && n.body ? `<br><span class="q-what">${esc(n.body)}</span>` : ''}</span>
-    <span class="q-side">${n.ref.rec ? `<button class="btn small" data-nact="apply" data-n="${i}" title="${esc(T.tasks.profiles[n.ref.rec.profile] + ' · ' + (n.ref.rec.model || T.tasks.cliDefault) + ' · ' + n.ref.rec.effort)}">${esc(N.apply)}</button><button class="btn small" data-nact="why" data-n="${i}">${esc(N.why)}</button>` : ''}${n.ref.task || n.ref.agent || n.ref.ver ? `<button class="btn small" data-nact="open" data-n="${i}">${esc(N.open)}</button>` : ''}<button class="btn small" data-nact="dismiss" data-n="${i}">${esc(N.notNow)}</button></span></li>`).join('')}</ul>` : `<p class="note">${esc(N.empty)}</p>`);
+    <span class="q-side">${n.ref.ask && (taskData.tasks.find(x => x.id === n.ref.task) || {}).ask ? `<button class="btn small" data-nact="allow" data-n="${i}">${esc(T.tasks.permAllow)}</button><button class="btn small" data-nact="deny" data-n="${i}">${esc(T.tasks.permDeny)}</button>` : ''}${n.ref.rec ? `<button class="btn small" data-nact="apply" data-n="${i}" title="${esc(T.tasks.profiles[n.ref.rec.profile] + ' · ' + (n.ref.rec.model || T.tasks.cliDefault) + ' · ' + n.ref.rec.effort)}">${esc(N.apply)}</button><button class="btn small" data-nact="why" data-n="${i}">${esc(N.why)}</button>` : ''}${n.ref.task || n.ref.agent || n.ref.ver ? `<button class="btn small" data-nact="open" data-n="${i}">${esc(N.open)}</button>` : ''}<button class="btn small" data-nact="dismiss" data-n="${i}">${esc(N.notNow)}</button></span></li>`).join('')}</ul>` : `<p class="note">${esc(N.empty)}</p>`);
 }
 reportEl.addEventListener('click', async e => {
   if (reportTab !== 'notices') return;
@@ -308,6 +329,7 @@ reportEl.addEventListener('click', async e => {
   n.read = true;
   if (a === 'why') n.showWhy = true;
   if (a === 'dismiss') notices = notices.filter(x => x !== n);
+  if (a === 'allow' || a === 'deny') { await permit(n.ref.task, a === 'allow', false); return renderNotices(); }
   if (a === 'apply' && n.ref.ext && n.ref.rec) { // outside session: the choice goes into its request box, used on the next request sent from here
     askDraft.set(n.ref.agent, { ...(askDraft.get(n.ref.agent) || {}), model: n.ref.rec.model, effort: n.ref.rec.effort }); saveNotices();
     closeReport(); selected = n.ref.agent; renderOverlay(); renderPanel();

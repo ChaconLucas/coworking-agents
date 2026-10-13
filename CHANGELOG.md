@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Compact: shrink a task's or an outside conversation's context in the background (Claude `/compact`, Codex compaction), keeping the same session
+- Permissions mid-run: a task pauses when the agent wants a tool it may not use (Claude) or to leave its sandbox (Codex) and the office asks Allow / Always allow / Deny, on the card and as a notice
+- Codex tasks run through `codex app-server`, the mode where Codex can ask before leaving its sandbox; cost per model call, counted once
+- "Open the conversation" jumps to the exact conversation in VS Code, the Claude app or the Codex app
 - Sessions opened outside are watched while they run: when there is a real reason (stuck on one step, nearly full context, the kind of work) the office sends a notice with the recommended model and effort; Apply puts it in that agent's request box
 - Ask any Claude or Codex session from the office, even one opened in VS Code or the app: the request continues the same conversation with the model and effort you choose (the recommended ones come pre-picked)
 - Sessions opened outside show their real effort (Codex from its log, Claude from its settings)

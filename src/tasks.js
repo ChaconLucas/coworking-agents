@@ -18,7 +18,7 @@ const ORDER = ['eco', 'bal', 'deep'];
 // what each operation may start from: the backend refuses anything else
 const ALLOWED = {
   cancel: ['pending', 'running', 'blocked'], reply: ['blocked', 'failed'], approve: ['blocked'], retry: ['failed', 'cancelled', 'blocked'],
-  conclude: ['blocked'], handoff: ['blocked', 'failed', 'done'], delete: ['pending', 'blocked', 'done', 'failed', 'cancelled'],
+  conclude: ['blocked'], compact: ['blocked', 'failed'], handoff: ['blocked', 'failed', 'done'], delete: ['pending', 'blocked', 'done', 'failed', 'cancelled'],
 };
 // short instructions added on demand: a role, and the economy rules (cheap context, no log dumps)
 const ROLES = {
@@ -86,13 +86,13 @@ function load(opts = {}) {
   if (demo) { tasks = require('./demo').demoTasks(); return; }
   try { const j = JSON.parse(fs.readFileSync(file('tasks.json'), 'utf8')); tasks = Array.isArray(j.tasks) ? j.tasks : []; settings = { ...settings, ...(j.settings || {}) }; } catch {}
   // the server stopped while these ran: an agent still alive keeps its slot ("detached") until it exits
-  for (const t of tasks) if (t.state === 'running') { t.reason = 'detached'; t.detached = true; }
+  for (const t of tasks) if (t.state === 'running') { t.reason = 'detached'; t.detached = true; t.ask = null; }
   save();
 }
 async function checkDetached() {
   for (const t of tasks.filter(x => x.state === 'running' && x.detached)) {
     if (await ours(t)) continue;
-    t.detached = false; t.pid = 0;
+    t.detached = false; t.pid = 0; t.compactOnly = false;
     if (t.cancelling) { t.cancelling = false; t.state = 'cancelled'; t.reason = ''; log(t, { kind: 'cancelled' }); }
     else { t.state = t.sessionId ? 'blocked' : 'failed'; t.reason = 'restart'; log(t, { kind: 'state', state: t.state, reason: 'restart' }); }
     save();
@@ -172,7 +172,7 @@ function create(m) {
     perm: ['acceptEdits', 'plan', 'default'].includes(m.perm) ? m.perm : 'acceptEdits',
     priority: Math.min(3, Math.max(1, Number(m.priority) || 2)), budget: Math.max(0, Number(m.budget) || 0),
     testCmd: s(m.testCmd, 300), worktree: !!m.worktree && !resume, dependsOn: tasks.some(x => x.id === m.dependsOn) ? m.dependsOn : '',
-    from: s(m.from, 12), state: 'pending', reason: '', created: now(), updated: now(), sessionId: resume, adopted: !!resume, cwd: dir, baseCommit: '', pid: 0,
+    from: s(m.from, 12), state: 'pending', reason: '', created: now(), updated: now(), sessionId: resume, adopted: !!resume, compactOnly: !!(m.compact && resume), cwd: dir, baseCommit: '', pid: 0,
     cost: 0, costUnknown: false, byModel: {}, costByDay: {}, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     attempts: 0, turns: 0, subagents: 0, result: '', files: [], denials: [], allowed: [], configLog: [], running: null,
   };
@@ -226,6 +226,11 @@ function op(m = {}) {
     if (!['blocked', 'failed'].includes(t.state)) return { ok: false, reason: 'state' };
     t.next = handoffText(t, s(m.text, 4000)); t.sessionId = ''; t.denials = []; log(t, { kind: 'fresh' }); t.state = 'pending'; t.reason = ''; save(); tick(); return { ok: true };
   }
+  if (m.op === 'permit') { const f = askers.get(t.id); if (!f || !t.ask) return { ok: false, reason: 'state' }; f(!!m.allow, !!m.always); return { ok: true }; }
+  if (m.op === 'compact') { // shrinks the same session's context (Claude /compact, Codex thread/compact/start); nothing else runs
+    if (!t.sessionId) return { ok: false, reason: 'nosession' };
+    t.compactOnly = true; t.next = ''; log(t, { kind: 'compact-asked' }); t.state = 'pending'; t.reason = ''; save(); tick(); return { ok: true };
+  }
   if (m.op === 'conclude') { t.state = 'done'; t.reason = ''; log(t, { kind: 'done' }); save(); tick(); return { ok: true }; }
   if (m.op === 'handoff') return create({ desc: handoffText(t, s(m.text, 4000)), title: '↪ ' + t.title, dir: t.cwd || t.dir, agent: m.agent || 'auto', profile: t.profile, role: m.role, priority: t.priority, testCmd: t.testCmd, from: t.id });
   if (m.op === 'delete') { tasks = tasks.filter(x => x !== t); events.delete(t.id); if (!demo) try { fs.unlinkSync(file(t.id + '.jsonl')); } catch {} save(); return { ok: true }; }
@@ -264,7 +269,7 @@ async function prepare(t) {
   return null;
 }
 async function run(t) {
-  t.state = 'running'; t.reason = ''; t.attempts++;
+  t.state = 'running'; t.reason = ''; if (!t.compactOnly) t.attempts++;
   Object.assign(t, { failedTurn: false, overBudget: false, cancelling: false, budgetWarned: false, detached: false, warn: null }); // a new attempt starts clean
   const cfg = { model: t.model, effort: t.effort };
   if (t.running && (t.running.model !== cfg.model || t.running.effort !== cfg.effort)) log(t, { kind: 'applied', from: t.running, to: cfg });
@@ -273,16 +278,16 @@ async function run(t) {
   if (t.cancelling) return finish(t, 0, '');
   if (bad) { t.state = 'failed'; t.reason = bad === 'nogit' ? 'nogit' : 'worktree'; log(t, { kind: 'error', text: bad }); return done(t); }
   const sys = [t.role && ROLES[t.role], t.lean && LEAN].filter(Boolean).join('\n');
-  const prompt = t.next || t.desc; t.next = '';
+  const prompt = t.compactOnly ? '/compact' : t.next || t.desc; t.next = '';
   const opt = options(t.agent);
-  const a = t.agent === 'claude'
-    ? ['-p', prompt, '--output-format', 'stream-json', '--verbose', '--permission-mode', t.perm, ...(t.model ? ['--model', t.model] : []), '--effort', t.effort,
-      ...(sys ? ['--append-system-prompt', sys] : []), ...(t.allowed.length ? ['--allowedTools', t.allowed.join(',')] : []), ...(t.sessionId ? ['--resume', t.sessionId] : [])]
-    : ['exec', ...(t.sessionId ? ['resume', t.sessionId] : []), '--json', '--skip-git-repo-check', ...(t.model ? ['-m', t.model] : []), '-c', `model_reasoning_effort="${t.effort}"`,
-      ...(t.sessionId ? ['-c', 'sandbox_mode="workspace-write"'] : ['--sandbox', 'workspace-write']), sys && !t.sessionId ? `${sys}\n\n${prompt}` : prompt];
   t.live = { model: t.agent === 'codex' ? t.model || opt.def : t.model, usd: 0, unknown: false, msgs: new Set(), seen: new Map(), byModel: new Map(), committed: false };
   log(t, { kind: 'start', model: t.model || opt.def, effort: t.effort, attempt: t.attempts, resume: !!t.sessionId });
-  let c; try { c = child(t, t.agent, a, { cwd: t.cwd }); } catch (e) { return finish(t, 1, 'spawn failed: ' + e.message); }
+  if (t.agent === 'codex') return runCodex(t, prompt, sys);
+  const a = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--permission-mode', t.perm, ...(t.model ? ['--model', t.model] : []), '--effort', t.effort,
+    ...(sys ? ['--append-system-prompt', sys] : []), ...(t.allowed.length ? ['--allowedTools', t.allowed.join(',')] : []), ...(t.sessionId ? ['--resume', t.sessionId] : [])];
+  let c; try { c = child(t, 'claude', a, { cwd: t.cwd, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (e) { return finish(t, 1, 'spawn failed: ' + e.message); }
+  // Claude takes the request on stdin and asks the office before a tool it may not use (answered by op 'permit')
+  c.stdin.on('error', () => {}); c.stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content: prompt } }) + '\n');
   let buf = '', err = '';
   c.on('error', e => { err += 'spawn failed: ' + e.message; });
   c.stderr.on('data', d => { err = (err + d).slice(-2000); });
@@ -291,11 +296,87 @@ async function run(t) {
     while ((i = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, i); buf = buf.slice(i + 1);
       let j; try { j = JSON.parse(line); } catch { continue; }
+      if (j.type === 'control_request') { control(t, c, j); continue; }
+      if (j.type === 'result') c.stdin.end();
       absorb(t, j); budget(t, c);
     }
   });
-  c.on('close', code => { procs.delete(t.id); t.pid = 0; if (t.live && !t.live.committed) commitLive(t); finish(t, code, err); });
+  c.on('close', code => { procs.delete(t.id); askers.delete(t.id); t.ask = null; t.pid = 0; if (t.live && !t.live.committed) commitLive(t); finish(t, code, err); });
 }
+// a tool the agent may not use waits here until the office answers (op 'permit'); "always" is remembered for the task
+const askers = new Map();
+function ask(t, tool, what, answer) {
+  if (t.allowed.includes(tool)) return answer(true, false);
+  t.ask = { tool, what: s(what, 300), at: now() };
+  askers.set(t.id, (allow, always) => {
+    if (allow && always && !t.allowed.includes(tool)) t.allowed.push(tool);
+    answer(!!allow, !!always); log(t, { kind: 'permit', tool, allow: !!allow, always: !!always }); t.ask = null; askers.delete(t.id); save();
+  });
+  log(t, { kind: 'ask', tool, text: t.ask.what }); save();
+}
+function control(t, c, j) {
+  const r = j.request || {}, send = response => { try { c.stdin.write(JSON.stringify({ type: 'control_response', response }) + '\n'); } catch {} };
+  if (r.subtype !== 'can_use_tool') return send({ subtype: 'error', request_id: j.request_id, error: 'unsupported' });
+  ask(t, s(r.tool_name, 60), r.description || toolWhat(r.input), allow => send({ subtype: 'success', request_id: j.request_id,
+    response: allow ? { behavior: 'allow', updatedInput: r.input || {} } : { behavior: 'deny', message: 'The user denied this from the office.' } }));
+}
+// Codex runs as `codex app-server` (JSON-RPC on stdio): the only headless mode where it can ask before leaving its sandbox
+function runCodex(t, prompt, sys) {
+  let c; try { c = child(t, 'codex', ['app-server'], { cwd: t.cwd, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (e) { return finish(t, 1, 'spawn failed: ' + e.message); }
+  const L = t.live; L.committed = true; // usage is committed per model call as it comes
+  let buf = '', err = '', rid = 0, over = false;
+  const write = m => { try { c.stdin.write(JSON.stringify({ jsonrpc: '2.0', ...m }) + '\n'); } catch {} };
+  const call = (method, params) => { write({ id: ++rid, method, params }); return rid; };
+  const end = () => { if (over) return; over = true; try { c.stdin.end(); } catch {} setTimeout(() => { if (procs.get(t.id) === c) c.kill('SIGTERM'); }, 3000).unref(); };
+  const fail = msg => { t.failedTurn = true; log(t, { kind: 'error', text: s(msg, 400) }); end(); };
+  const policy = { cwd: t.cwd, approvalPolicy: 'on-request', sandbox: 'workspace-write', ...(t.model ? { model: t.model } : {}), ...(sys ? { developerInstructions: sys } : {}) };
+  const ids = { init: call('initialize', { clientInfo: { name: 'coworking-agents', version: require('../package.json').version } }) };
+  const seen = new Set();
+  c.stdin.on('error', () => {});
+  c.on('error', e => { err += 'spawn failed: ' + e.message; });
+  c.stderr.on('data', d => { err = (err + d).slice(-2000); });
+  c.stdout.on('data', d => {
+    buf += d; let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i); buf = buf.slice(i + 1);
+      let j; try { j = JSON.parse(line); } catch { continue; }
+      if (j.id !== undefined && j.method) { codexRequest(t, j, write); continue; }
+      if (j.id !== undefined) {
+        if (j.error) { fail(j.error.message || 'codex error'); continue; }
+        if (j.id === ids.init) { write({ method: 'initialized' }); ids.thread = t.sessionId ? call('thread/resume', { threadId: t.sessionId, ...policy }) : call('thread/start', policy); }
+        else if (j.id === ids.thread) {
+          const r = j.result || {}; if (r.thread && r.thread.id) t.sessionId = r.thread.id; if (r.model) L.model = r.model; save();
+          if (t.compactOnly) ids.turn = call('thread/compact/start', { threadId: t.sessionId });
+          else ids.turn = call('turn/start', { threadId: t.sessionId, input: [{ type: 'text', text: prompt }], effort: t.effort, ...(t.model ? { model: t.model } : {}) });
+        }
+        continue;
+      }
+      const p = j.params || {}, it = p.item || {};
+      if (j.method === 'item/started' && it.type && !['userMessage', 'agentMessage', 'reasoning'].includes(it.type) && !/compact/i.test(it.type)) { toolEvent(t, it.type, it.command || it.changes || it.query || ''); if (/agent/i.test(it.type)) t.subagents++; }
+      if (j.method === 'thread/compacted' || (j.method === 'item/completed' && /compact/i.test(it.type || ''))) { if (!L.compacted) { L.compacted = true; log(t, { kind: 'compacted' }); } if (t.compactOnly) end(); }
+      if (j.method === 'item/completed' && it.type === 'agentMessage' && it.text && !t.compactOnly) { t.result = s(it.text, 6000); log(t, { kind: 'text', text: s(it.text, 2000) }); }
+      if (j.method === 'thread/tokenUsage/updated' && p.tokenUsage && p.tokenUsage.last) {
+        const u = p.tokenUsage.last, k = p.turnId + ':' + (p.tokenUsage.total && p.tokenUsage.total.totalTokens);
+        if (!seen.has(k)) { seen.add(k); addCost(t, L.model, { input: Math.max(0, (u.inputTokens || 0) - (u.cachedInputTokens || 0)), output: u.outputTokens || 0, cacheRead: u.cachedInputTokens || 0, cacheWrite: u.cacheWriteInputTokens || 0 }); save(); }
+      }
+      if (j.method === 'turn/completed') {
+        const turn = p.turn || {}; t.turns++;
+        if (turn.status === 'failed') fail((turn.error && turn.error.message) || 'turn failed'); else end();
+      }
+      if (j.method === 'error' && p.error && !p.willRetry) fail(p.error.message);
+      budget(t, c);
+    }
+  });
+  c.on('close', code => { procs.delete(t.id); askers.delete(t.id); t.ask = null; t.pid = 0; finish(t, over && !t.failedTurn ? 0 : code || (t.failedTurn ? 1 : 0), err); });
+}
+function codexRequest(t, j, write) {
+  const p = j.params || {}, m = j.method, reply = result => write({ id: j.id, result });
+  const v1 = m === 'execCommandApproval' || m === 'applyPatchApproval', decide = (allow, always) => reply({ decision: v1 ? (allow ? (always ? 'approved_for_session' : 'approved') : 'denied') : allow ? (always ? 'acceptForSession' : 'accept') : 'decline' });
+  if (m === 'item/commandExecution/requestApproval' || m === 'execCommandApproval') return ask(t, 'command', [Array.isArray(p.command) ? p.command.join(' ') : p.command, p.reason].filter(Boolean).join(' — '), decide);
+  if (m === 'item/fileChange/requestApproval' || m === 'applyPatchApproval') return ask(t, 'file_change', p.reason || p.grantRoot || 'file changes', decide);
+  write({ id: j.id, error: { code: -32601, message: 'not supported by coworking-agents' } }); // anything else is refused, never approved silently
+}
+const toolWhat = i => { i = i || {}; return String(i.command || i.file_path || i.path || i.url || i.pattern || JSON.stringify(i)).slice(0, 300); };
 // the live estimate (per assistant message, deduplicated by message id) is replaced by the CLI's own totals when they arrive
 function commitLive(t) {
   const L = t.live; L.committed = true;
@@ -310,8 +391,9 @@ function budget(t, c) {
 }
 function absorb(t, j) {
   const L = t.live;
-  if (t.agent === 'claude') {
+  { // Claude's stream-json; Codex goes through runCodex
     if (j.type === 'system' && j.subtype === 'init') { if (j.session_id) t.sessionId = j.session_id; if (j.model) L.model = j.model; save(); }
+    if (j.type === 'system' && j.subtype === 'compact_boundary') { const c = j.compact_metadata || {}; log(t, { kind: 'compacted', pre: c.pre_tokens || 0, post: c.post_tokens || 0 }); }
     if (j.type === 'assistant' && j.message) {
       const msg = j.message;
       for (const c of msg.content || []) {
@@ -327,7 +409,7 @@ function absorb(t, j) {
       }
     }
     if (j.type === 'result') {
-      L.committed = true; t.turns += j.num_turns || 0; t.result = s(j.result, 6000);
+      L.committed = true; t.turns += j.num_turns || 0; if (!t.compactOnly) t.result = s(j.result, 6000);
       const mu = j.modelUsage && typeof j.modelUsage === 'object' ? Object.entries(j.modelUsage) : [];
       if (mu.length) for (const [model, u] of mu) addCost(t, model, claudeUsage(u), typeof u.costUSD === 'number' ? u.costUSD : undefined);
       else if (typeof j.total_cost_usd === 'number') addCost(t, L.model || t.model, claudeUsage(j.usage || {}), j.total_cost_usd);
@@ -335,14 +417,6 @@ function absorb(t, j) {
       t.denials = (j.permission_denials || []).map(d => ({ tool: s(d.tool_name, 60), what: s(JSON.stringify(d.tool_input || {}), 200) })).slice(0, 10);
       t.failedTurn = !!j.is_error; log(t, { kind: 'result', text: t.result, usd: j.total_cost_usd, error: !!j.is_error });
     }
-  } else {
-    L.committed = true; // Codex reports usage per turn: committed as it comes, nothing to replace later
-    if (j.type === 'thread.started' && j.thread_id) { t.sessionId = j.thread_id; save(); }
-    const it = j.item || {};
-    if (j.type === 'item.completed' && it.type === 'agent_message') { t.result = s(it.text, 6000); log(t, { kind: 'text', text: s(it.text, 2000) }); }
-    if (j.type === 'item.started' && it.type) { toolEvent(t, it.type, it.command || it.changes || it.query || ''); if (/agent/.test(it.type)) t.subagents++; }
-    if (j.type === 'turn.completed' && j.usage) { const u = j.usage; t.turns++; addCost(t, L.model, { input: Math.max(0, (u.input_tokens || 0) - (u.cached_input_tokens || 0)), output: u.output_tokens || 0, cacheRead: u.cached_input_tokens || 0, cacheWrite: 0 }); save(); }
-    if (j.type === 'turn.failed' || j.type === 'error') { t.failedTurn = true; log(t, { kind: 'error', text: s((j.error && j.error.message) || j.message, 400) }); }
   }
 }
 // the same tool with the same input 3 times is a loop without progress: say so once, with the proposed fix
@@ -360,7 +434,12 @@ function autoApply(t, rec) {
 function proposal(t, step, why) { const i = Math.min(2, ORDER.indexOf(t.profile) + step), p = ORDER[i]; return i === ORDER.indexOf(t.profile) ? null : { profile: p, ...PROFILES[p][t.agent], why }; }
 
 async function finish(t, code, err) {
+  const compact = t.compactOnly; t.compactOnly = false;
   if (t.cancelling && !t.overBudget) { t.cancelling = false; t.state = 'cancelled'; t.reason = ''; log(t, { kind: 'cancelled' }); return done(t); }
+  if (compact) { // a compaction ends where it started: waiting for the next request, with the same result
+    t.state = code !== 0 || t.failedTurn ? 'failed' : 'blocked'; t.reason = t.state === 'failed' ? 'error' : 'compacted';
+    if (t.state === 'failed') log(t, { kind: 'error', text: s(err, 600), code }); return done(t);
+  }
   t.files = await changedFiles(t);
   if (t.overBudget) { t.overBudget = t.cancelling = false; t.state = 'blocked'; t.reason = 'budget'; return done(t); }
   if (code !== 0 || t.failedTurn) {
@@ -402,7 +481,7 @@ async function diff(id, { privacy = false } = {}) {
 
 // ---- private mode: nothing that names a project leaves the server ----
 function mask(t, i) {
-  return { ...t, title: 'task ' + (i + 1), desc: '', dir: '', cwd: '', result: '', files: t.files.map(() => '•'), denials: t.denials.map(d => ({ tool: d.tool, what: '' })), testCmd: t.testCmd ? '•' : '', sessionId: '', baseCommit: '' };
+  return { ...t, title: 'task ' + (i + 1), desc: '', dir: '', cwd: '', result: '', files: t.files.map(() => '•'), denials: t.denials.map(d => ({ tool: d.tool, what: '' })), testCmd: t.testCmd ? '•' : '', sessionId: '', baseCommit: '', ask: t.ask ? { ...t.ask, what: '' } : null };
 }
 function pub(t) { const { live, ...rest } = t; return rest; }
 function list({ privacy = false } = {}) {

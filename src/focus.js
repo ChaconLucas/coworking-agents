@@ -100,13 +100,19 @@ async function focusOther(person) {
   return { ok: false, reason: 'platform' };
 }
 
+// conversations living in an app or in VS Code open right on that conversation through the app's own link
+function deepLink(p) {
+  if (!/^[\w-]{8,64}$/.test(p.id || '')) return null;
+  if (p.agent === 'claude' && p.entrypoint === 'claude-desktop') return { url: 'claude://code/continue?session=' + p.id, app: 'Claude' };
+  if (p.agent === 'claude' && p.entrypoint === 'claude-vscode') return { url: 'vscode://anthropic.claude-code/open?session=' + p.id, app: 'VS Code' };
+  if (p.agent === 'codex' && p.entrypoint === 'codex-vscode') return { url: 'vscode://openai.chatgpt/local/' + p.id, app: 'VS Code' };
+  if (p.agent === 'codex' && !p.pid) return { url: 'codex://threads/' + p.id, app: 'Codex' };
+  return null;
+}
 async function focus(person) {
   if (process.platform !== 'darwin') return focusOther(person);
-  if (person.agent === 'codex' && !person.pid) {
-    const ok = await run('open', ['-a', 'Codex']);
-    return ok === null ? { ok: false, reason: 'codex' } : { ok: true, app: 'Codex', exact: false };
-  }
-  if (person.entrypoint === 'claude-desktop') { const ok = await run('open', ['-a', 'Claude']); return ok === null ? { ok: false, reason: 'desktop' } : { ok: true, app: 'Claude', exact: false }; }
+  const link = deepLink(person);
+  if (link) { const ok = await run('open', [link.url]); return ok === null ? { ok: false, reason: person.agent === 'codex' ? 'codex' : 'desktop' } : { ok: true, app: link.app, exact: true }; }
   if (!person.pid) return { ok: false, reason: 'nopid' };
   const tty = await run('ps', ['-o', 'tty=', '-p', String(person.pid)]);
   if (!tty || !/^ttys?\d+$/.test(tty)) return { ok: false, reason: 'notty' };
@@ -211,4 +217,4 @@ async function launch(dir, agent) {
   return res.out === 'ok' ? { ok: true, app: 'Terminal' } : { ok: false, reason: res.fail || 'unknown' };
 }
 
-module.exports = { focus, sendText, launch };
+module.exports = { deepLink, focus, sendText, launch };

@@ -26,8 +26,7 @@ Estimated cost · wait reminder · git state on the door · daily report as Mark
 - **Seasonal decor** by date (subtle, off with a toggle).
 
 ## Tasks — next steps
-- Mid-step permission prompts in the page (today denied tools are listed after the step; approving resumes with them allowed).
-- Compaction of a headless Claude session (`/compact` through `-p`) once it's confirmed to work; today the option is a fresh session with a summary.
-- Codex subagent usage (not in `codex exec --json`).
+- Codex subagent cost: `codex app-server` usage updates are counted for every thread it reports; whether spawned subagents report theirs there is not verified yet.
+- Changing the model of a step that is already running in an outside session (it applies from the next request sent from the office).
 - CI: left out on purpose for now (GitHub Actions removed); `npm test` runs before every commit.
 - Semantic search over history only if plain text search stops being enough; smarter automatic assignment.

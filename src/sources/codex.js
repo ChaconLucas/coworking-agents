@@ -174,8 +174,8 @@ function sessions(now) {
     if (!st || !st.id) continue;
     st.title = names.get(st.id) || st.firstPrompt || '';
     out.push({
-      agent: 'codex', id: st.id, name: 'codex-' + st.id.slice(-4), pid: st.originator.includes('desktop') ? null : pidFor(st, procs),
-      kind: st.originator.includes('desktop') ? 'desktop' : 'cli', entrypoint: st.originator.includes('desktop') ? 'codex-desktop' : '', version: st.version,
+      agent: 'codex', id: st.id, name: 'codex-' + st.id.slice(-4), pid: st.originator.includes('desktop') || /vscode/i.test(st.originator) ? null : pidFor(st, procs),
+      kind: st.originator.includes('desktop') ? 'desktop' : 'cli', entrypoint: st.originator.includes('desktop') ? 'codex-desktop' : /vscode/i.test(st.originator) ? 'codex-vscode' : '', version: st.version,
       status: st.busy ? 'busy' : 'idle', since: st.since || st.lastTs, startedAt: st.startedAt || st.lastTs,
       cwd: st.cwd, st, subagents: [],
     });

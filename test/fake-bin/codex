@@ -1,11 +1,35 @@
 #!/usr/bin/env node
-// fake `codex exec --json` for the tests
+// fake `codex app-server` (JSON-RPC on stdio) for the tests; each run logs {args, thread, turn} to $HOME/fake-args
 const fs = require('fs'), path = require('path'), H = process.env.HOME;
-fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify(process.argv.slice(2)) + '\n');
-const out = o => process.stdout.write(JSON.stringify(o) + '\n');
+const out = o => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...o }) + '\n');
 const mode = (() => { try { return fs.readFileSync(path.join(H, 'fake-mode'), 'utf8').trim(); } catch { return 'ok'; } })();
-if (mode === 'cfail') { out({ type: 'thread.started', thread_id: 'T2' }); out({ type: 'turn.failed', error: { message: 'boom' } }); return; }
-out({ type: 'thread.started', thread_id: 'T1' });
-out({ type: 'item.started', item: { type: 'command_execution', command: 'ls' } });
-out({ type: 'item.completed', item: { type: 'agent_message', text: 'ok' } });
-out({ type: 'turn.completed', usage: { input_tokens: 2000, cached_input_tokens: 1000, output_tokens: 50 } });
+const model = (() => { try { return (fs.readFileSync(path.join(H, '.codex', 'config.toml'), 'utf8').match(/model = "([^"]+)"/) || [])[1] || ''; } catch { return ''; } })();
+const run = { args: process.argv.slice(2) }; let rest = '', thread = '';
+const usage = (turnId, total) => out({ method: 'thread/tokenUsage/updated', params: { threadId: thread, turnId, tokenUsage: { last: { inputTokens: 2000, cachedInputTokens: 1000, outputTokens: 50, cacheWriteInputTokens: 0, totalTokens: 2050 }, total: { totalTokens: total } } } });
+process.stdin.on('data', d => {
+  rest += d; let i;
+  while ((i = rest.indexOf('\n')) >= 0) {
+    const m = JSON.parse(rest.slice(0, i)); rest = rest.slice(i + 1);
+    if (m.method === 'initialize') out({ id: m.id, result: {} });
+    if (m.method === 'thread/start' || m.method === 'thread/resume') {
+      thread = m.params.threadId || (mode === 'cfail' ? 'T2' : 'T1'); run.thread = { method: m.method, ...m.params };
+      out({ id: m.id, result: { thread: { id: thread }, model: m.params.model || model } });
+    }
+    if (m.method === 'thread/compact/start') { run.compact = m.params; fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify(run) + '\n'); out({ id: m.id, result: {} }); out({ method: 'thread/compacted', params: { threadId: thread, turnId: 'c1' } }); }
+    if (m.method === 'turn/start') {
+      run.turn = m.params; fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify(run) + '\n');
+      out({ id: m.id, result: { turn: { id: 'u1', status: 'inProgress' } } });
+      if (mode === 'cfail') { out({ method: 'turn/completed', params: { threadId: thread, turn: { id: 'u1', status: 'failed', error: { message: 'boom' } } } }); continue; }
+      out({ method: 'item/started', params: { item: { type: 'commandExecution', command: 'ls' } } });
+      if (mode === 'perm') out({ id: 0, method: 'item/commandExecution/requestApproval', params: { threadId: thread, turnId: 'u1', itemId: 'x', command: 'curl example.com', reason: 'needs network' } });
+      else finish();
+    }
+    if (m.id === 0 && m.result) { fs.writeFileSync(path.join(H, 'fake-perm'), JSON.stringify(m.result)); finish(); }
+  }
+});
+process.stdin.on('end', () => process.exit(0));
+function finish() {
+  usage('u1', 2050); usage('u1', 2050); // the same update twice counts once
+  out({ method: 'item/completed', params: { item: { type: 'agentMessage', text: 'ok' } } });
+  out({ method: 'turn/completed', params: { threadId: thread, turn: { id: 'u1', status: 'completed' } } });
+}

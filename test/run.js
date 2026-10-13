@@ -222,11 +222,45 @@ sleepK.kill();
   }
   const vm = require('vm');
   const el = () => new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => '' : ['clientWidth', 'width', 'height', 'length'].includes(k) ? 0 : k === 'children' ? [] : el(), set: () => true, apply: () => el(), construct: () => el() });
-  const sandbox = { console, Map, Set, URLSearchParams, setTimeout, setInterval: () => 0, clearInterval() {}, requestAnimationFrame: () => 0, location: { search: '' }, navigator: { language: 'en' }, localStorage: { getItem: () => null, setItem() {} }, document: el(), EventSource: function () {}, CSS: { escape: s => s }, addEventListener() {}, fetch: () => new Promise(() => {}), clearTimeout() {} };
+  const sandbox = { console, Map, Set, URLSearchParams, setTimeout: (f, ms) => { const h = setTimeout(f, ms); h.unref(); return h; }, setInterval: () => 0, clearInterval() {}, requestAnimationFrame: () => 0, location: { search: '' }, navigator: { language: 'en' }, localStorage: { getItem: () => null, setItem() {} }, document: el(), EventSource: function () {}, CSS: { escape: s => s }, addEventListener() {}, fetch: () => new Promise(() => {}), clearTimeout() {} };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   for (const [s, c] of code) vm.runInContext(c, sandbox, { filename: s });
   assert.strictEqual(vm.runInContext('typeof drawScene + typeof renderAll + typeof I18N.en.working', sandbox), 'functionfunctionstring', 'front-end scripts share their names');
+
+  // cards and notices, run against the real front-end code
+  (async () => {
+  const run = c => vm.runInContext(c, sandbox);
+  run(`T = I18N.en; playTune = () => {}; renderPanel = () => {};
+    taskData = { tasks: [], settings: {}, options: { claude: { models: ['haiku', 'sonnet', 'opus'], efforts: ['low', 'medium', 'high'] } }, roles: [], privacy: false };
+    data = { privacy: false, people: [] }; notices = []; noticed = {};
+    var calls = []; globalThis.reply = body => body && body.op === 'recommend' ? { ok: true, rec: globalThis.nextRec } : { ok: true, tasks: taskData.tasks };
+    fetch = (url, o) => { const body = o && o.body ? JSON.parse(o.body) : null; if (body) calls.push(body); return Promise.resolve({ json: () => Promise.resolve(globalThis.reply(body)) }); };`);
+  const ext = { id: 'ext-00001', agent: 'claude', cwd: '/x', model: 'claude-opus-5-5', effort: 'high', state: 'thinking', name: 'ada', title: 'fix typo' };
+  sandbox.ext = ext;
+  let html = run(`recOf.set('p:ext-00001', { key: 'p:ext-00001:fix typo', rec: { profile: 'eco', model: 'haiku', effort: 'low', why: ['eco'], missing: ['history'] } }); taskCardHtml(ext)`);
+  assert.ok(html.includes('claude-opus-5-5 · high') && html.includes('haiku · low') && html.includes(run('I18N.en.tasks.missing.history')), 'outside card: current, recommended and what is missing');
+  assert.ok(/<option value="haiku" selected>/.test(html) && /<option value="low" selected>/.test(html), 'the request box comes with the recommendation picked');
+  assert.ok(/data-pask="ext-00001" disabled/.test(html) && html.includes('It is working right now'), 'no request while it is busy');
+  ext.state = 'idle'; assert.ok(!/data-pask="ext-00001" disabled/.test(run('taskCardHtml(ext)')), 'idle: the request can go');
+  // watching: a concrete reason notifies once, a plain "regular task" never does
+  ext.state = 'thinking'; ext.doing = { for: 9e5 }; sandbox.nextRec = { profile: 'deep', model: 'opus', effort: 'high', why: ['default', 'live-stuck'] };
+  ext.model = 'claude-sonnet-5'; run('data.people = [ext]; watchOutside()'); await new Promise(r => setTimeout(r, 20));
+  assert.ok(run("calls.some(c => c.op === 'recommend' && c.live.stuckMs === 9e5)"), 'progress goes into the recommendation');
+  assert.strictEqual(run("notices.filter(n => n.key === 'out:ext-00001').length"), 1, 'stuck outside session: one notice');
+  assert.ok(run("notices[0].ref.ext && notices[0].ref.rec.model === 'opus'"), 'the notice carries the exact proposal');
+  run('watchAt.clear(); watchOutside()'); await new Promise(r => setTimeout(r, 20));
+  assert.strictEqual(run("notices.filter(n => n.key === 'out:ext-00001')[0].n"), 1, 'the same recommendation is not repeated');
+  run("notices = []; noticed = {}; watchAt.clear(); globalThis.nextRec = { profile: 'bal', model: 'sonnet', effort: 'medium', why: ['default'] }; ext.model = 'claude-opus-5-5'; watchOutside()"); await new Promise(r => setTimeout(r, 20));
+  assert.strictEqual(run('notices.length'), 0, 'no notice without a concrete reason');
+  // a task asking permission: card buttons and a notice
+  const asking = { id: 'tk1', title: 'Build', agent: 'claude', state: 'running', model: 'sonnet', effort: 'medium', profile: 'bal', tokens: { output: 0 }, attempts: 1, events: [], ask: { tool: 'Bash', what: 'npm test', at: 5 } };
+  sandbox.asking = asking;
+  html = run('askPermHtml(asking)');
+  assert.ok(html.includes('data-tpermit="tk1" data-allow="1"') && html.includes('data-always="1"') && html.includes('npm test'), 'allow, always and deny on the card');
+  run('taskData.tasks = [asking]; globalThis.reply = () => ({ ok: true, tasks: [asking], options: taskData.options }); reportEl.hidden = true'); await run('pollTasks()');
+  assert.ok(run("notices.some(n => n.key === 'ask:tk1' && n.ref.ask)"), 'a permission question becomes a notice');
+  })().catch(e => { console.error(e); process.exit(1); });
 }
 
 // secrets in commands never show up
@@ -404,6 +438,38 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(T(t1.id).events.some(e => e.kind === 'applied' && e.to.model === 'opus'), 'change confirmed when applied');
   assert.ok(Math.abs(T(t1.id).cost - 0.02) < 1e-9, 'resumed runs add their own cost only');
 
+  // a permission asked mid-run waits for the office; "always" remembers the tool for the next asks
+  mode('perm'); const tp = tasks.op({ op: 'create', dir: proj, desc: 'needs bash', agent: 'claude' }).task;
+  for (let i = 0; i < 100 && !T(tp.id).ask; i++) await new Promise(r => setTimeout(r, 30));
+  assert.deepStrictEqual([T(tp.id).state, T(tp.id).ask && T(tp.id).ask.tool], ['running', 'Bash'], 'the run waits on the question');
+  assert.strictEqual(tasks.op({ op: 'permit', id: tp.id, allow: true, always: true }).ok, true); await tasks._idle();
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(H, 'fake-perm'), 'utf8')).response.response.behavior, 'allow', 'the answer reaches the agent');
+  assert.ok(T(tp.id).allowed.includes('Bash') && !T(tp.id).ask, 'remembered, question cleared');
+  fs.unlinkSync(path.join(H, 'fake-perm')); tasks.op({ op: 'reply', id: tp.id, text: 'again' }); await tasks._idle();
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(H, 'fake-perm'), 'utf8')).response.response.behavior, 'allow', 'an allowed tool is answered without asking');
+  const tq = tasks.op({ op: 'create', dir: proj, desc: 'needs bash too', agent: 'claude' }).task;
+  for (let i = 0; i < 100 && !T(tq.id).ask; i++) await new Promise(r => setTimeout(r, 30));
+  tasks.op({ op: 'permit', id: tq.id, allow: false }); await tasks._idle();
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(H, 'fake-perm'), 'utf8')).response.response.behavior, 'deny', 'a denial reaches the agent');
+  assert.strictEqual(tasks.op({ op: 'permit', id: tq.id, allow: true }).ok, false, 'nothing to answer once it is over');
+  // Codex asks before leaving its sandbox; the office answers
+  mode('perm'); const tc = tasks.op({ op: 'create', dir: plain, desc: 'codex needs network', agent: 'codex' }).task;
+  for (let i = 0; i < 100 && !T(tc.id).ask; i++) await new Promise(r => setTimeout(r, 30));
+  assert.strictEqual(T(tc.id).ask && T(tc.id).ask.tool, 'command', 'Codex waits on the question');
+  tasks.op({ op: 'permit', id: tc.id, allow: true, always: true }); await tasks._idle();
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(H, 'fake-perm'), 'utf8')).decision, 'acceptForSession', 'the answer reaches Codex');
+  assert.strictEqual(T(tc.id).state, 'blocked', 'and the run finishes');
+  mode('ok');
+
+  // compaction keeps the same session, the result and the attempt count
+  const before = T(t1.id); tasks.op({ op: 'compact', id: t1.id }); await tasks._idle();
+  const tc1 = T(t1.id), ac = lastArgs();
+  assert.deepStrictEqual([tc1.state, tc1.reason, tc1.result, tc1.attempts], ['blocked', 'compacted', before.result, before.attempts], 'Claude compacted, back to waiting');
+  assert.ok(ac[ac.length - 1] === '/compact' && ac[ac.indexOf('--resume') + 1] === 'S1', 'through /compact on the same session');
+  assert.ok(tc1.events.some(e => e.kind === 'compacted' && e.pre === 28000 && e.post === 2800), 'how much it shrank is kept');
+  const fresh0 = tasks.op({ op: 'create', dir: proj, desc: 'new one', agent: 'claude', dependsOn: t1.id }).task; tasks.op({ op: 'cancel', id: fresh0.id });
+  assert.strictEqual(tasks.op({ op: 'compact', id: fresh0.id }).reason, 'state', 'nothing to compact before it ran');
+
   // failure, then a clean retry
   mode('fail'); let t2 = tasks.op({ op: 'create', dir: proj, desc: 'break', agent: 'claude' }).task; await tasks._idle();
   assert.strictEqual(T(t2.id).state, 'failed');
@@ -430,22 +496,31 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   fs.writeFileSync(path.join(H, '.codex', 'config.toml'), 'model = "gpt-6.1-sol"\n');
   assert.ok(tasks.options('codex').models.includes('gpt-6.1-sol') && tasks.options('codex').efforts.includes('xhigh'), 'Codex models and efforts from its own cache');
   const t6 = tasks.op({ op: 'create', dir: plain, desc: 'codex job', agent: 'codex', model: 'gpt-6.1-sol', effort: 'xhigh' }).task; await tasks._idle();
-  const a6 = lastArgs(); assert.ok(a6[a6.indexOf('-m') + 1] === 'gpt-6.1-sol' && a6.includes('model_reasoning_effort="xhigh"'));
+  const a6 = lastArgs(); assert.ok(a6.args[0] === 'app-server' && a6.thread.model === 'gpt-6.1-sol' && a6.turn.effort === 'xhigh' && a6.thread.approvalPolicy === 'on-request' && a6.thread.sandbox === 'workspace-write', 'model, effort and an asking sandbox reach Codex');
+  assert.ok(Math.abs(T(t6.id).tokens.input - 1000) < 1e-9, 'a repeated usage update counts once');
   assert.ok(!T(t6.id).costUnknown && T(t6.id).cost > 0, 'known Codex model is priced');
   tasks.op({ op: 'reply', id: t6.id, text: 'go on' }); await tasks._idle();
-  assert.deepStrictEqual(lastArgs().slice(0, 3), ['exec', 'resume', 'T1'], 'Codex resumes its thread');
+  assert.deepStrictEqual([lastArgs().thread.method, lastArgs().thread.threadId], ['thread/resume', 'T1'], 'Codex resumes its thread');
+  tasks.op({ op: 'compact', id: t6.id }); await tasks._idle();
+  assert.deepStrictEqual([lastArgs().compact.threadId, T(t6.id).state, T(t6.id).reason, T(t6.id).result], ['T1', 'blocked', 'compacted', 'ok'], 'Codex compacts its thread');
 
   const lv = tasks.recommend('fix the typo in the readme', 'claude', null, { stuckMs: 9e5, ctx: .9 });
   assert.ok(lv.profile === 'bal' && lv.why.includes('live-stuck') && lv.why.includes('live-ctx'), 'a stuck outside session is told to step up and start fresh');
+  const { deepLink } = require('../src/focus');
+  assert.deepStrictEqual([deepLink({ agent: 'claude', entrypoint: 'claude-vscode', id: 'aaaaaaaa-1' }).url, deepLink({ agent: 'claude', entrypoint: 'claude-desktop', id: 'aaaaaaaa-1' }).url, deepLink({ agent: 'codex', entrypoint: 'codex-vscode', id: 'bbbbbbbb-2' }).url, deepLink({ agent: 'codex', id: 'bbbbbbbb-2' }).url],
+    ['vscode://anthropic.claude-code/open?session=aaaaaaaa-1', 'claude://code/continue?session=aaaaaaaa-1', 'vscode://openai.chatgpt/local/bbbbbbbb-2', 'codex://threads/bbbbbbbb-2'], 'each outside conversation opens where it lives');
+  assert.ok(!deepLink({ agent: 'claude', entrypoint: 'cli', id: 'aaaaaaaa-1', pid: 1 }) && !deepLink({ agent: 'codex', id: 'x;rm -rf' }), 'terminals keep the tab path; odd ids never become a link');
   // a request sent from the office to a session opened outside continues that same conversation, never in a worktree
   const ext = 'b1c2d3e4-0000-4000-8000-123456789abc';
   const tx = tasks.op({ op: 'create', dir: proj, desc: 'from the office', agent: 'claude', resume: ext, worktree: true, model: 'haiku', effort: 'low' }).task;
   assert.ok(tx.adopted && !tx.worktree, 'adopted, no worktree'); await tasks._idle();
   const a7 = lastArgs(); assert.ok(a7[a7.indexOf('--resume') + 1] === ext && a7[a7.indexOf('--model') + 1] === 'haiku' && a7.includes('from the office'), 'Claude resumes the outside session with the chosen model');
   tasks.op({ op: 'create', dir: plain, desc: 'codex from the office', agent: 'codex', resume: 'T-outside-123' }); await tasks._idle();
-  const a8 = lastArgs(); assert.deepStrictEqual(a8.slice(0, 3), ['exec', 'resume', 'T-outside-123'], 'Codex resumes the outside thread');
-  assert.ok(a8.includes('sandbox_mode="workspace-write"'), 'and may still edit files');
+  const a8 = lastArgs(); assert.deepStrictEqual([a8.thread.method, a8.thread.threadId, a8.thread.sandbox], ['thread/resume', 'T-outside-123', 'workspace-write'], 'Codex resumes the outside thread and may still edit files');
   assert.ok(!tasks.op({ op: 'create', dir: proj, desc: 'x', agent: 'claude', resume: '../../etc' }).task.adopted, 'a bad id is not resumed');
+  const tcx = tasks.op({ op: 'create', dir: proj, desc: 'compact', agent: 'claude', resume: ext, compact: true }).task; await tasks._idle();
+  const allArgs = fs.readFileSync(path.join(H, 'fake-args'), 'utf8').trim().split('\n').map(l => JSON.parse(l));
+  assert.ok(allArgs.some(x => Array.isArray(x) && x[x.length - 1] === '/compact' && x[x.indexOf('--resume') + 1] === ext) && T(tcx.id).reason === 'compacted', 'an outside session can be compacted from the office (' + T(tcx.id).reason + ')');
 
   // a Codex turn that failed must not leave the next successful attempt marked as failed
   mode('cfail'); const t6b = tasks.op({ op: 'create', dir: plain, desc: 'codex fail', agent: 'codex' }).task; await tasks._idle();

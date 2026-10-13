@@ -2,12 +2,27 @@
 // fake `claude -p --output-format stream-json` for the tests: behaviour comes from $HOME/fake-mode
 const fs = require('fs'), path = require('path'), H = process.env.HOME;
 const mode = (() => { try { return fs.readFileSync(path.join(H, 'fake-mode'), 'utf8').trim(); } catch { return 'ok'; } })();
-fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify(process.argv.slice(2)) + '\n');
 const out = o => process.stdout.write(JSON.stringify(o) + '\n');
+// the request arrives on stdin (--input-format stream-json); it is logged with the args so the tests can see it
+const lines = []; let wait = null, rest = '';
+process.stdin.on('data', d => { rest += d; let i; while ((i = rest.indexOf('\n')) >= 0) { lines.push(JSON.parse(rest.slice(0, i))); rest = rest.slice(i + 1); if (wait) { const w = wait; wait = null; w(); } } });
+const next = () => new Promise(r => lines.length ? r() : (wait = r)).then(() => lines.shift());
+(async () => {
+const first = await next();
+fs.appendFileSync(path.join(H, 'fake-args'), JSON.stringify([...process.argv.slice(2), first.message.content]) + '\n');
+if (first.message.content === '/compact') {
+  out({ type: 'system', subtype: 'init', session_id: 'S1', model: 'claude-sonnet-5' });
+  out({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'manual', pre_tokens: 28000, post_tokens: 2800 } });
+  out({ type: 'result', subtype: 'success', is_error: false, result: '', num_turns: 0, total_cost_usd: 0.004 }); process.exit(0);
+}
 const model = 'claude-sonnet-5', usage = { input_tokens: 1000, output_tokens: 100, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
 out({ type: 'system', subtype: 'init', session_id: 'S1', model });
 const msg = (id, content) => out({ type: 'assistant', message: { id, model, content, usage } });
 msg('m1', [{ type: 'text', text: 'working' }]); msg('m1', [{ type: 'tool_use', name: 'Read', input: { file_path: 'a.txt' } }]); // same message twice: usage counts once
+if (mode === 'perm') { // asks before Bash; the answer decides what the result says
+  out({ type: 'control_request', request_id: 'r1', request: { subtype: 'can_use_tool', tool_name: 'Bash', input: { command: 'npm test' }, description: 'run the tests' } });
+  const a = await next(); fs.writeFileSync(path.join(H, 'fake-perm'), JSON.stringify(a));
+}
 if (mode === 'loop') for (let i = 0; i < 3; i++) msg('l' + i, [{ type: 'tool_use', name: 'Bash', input: { command: 'ls' } }]);
 if (mode === 'slow') { let n = 0; const iv = setInterval(() => msg('s' + n++, [{ type: 'text', text: 'still going' }]), 100); setTimeout(() => clearInterval(iv), 20000); return; }
 if (mode === 'ok' || mode === 'loop') { fs.writeFileSync('new.txt', 'brand new\n'); fs.appendFileSync('a.txt', 'changed\n'); require('child_process').execFileSync('git', ['commit', '-qam', 'agent commit']); }
@@ -16,3 +31,4 @@ out({ type: 'result', subtype: fail ? 'error_during_execution' : 'success', is_e
   modelUsage: { [model]: { inputTokens: 1000, outputTokens: 100, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.01 } },
   permission_denials: mode === 'deny' ? [{ tool_name: 'Bash', tool_input: { command: 'rm x' } }] : [] });
 process.exit(fail ? 1 : 0);
+})();
