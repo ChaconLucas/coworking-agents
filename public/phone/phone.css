@@ -89,3 +89,8 @@ nav#tabs button { min-height: 48px; }
    to the bottom edge; the top half keeps the page colour behind the header */
 html:not(.visit) { background: linear-gradient(to bottom, var(--bg) 0 50%, #1d1a22 50% 100%); }
 html:not(.visit) body { background: transparent; }
+/* a solid colour everywhere iOS shows outside the page (no gradient that could repeat), the tab bar's colour */
+html:not(.visit) { background: #1d1a22; }
+/* when the shell is stretched to the real screen height (see phone.js), the home bar gets its own room */
+#shell.tall nav#tabs { padding-bottom: 22px; }
+#shell header { box-shadow: 0 -200px 0 0 var(--bg); } /* the area behind the clock: the header's solid colour, never a blur */

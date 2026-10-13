@@ -102,3 +102,13 @@ document.querySelector('.brand').addEventListener('click', () => {
   const mode = matchMedia('(display-mode: standalone)').matches || navigator.standalone ? P.diagApp : P.diagSafari;
   alert(`${mode}\n${P.diagScreen}: ${screen.width}×${screen.height} · ${P.diagPage}: ${innerWidth}×${innerHeight}\n${P.diagInsets}: ${top} / ${bottom}`);
 });
+// iOS home-screen apps sometimes give the page less height than the screen, leaving a strip under the tab bar:
+// stretch the shell to the real screen height so the bar sits on the bottom edge
+function fitShell() {
+  const shell = document.getElementById('shell'); if (!shell) return;
+  const app = matchMedia('(display-mode: standalone)').matches || navigator.standalone, gap = screen.height - innerHeight;
+  const tall = app && gap > 16 && gap < 200;
+  shell.classList.toggle('tall', tall);
+  shell.style.height = tall ? screen.height + 'px' : ''; shell.style.bottom = tall ? 'auto' : '';
+}
+fitShell(); addEventListener('resize', fitShell); addEventListener('orientationchange', () => setTimeout(fitShell, 300));
