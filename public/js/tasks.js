@@ -437,11 +437,21 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  if (menu) for (const [tab, icon] of [['phone', '📱'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); openReport(tab); });
   }
+}
+// the phone panel: its link as a QR code when the office was started with --phone, how to turn it on otherwise
+async function renderPhone() {
+  const P = T.phone, body = reportEl.querySelector('.report-body');
+  const d = await api('api/phone'); if (reportTab !== 'phone' || reportEl.hidden) return;
+  if (!d || !d.on) { body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.how)}</p><p><code>npx coworking-agents --phone</code></p><p class="note">${esc(P.warn)}</p>`; return; }
+  body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.scan)}</p><canvas class="qr" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.url)}</code></p><p class="note">${esc(P.warn)}</p>`;
+  const c = body.querySelector('canvas.qr'), n = d.qr.length, q = 4, s = 6, g = c.getContext('2d');
+  c.width = c.height = (n + q * 2) * s; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#000';
+  d.qr.forEach((row, r) => [...row].forEach((x, k) => { if (x === '1') g.fillRect((k + q) * s, (r + q) * s, s, s); }));
 }
 function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); }
 setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);

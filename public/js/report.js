@@ -109,6 +109,7 @@ function renderReport() {
   if (reportTab === 'tasks') return renderTasks();
   if (reportTab === 'notices') return renderNotices();
   if (reportTab === 'version') return renderVersion();
+  if (reportTab === 'phone') return renderPhone();
   if (reportTab === 'today') return renderToday();
   if (reportTab === 'feed') return renderFeed();
   if (reportTab === 'ach') return renderAchievements();

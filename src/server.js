@@ -51,7 +51,7 @@ function privateUsage(u, privacy) {
   return strip(u);
 }
 
-function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token } = {}) {
+function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token, phone = false } = {}) {
   tasks.startQueue({ demo });
   token = token || crypto.randomBytes(24).toString('hex');
   const snapshot = demo ? demoSnapshot : real;
@@ -74,6 +74,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     }
   }
   const timer = setInterval(() => { if (clients.size) tick(); }, interval);
+  let phoneInfo = null, phoneReason = phone ? 'starting' : 'off';
 
   const server = http.createServer((req, res) => {
     try { handle(req, res); } catch { if (!res.headersSent) send(res, 500, 'text/plain', 'error'); else res.destroy(); }
@@ -247,6 +248,8 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/report') return send(res, 200, 'application/json', JSON.stringify(demo ? demoReport() : report({ privacy })));
     if (url.pathname === '/api/state') return send(res, 200, 'application/json', safeSnapshot());
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
+    // the phone link and its QR code, only to this machine (the phone server itself never serves this)
+    if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : { on: false, reason: phoneReason }));
 
     const rel = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
     const file = path.join(PUBLIC, path.normalize(rel));
@@ -259,9 +262,13 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
 
   return new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(port, host, () => {
+    server.listen(port, host, async () => {
       const base = `http://${host === '0.0.0.0' ? 'localhost' : host}:${server.address().port}`;
-      resolve({ server, token, base, url: `${base}/?t=${token}`, close: () => { clearInterval(timer); for (const c of clients) c.destroy(); server.close(); } });
+      if (phone) { // opt-in: a separate, restricted server on the LAN address (see src/phone.js)
+        try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
+        catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; }
+      }
+      resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });
     });
   });
 }

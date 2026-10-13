@@ -12,11 +12,12 @@ const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 if (flag('-h') || flag('--help')) {
   console.log(`coworking-agents — a pixel office for your AI coding agents (Claude Code, Codex, …)
 
-  npx coworking-agents [--port 4777] [--no-open] [--private]
+  npx coworking-agents [--port 4777] [--no-open] [--private] [--phone]
 
   --port      port to listen on (default 4777, falls back to a free one)
   --no-open   don't open the browser
   --private   hide session titles, paths and file names (screen sharing)
+  --phone     also serve a small phone panel on your Wi-Fi (own token, QR code in the terminal; trusted networks only)
   --demo [N]  show a fake office with every state and N agents (default 10)
   --json      print one snapshot and exit
   mcp         run a read-only MCP server on stdio (claude mcp add coworking -- npx coworking-agents mcp)
@@ -58,16 +59,18 @@ async function reuse() {
   const privacy = flag('--private'), demo = flag('--demo');
   if (!demo && !privacy && !flag('--port')) {
     const s = await reuse();
+    if (s && flag('--phone')) { console.log(`coworking-agents is already running without the phone panel (${s.base}). Close it (Ctrl+C in its terminal) and start again with --phone.`); return; }
     if (s) { console.log(`coworking-agents already running → ${s.base}/?t=${s.token}`); if (!flag('--no-open')) open(`${s.base}/?t=${s.token}`); return; }
   }
   // keep the same token across restarts so an open tab keeps working (file is 0600, only yours)
   let token;
   if (!demo && !privacy) { try { const prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (/^[0-9a-f]{48}$/.test(prev.token)) token = prev.token; } catch {} }
   let hq;
-  try { hq = await start({ port, privacy, demo, token }); }
+  const phone = flag('--phone');
+  try { hq = await start({ port, privacy, demo, token, phone }); }
   catch (e) {
     if (e.code !== 'EADDRINUSE') throw e;
-    hq = await start({ port: 0, privacy, demo, token }); // port taken by something else: use a free one
+    hq = await start({ port: 0, privacy, demo, token, phone }); // port taken by something else: use a free one
   }
   if (!demo && !privacy) {
     try {
@@ -79,6 +82,10 @@ async function reuse() {
     } catch {}
   }
   console.log(`coworking-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
+  if (phone) {
+    if (hq.phone) console.log(`\nPhone (same Wi-Fi, trusted networks only — the LAN link is not encrypted) → ${hq.phone.url}\n${require('../src/qr').toTerminal(require('../src/qr').encode(hq.phone.url))}\n`);
+    else console.log(`\nPhone panel not started: ${hq.phoneReason === 'nolan' ? 'no local network address found' : hq.phoneReason}`);
+  }
   if (!flag('--no-open')) open(hq.url);
   if (!demo && !flag('--no-update-check')) {
     const up = await require('../src/update').startChecks();

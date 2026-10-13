@@ -201,6 +201,12 @@ Tasks live in `~/.config/coworking-agents/tasks/`. In private mode names, folder
 
 The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. It keeps working with the tab in the background and recovers what was already pending when you open the office. **Releases** shows the installed version, the newest on npm (or *unavailable*), when it checked, a clickable map of every release and the notes of the newer one, with the update command for how you installed it. The office admin appears behind the top-bar counter only when there's version news: he waves the sign until you've seen it, keeps holding it until you update, then celebrates.
 
+## Phone panel (opt-in)
+
+`npx coworking-agents --phone` also serves a small page for your phone on the same Wi-Fi: who needs you, tasks with their permission questions (*Allow* / *Deny*), reply, conclude or cancel a task, and pick an option when an agent asks a single-choice question. Scan the QR code printed in the terminal or shown in ☰ → 📱 Phone.
+
+It is a separate server that only answers on your LAN address, with its own token (new each run), an exact Host and Origin check, and none of the office's other routes (files, diffs, launching, windows). The office itself stays on `127.0.0.1`. The local network link is plain HTTP, so use it only on networks you trust.
+
 ## MCP (read-only)
 
 `claude mcp add coworking -- npx coworking-agents mcp` gives other agents `list_agents`, `get_agent_status`, `get_conflicts`, `get_daily_report` and `list_tasks`. Nothing through MCP changes anything.

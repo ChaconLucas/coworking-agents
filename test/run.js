@@ -276,6 +276,16 @@ sleepK.kill();
   })().catch(e => { console.error(e); process.exit(1); });
 }
 
+// QR codes: the same matrix as a reference encoder (npm's qrcode-terminal) for "hi" with mask 2
+{
+  const { encode } = require('../src/qr');
+  const ref = ['#######..#..#.#######', '#.....#.#..#..#.....#', '#.###.#..#....#.###.#', '#.###.#.#..#..#.###.#', '#.###.#...###.#.###.#', '#.....#.###.#.#.....#', '#######.#.#.#.#######',
+    '..........###........', '#####.####..##.#.#.#.', '#.#..#....#.#..#....#', '.#...###..##.#..####.', '####.#.#.......##.#..', '#.#.###..#.#.#..#.#.#', '........#.#####..#..#',
+    '#######.#...#.##...#.', '#.....#..######..#..#', '#.###.#.#.#.#..#..#..', '#.###.#.##..#..#..#..', '#.###.#.#..#.#..###..', '#.....#.##.....##.#..', '#######.####.#..####.'];
+  assert.deepStrictEqual(encode('hi', 2).map(r => r.map(x => (x ? '#' : '.')).join('')), ref, 'QR matches the reference encoder');
+  assert.strictEqual(encode('http://192.168.0.10:4778/?t=' + 'a'.repeat(32)).length, 33, 'a phone link fits version 4');
+}
+
 // secrets in commands never show up
 const { short } = require('../src/util');
 assert.ok(!short('export GITHUB_TOKEN=ghp_abc123 && x').includes('ghp_abc123'));
@@ -553,6 +563,24 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(!codexKeys('hidden', 'low', cache) && !codexKeys('a', 'max', cache) && !codexKeys('b', 'high', cache), 'only what the picker shows directly');
   assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'claude-vscode' }, 'sonnet', 'low')).reason, 'unsupported', 'VS Code and the app are not typed into');
   assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'cli' }, 'sonnet; rm -rf ~', 'low')).reason, 'text', 'only a model name and a known effort are typed');
+
+  // phone panel: only its LAN address, its own token, the tight POST rules, and nothing else of the office
+  const { startPhone, lanIp } = require('../src/phone');
+  if (lanIp()) {
+    const ph = await startPhone({ port: 0, demo: false, snapshot: () => ({ people: [] }), tasks, sendText: async () => ({ ok: true }), people: () => [] });
+    const tok = ph.url.split('t=')[1], base = 'http://' + ph.host, get = (u, h = {}) => fetch(base + u, { headers: h, redirect: 'manual' });
+    assert.strictEqual((await get('/api/m')).status, 401, 'phone: no token, nothing');
+    assert.strictEqual((await get('/api/m', { Cookie: 'cwp=' + 'b'.repeat(32) })).status, 401, 'phone: wrong token');
+    const login = await get('/?t=' + tok); assert.ok(login.status === 302 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')), 'phone: the link sets a strict cookie');
+    const ck = { Cookie: 'cwp=' + tok };
+    assert.strictEqual((await get('/api/m', ck)).status, 200);
+    assert.deepStrictEqual([(await get('/api/tasks', ck)).status, (await get('/index.html', ck)).status, (await get('/../src/server.js', ck)).status], [404, 404, 404], 'phone: nothing of the office');
+    const post = (h, b) => fetch(base + '/api/m', { method: 'POST', headers: { ...ck, ...h }, body: JSON.stringify(b) });
+    assert.strictEqual((await post({}, { op: 'permit' })).status, 403, 'phone: POST needs the header');
+    assert.strictEqual((await post({ 'X-Coworking': '1', Origin: 'http://evil.example' }, { op: 'permit' })).status, 403, 'phone: and its own origin');
+    assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'delete', id: 'x' })).json()).reason, 'op', 'phone: only allow, reply, conclude, cancel and answer');
+    ph.close();
+  }
 
   // a request sent from the office to a session opened outside continues that same conversation, never in a worktree
   const ext = 'b1c2d3e4-0000-4000-8000-123456789abc';
