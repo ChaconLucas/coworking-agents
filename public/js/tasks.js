@@ -412,7 +412,7 @@ reportEl.addEventListener('change', async e => {
 let tSearchT = 0;
 reportEl.addEventListener('input', e => {
   const q = e.target.closest('[data-tsearch]'); if (!q) return;
-  clearTimeout(tSearchT); tSearchT = setTimeout(async () => { const v = q.value.trim(); taskSearch = v.length > 1 ? await api('api/search?q=' + encodeURIComponent(v)) : []; if (!Array.isArray(taskSearch)) taskSearch = []; const sd = v.length > 2 ? await api('api/said?q=' + encodeURIComponent(v)) : []; taskSaid = Array.isArray(sd) ? sd : []; const v = q.value; renderTasks(); const n = reportEl.querySelector('[data-tsearch]'); n.value = v; n.focus(); }, 300);
+  clearTimeout(tSearchT); tSearchT = setTimeout(async () => { const v = q.value.trim(); taskSearch = v.length > 1 ? await api('api/search?q=' + encodeURIComponent(v)) : []; if (!Array.isArray(taskSearch)) taskSearch = []; const sd = v.length > 2 ? await api('api/said?q=' + encodeURIComponent(v)) : []; taskSaid = Array.isArray(sd) ? sd : []; const typed = q.value; renderTasks(); const n = reportEl.querySelector('[data-tsearch]'); n.value = typed; n.focus(); }, 300);
 });
 
 // ---- notification center: grouped by key, read state, actions; kept in this browser ----
