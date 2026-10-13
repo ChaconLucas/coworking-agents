@@ -216,10 +216,13 @@ function settingsHtml() {
     <div class="trow"><label>${esc(X.autoMax)}<select data-tset="autoMax">${['eco', 'bal', 'deep'].map(k => `<option value="${k}" ${st.autoMax === k ? 'selected' : ''}>${esc(X.profiles[k])}</option>`).join('')}</select></label>
     <label>${esc(X.autoPerTask)}<input type="number" min="0" max="5" value="${Number(st.autoPerTask) || 0}" data-tset="autoPerTask"></label></div><p class="note">${esc(X.autoNote)}</p></details>`;
 }
+let tformOpen = false; // the form stays open across the periodic refresh
+document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('tform')) tformOpen = e.target.open; }, true);
 function formHtml() {
   const X = TT(), folders = typeof knownFolders === 'function' ? knownFolders() : [];
   const sel = (name, opts, v) => `<select data-tf="${name}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  return `<details class="tform" ${taskData.tasks.length ? '' : 'open'}><summary>＋ ${esc(X.newT)}</summary>
+  return `<details class="tform" ${!taskData.tasks.length || tformOpen ? 'open' : ''}><summary>＋ ${esc(X.newT)}</summary>
+    ${(taskData.settings.templates || []).length ? `<div class="tpls"><small>${esc(X.tplTitle)}</small>${taskData.settings.templates.map((x, i) => `<span class="tpl"><button class="btn small ghost" data-tpl="${i}" title="${esc(x.desc.slice(0, 200))}">${esc(x.name)}</button><button class="hb" data-tplrun="${i}" title="${esc(X.tplRun)}">▶</button><button class="hb" data-tpldel="${i}" title="${esc(X.tplDel)}">✕</button></span>`).join('')}</div>` : ''}
     <label>${esc(X.desc)}<textarea data-tf="desc" rows="3"></textarea></label>
     <label>${esc(X.title)}<input data-tf="title" maxlength="80"></label>
     <label>${esc(X.folder)}<input data-tf="dir" list="tdirs" value="${esc(folders[0] ? folders[0][0] : '')}"><datalist id="tdirs">${folders.map(([d]) => `<option value="${esc(d)}">`).join('')}</datalist></label>
@@ -233,7 +236,7 @@ function formHtml() {
     <label>${esc(X.test)}<input data-tf="testCmd" placeholder="npm test"></label>
     <label class="tchk"><input type="checkbox" data-tf="worktree" checked> ${esc(X.wt)}</label>
     <label class="tchk"><input type="checkbox" data-tf="lean"> ${esc(X.lean)}</label>
-    <p><button class="btn small" data-tact="recommend">💡 ${esc(X.rec)}</button> <button class="btn" data-tact="create">➤ ${esc(X.create)}</button></p><p class="note" id="tmsg">${esc(taskWhy)}</p></details>`;
+    <p><button class="btn small" data-tact="recommend">💡 ${esc(X.rec)}</button> <button class="btn" data-tact="create">➤ ${esc(X.create)}</button> <button class="btn small ghost" data-tact="saveTpl">💾 ${esc(X.tplSave)}</button></p><p class="note" id="tmsg">${esc(taskWhy)}</p></details>`;
 }
 function rowHtml(t) {
   const X = TT(), why = t.state === 'blocked' || t.reason === 'restart' || t.reason === 'detached' ? ' · ' + (X.reasons[t.reason] || '') : '';
@@ -243,6 +246,11 @@ function rowHtml(t) {
 function renderTasks() {
   const X = TT(), body = reportEl.querySelector('.report-body');
   if (taskSel && taskDetail) return renderTaskDetail(body);
+  const draft = reportEl.querySelector('.tform') ? tfVal() : null; // what was typed survives the refresh
+  renderTaskList(X, body);
+  if (draft) for (const [k, v] of Object.entries(draft)) { const el = reportEl.querySelector(`[data-tf="${k}"]`); if (el) { if (el.type === 'checkbox') el.checked = v; else el.value = v; } }
+}
+function renderTaskList(X, body) {
   const order = ['blocked', 'running', 'pending', 'failed', 'done', 'cancelled'], list = taskData.tasks.slice().sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state) || b.priority - a.priority || b.updated - a.updated);
   const kindL = { task: X.kinds.task, session: X.kinds.session, today: X.kinds.today, month: X.kinds.month };
   body.innerHTML = tabsHtml() + `<p class="sub">${esc(X.sub)}</p>${taskData.privacy ? `<p class="note">🔒 ${esc(X.privateNote)}</p>` : ''}` + formHtml() + settingsHtml()
@@ -286,12 +294,21 @@ const tfVal = () => { const o = {}; reportEl.querySelectorAll('[data-tf]').forEa
 const tFail = r => (TT().fail[r.reason] || TT().fail.state);
 reportEl.addEventListener('click', async e => {
   if (reportTab !== 'tasks') return;
+  const tp = e.target.closest('[data-tpl],[data-tplrun],[data-tpldel]');
+  if (tp) {
+    const i = Number(tp.dataset.tpl ?? tp.dataset.tplrun ?? tp.dataset.tpldel), x = (taskData.settings.templates || [])[i]; if (!x) return;
+    if (tp.dataset.tpldel !== undefined) { if (!confirm(TT().tplDelSure(x.name))) return; await api('api/tasks', { op: 'untemplate', name: x.name }); await pollTasks(); return renderTasks(); }
+    if (tp.dataset.tplrun !== undefined) { const { name, ...v } = x; const r = await api('api/tasks', { op: 'create', ...v, title: name }); if (!r.ok) { const m = document.getElementById('tmsg'); if (m) m.textContent = tFail(r); return; } achBump('launches'); await pollTasks(); return loadTask(r.task.id); }
+    for (const [k, v] of Object.entries(x)) { const el = reportEl.querySelector(`[data-tf="${k}"]`); if (el) { if (el.type === 'checkbox') el.checked = !!v; else el.value = v; } }
+    const ti = reportEl.querySelector('[data-tf="title"]'); if (ti && !ti.value) ti.value = x.name; return;
+  }
   const per = e.target.closest('[data-tperiod]'); if (per) { taskPeriod = per.dataset.tperiod; return renderTasks(); }
   const op1 = e.target.closest('[data-topen]'); if (op1) { taskDiff = null; return loadTask(op1.dataset.topen); }
   const pp = e.target.closest('[data-tperson]'); if (pp) { closeReport(); selected = pp.dataset.tperson; return renderPanel(); }
   const b = e.target.closest('[data-tact]'); if (!b) return;
   const act = b.dataset.tact, X = TT(), msg = t => { const m = document.getElementById('tmsg'); if (m) m.textContent = t; };
   if (act === 'recommend') { const v = tfVal(), r = await api('api/tasks', { op: 'recommend', desc: v.desc, agent: v.agent === 'auto' ? 'claude' : v.agent }); if (r.ok) { reportEl.querySelector('[data-tf="profile"]').value = r.rec.profile; taskWhy = `${X.recFor(X.profiles[r.rec.profile], r.rec.model || X.cliDefault, r.rec.effort)} — ${r.rec.why.map(w => X.recWhy[w] || w).join(' · ')}${r.rec.similar ? ' · ' + X.similar(r.rec.similar) : ''}`; msg(taskWhy); } return; }
+  if (act === 'saveTpl') { const v = tfVal(); if (!v.desc.trim()) return msg(X.fail.nodesc); const name = (prompt(X.tplName, v.title || v.desc.split('\n')[0].slice(0, 40)) || '').trim(); if (!name) return; const r = await api('api/tasks', { op: 'template', name, ...v }); if (!r.ok) return msg(tFail(r)); await pollTasks(); renderTasks(); return msg(X.tplSaved(name)); }
   if (act === 'create') { const r = await api('api/tasks', { op: 'create', ...tfVal() }); if (!r.ok) return msg(tFail(r)); taskWhy = ''; achBump('launches'); await pollTasks(); return loadTask(r.task.id); }
   if (act === 'back') { taskSel = ''; taskDetail = null; taskDiff = null; return renderTasks(); }
   const id = taskSel; if (!id) return;

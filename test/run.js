@@ -483,6 +483,14 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   const fresh0 = tasks.op({ op: 'create', dir: proj, desc: 'new one', agent: 'claude', dependsOn: t1.id }).task; tasks.op({ op: 'cancel', id: fresh0.id });
   assert.strictEqual(tasks.op({ op: 'compact', id: fresh0.id }).reason, 'state', 'nothing to compact before it ran');
 
+  // templates: saved with folder and settings, replaced by name, hidden in private mode, deleted
+  tasks.op({ op: 'template', name: 'tests', desc: 'run the tests and fix', dir: proj, agent: 'codex', profile: 'eco', testCmd: 'npm test' });
+  tasks.op({ op: 'template', name: 'tests', desc: 'run the tests and fix them', dir: proj, agent: 'claude' });
+  const tl = tasks.list().settings.templates;
+  assert.deepStrictEqual([tl.length, tl[0].desc, tl[0].agent], [1, 'run the tests and fix them', 'claude'], 'one template per name');
+  assert.ok(!JSON.stringify(tasks.list({ privacy: true }).settings.templates).includes('run the tests'), 'templates hidden in private mode');
+  tasks.op({ op: 'untemplate', name: 'tests' }); assert.strictEqual(tasks.list().settings.templates.length, 0);
+
   // failure, then a clean retry
   mode('fail'); let t2 = tasks.op({ op: 'create', dir: proj, desc: 'break', agent: 'claude' }).task; await tasks._idle();
   assert.strictEqual(T(t2.id).state, 'failed');

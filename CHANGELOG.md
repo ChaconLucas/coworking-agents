@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Task templates: save a request you repeat with its folder and settings; fill the form or create and run with one click
+- The new-task form stays open and keeps what you typed across the periodic refresh
 - Daily report to paste: cost of the day's sessions, what each agent did, what is still open (tasks and agents waiting on you), as Markdown or Slack markup
 - Limits: at the pace of the last hour, the office warns when a 5-hour or weekly window will run out before it resets; limit warnings also land in the 🔔 notices with a tip to make it last
 - Switch in the terminal: change the model and effort of a running Claude or Codex terminal session from the office (Claude `/model` + `/effort`; Codex picker, this session only); recommendation notices do it on Apply

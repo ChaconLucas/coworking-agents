@@ -842,3 +842,5 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .queue.notices .q-what { -webkit-line-clamp: unset; display: block; overflow: visible; white-space: normal; }
 .permask { border: 2px solid #e4a03b; background: rgba(228,160,59,.1); padding: 8px 10px; margin: 8px 0; display: grid; gap: 6px; font-size: 13px; }
 .permask code { white-space: pre-wrap; word-break: break-all; }
+.tpls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.tpl { display: inline-flex; align-items: center; gap: 2px; }

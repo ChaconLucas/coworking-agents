@@ -203,6 +203,13 @@ function op(m = {}) {
     if (m.autoPerTask !== undefined) settings.autoPerTask = Math.min(5, Math.max(0, Number(m.autoPerTask) || 0));
     save(); tick(); return { ok: true, settings };
   }
+  if (m.op === 'template') { // a request you repeat, saved with its folder and settings; fired again from the form
+    const name = s(m.name, 40).trim(), desc = s(m.desc, 12000).trim(); if (!name || !desc) return { ok: false, reason: 'nodesc' };
+    const tpl = { name, desc, dir: s(m.dir, 500), agent: ['auto', ...AGENTS].includes(m.agent) ? m.agent : 'auto', profile: PROFILES[m.profile] ? m.profile : '', role: ROLES[m.role] ? m.role : '',
+      perm: ['acceptEdits', 'plan', 'default'].includes(m.perm) ? m.perm : 'acceptEdits', testCmd: s(m.testCmd, 300), worktree: !!m.worktree, lean: !!m.lean, priority: String(Math.min(3, Math.max(1, Number(m.priority) || 2))) };
+    settings.templates = [tpl, ...(settings.templates || []).filter(x => x.name !== name)].slice(0, 30); save(); return { ok: true, templates: settings.templates };
+  }
+  if (m.op === 'untemplate') { settings.templates = (settings.templates || []).filter(x => x.name !== s(m.name, 40)); save(); return { ok: true, templates: settings.templates }; }
   if (m.op === 'recommend') { const t = tasks.find(x => x.id === m.id); return { ok: true, rec: recommend(s(m.desc || (t && t.desc), 12000), m.agent || (t && t.agent), t, m.live && typeof m.live === 'object' ? m.live : null) }; }
   const t = tasks.find(x => x.id === m.id); if (!t) return { ok: false, reason: 'notask' };
   if (m.op === 'config') return setConfig(t, m);
@@ -500,7 +507,7 @@ function mask(t, i) {
 function pub(t) { const { live, ...rest } = t; return rest; }
 function list({ privacy = false } = {}) {
   load(); const opts = { claude: options('claude'), codex: options('codex') };
-  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
+  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })) } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
 }
 function get(id, { privacy = false } = {}) {
   load(); const i = tasks.findIndex(x => x.id === id); if (i < 0) return null;
