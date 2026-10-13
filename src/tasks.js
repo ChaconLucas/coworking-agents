@@ -219,6 +219,12 @@ function op(m = {}) {
     settings.schedules = [...(settings.schedules || []).filter(x => x.id !== sc.id), sc].slice(0, 30); save(); return { ok: true, schedules: settings.schedules };
   }
   if (m.op === 'unschedule') { settings.schedules = (settings.schedules || []).filter(x => x.id !== m.id); save(); return { ok: true, schedules: settings.schedules }; }
+  if (m.op === 'repoNote') { // standing instructions for every task in a repository (empty removes them)
+    const dir = validDir(m.dir); if (!dir) return { ok: false, reason: 'nodir' };
+    const text = s(m.text, 2000).trim(), notes = { ...(settings.repoNotes || {}) };
+    if (text) notes[dir] = text; else delete notes[dir];
+    settings.repoNotes = notes; save(); return { ok: true };
+  }
   if (m.op === 'permRule') { // a standing allow / deny rule (validated; deny rules win)
     const tool = /^[\w*.-]{1,40}$/.test(m.tool || '') ? m.tool : '', match = s(m.match, 200).trim(), action = ['allow', 'deny'].includes(m.action) ? m.action : '';
     if (!tool || !action || (action === 'allow' && !match)) return { ok: false, reason: 'rule' };
@@ -325,7 +331,8 @@ async function run(t) {
   const bad = await prepare(t);
   if (t.cancelling) return finish(t, 0, '');
   if (bad) { t.state = 'failed'; t.reason = bad === 'nogit' ? 'nogit' : 'worktree'; log(t, { kind: 'error', text: bad }); return done(t); }
-  const sys = [t.role && ROLES[t.role], t.lean && LEAN].filter(Boolean).join('\n');
+  const noteKey = Object.keys(settings.repoNotes || {}).filter(k => t.dir === k || t.dir.startsWith(k + '/')).sort((a, b) => b.length - a.length)[0];
+  const sys = [t.role && ROLES[t.role], t.lean && LEAN, noteKey && `Standing instructions for this repository from the user:\n${settings.repoNotes[noteKey]}`].filter(Boolean).join('\n');
   let prompt = t.compactOnly ? '/compact' : t.next || t.desc; t.next = '';
   if (t.chain && t.dependsOn && !t.chainFed) { // the previous task's result travels with the request, once
     const d = tasks.find(x => x.id === t.dependsOn);
@@ -706,7 +713,7 @@ function mask(t, i) {
 function pub(t) { const { live, ...rest } = t; return rest; }
 function list({ privacy = false } = {}) {
   load(); const opts = { claude: options('claude'), codex: options('codex') };
-  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })) } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
+  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })), repoNotes: {} } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
 }
 function get(id, { privacy = false } = {}) {
   load(); const i = tasks.findIndex(x => x.id === id); if (i < 0) return null;

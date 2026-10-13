@@ -629,11 +629,18 @@ function renderRepos() {
       <p><b>${esc(R.now)}:</b> ${r.people.map(p => `<a href="#" data-tperson="${esc(p.id)}">${esc(p.name)}</a> <small class="note">(${esc(T.states[p.state] || p.state)}${p.branch ? ' · ' + esc(p.branch) : ''})</small>`).join(', ')}</p>
       ${trees.length > 1 ? `<p class="note">${esc(R.trees(trees.length))}: ${trees.map(g => `${esc(g.branch || '?')}${g.dirty ? ' ✎' + g.dirty : ''}${g.ahead ? ' ↑' + g.ahead : ''}`).join(' · ')}</p>` : ''}
       ${open.length ? `<p><b>${esc(R.tasks)}:</b> ${open.map(t => `<a href="#" data-popen="${esc(t.id)}">${esc(t.title)}</a> <span class="tpill st-${esc(t.state)}">${esc(T.tasks.states[t.state])}</span>`).join(' ')}</p>` : ''}
-      ${prs.length ? `<p><b>PRs:</b> ${prs.map(t => `<a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr.replace(/^https:\/\/github\.com\//, ''))}</a>`).join(' · ')}</p>` : ''}</section>`;
+      ${prs.length ? `<p><b>PRs:</b> ${prs.map(t => `<a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr.replace(/^https:\/\/github\.com\//, ''))}</a>`).join(' · ')}</p>` : ''}
+      ${r.path && !taskData.privacy ? `<details class="rnote" ${(taskData.settings.repoNotes || {})[r.path] ? 'open' : ''}><summary>📌 ${esc(R.note)}${(taskData.settings.repoNotes || {})[r.path] ? ' ✓' : ''}</summary><textarea data-reponote="${esc(r.path)}" rows="3" maxlength="2000" placeholder="${esc(R.notePh)}">${esc((taskData.settings.repoNotes || {})[r.path] || '')}</textarea><p><button class="btn small" data-reponotesave="${esc(r.path)}">${esc(R.noteSave)}</button> <small class="note">${esc(R.noteHint)}</small></p></details>` : ''}</section>`;
   }).join('')}</div>` : `<p class="note">${esc(R.none)}</p>`);
   body.insertAdjacentHTML('beforeend', cleanHtml());
   if (!todayData && typeof loadToday === 'function') loadToday();
 }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-reponotesave]'); if (!b) return;
+  const ta = [...reportEl.querySelectorAll('[data-reponote]')].find(x => x.dataset.reponote === b.dataset.reponotesave);
+  b.disabled = true; const r = await api('api/tasks', { op: 'repoNote', dir: b.dataset.reponotesave, text: ta ? ta.value : '' }); b.disabled = false;
+  b.textContent = r.ok ? '✓ ' + T.repos.noteSaved : '⚠'; await pollTasks();
+});
 // cleanup of finished tasks' worktrees: list first, remove only what you tick (uncommitted work is never removed)
 let cleanData = null, cleanOut = null;
 function cleanHtml() {

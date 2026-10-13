@@ -752,6 +752,16 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   // handoff carries decisions, tests and open items
   const h = tasks.handoffText(T(t1.id), 'finish it');
   assert.ok(h.includes('Decisions') && h.includes('echo all good') && h.includes('Open items'));
+  // standing instructions per repository reach every task there (and only there)
+  assert.strictEqual(tasks.op({ op: 'repoNote', dir: '/etc', text: 'x' }).reason, 'nodir');
+  tasks.op({ op: 'repoNote', dir: proj, text: 'Use pnpm here.' }); mode('ok');
+  const tn = tasks.op({ op: 'create', dir: proj, desc: 'note check', agent: 'claude' }).task; await tasks._idle();
+  const an = lastArgs(); assert.ok(an[an.indexOf('--append-system-prompt') + 1].includes('Use pnpm here.'), 'the note goes with the task');
+  tasks.op({ op: 'create', dir: plain, desc: 'other repo', agent: 'claude' }); await tasks._idle();
+  assert.ok(!lastArgs().join(' ').includes('Use pnpm here.'), 'not in another repo');
+  assert.deepStrictEqual(tasks.list({ privacy: true }).settings.repoNotes, {}, 'hidden in private mode');
+  tasks.op({ op: 'repoNote', dir: proj, text: '' }); assert.ok(!tasks.list().settings.repoNotes[proj], 'empty removes it');
+
   // GitHub: issues become tasks; a PR review is read-only and carries the diff as data
   const gi = await tasks.ghIssues(proj);
   assert.deepStrictEqual(gi.issues.map(x => [x.number, x.url]), [[3, 'https://github.com/x/y/issues/3'], [4, '']], 'issues parsed, only numbers, only https links');
