@@ -634,7 +634,8 @@ function renderRepos() {
       ${r.path && !taskData.privacy ? `<p class="rbudget"><label>💲 ${esc(R.budget)} <input type="number" min="0" step="1" value="${Number((taskData.settings.repoBudgets || {})[r.path]) || ''}" placeholder="0" data-repobudget="${esc(r.path)}"></label></p>` : ''}
       ${r.path && !taskData.privacy ? `<details class="rnote" ${(taskData.settings.repoNotes || {})[r.path] ? 'open' : ''}><summary>📌 ${esc(R.note)}${(taskData.settings.repoNotes || {})[r.path] ? ' ✓' : ''}</summary><textarea data-reponote="${esc(r.path)}" rows="3" maxlength="2000" placeholder="${esc(R.notePh)}">${esc((taskData.settings.repoNotes || {})[r.path] || '')}</textarea><p><button class="btn small" data-reponotesave="${esc(r.path)}">${esc(R.noteSave)}</button> <small class="note">${esc(R.noteHint)}</small></p></details>` : ''}</section>`;
   }).join('')}</div>` : `<p class="note">${esc(R.none)}</p>`);
-  body.insertAdjacentHTML('beforeend', cleanHtml());
+  body.insertAdjacentHTML('beforeend', hotHtml() + cleanHtml());
+  if (!hotData && !taskData.privacy) { hotData = []; api('api/hotfiles').then(r => { hotData = Array.isArray(r) ? r : []; if (reportTab === 'repos' && !reportEl.hidden) renderRepos(); }); }
   if (!todayData && typeof loadToday === 'function') loadToday();
 }
 document.addEventListener('change', async e => { const i = e.target.closest('[data-repobudget]'); if (!i) return; await api('api/tasks', { op: 'settings', repoBudget: Number(i.value) || 0, dir: i.dataset.repobudget }); await pollTasks(); });
@@ -644,6 +645,14 @@ document.addEventListener('click', async e => {
   b.disabled = true; const r = await api('api/tasks', { op: 'repoNote', dir: b.dataset.reponotesave, text: ta ? ta.value : '' }); b.disabled = false;
   b.textContent = r.ok ? '✓ ' + T.repos.noteSaved : '⚠'; await pollTasks();
 });
+// the files the agents touched most this week, hotter = more sessions
+let hotData = null;
+function hotHtml() {
+  const H = T.hot; if (taskData.privacy) return '';
+  if (!hotData || !hotData.length) return `<h3>🔥 ${esc(H.title)}</h3><p class="note">${esc(hotData ? H.none : H.loading)}</p>`;
+  const max = Math.max(...hotData.map(x => x.sessions)), heat = n => { const f = n / max; return f > .66 ? '#e43b44' : f > .33 ? '#f77622' : '#feae34'; };
+  return `<h3>🔥 ${esc(H.title)}</h3><p class="note">${esc(H.sub)}</p><ul class="bars hot">${hotData.slice(0, 20).map(x => `<li><code title="${esc(x.repo + ' · ' + x.rel)}">${esc(x.rel)}</code><span class="tbar"><i style="width:${(x.sessions / max * 100).toFixed(1)}%;background:${heat(x.sessions)}"></i></span><span class="t">${esc(H.sessions(x.sessions))} · ${esc(x.repo)} · ${esc(x.agents.join(', '))} · ${esc(ago(Date.now() - x.last))}</span></li>`).join('')}</ul>`;
+}
 // cleanup of finished tasks' worktrees: list first, remove only what you tick (uncommitted work is never removed)
 let cleanData = null, cleanOut = null;
 function cleanHtml() {

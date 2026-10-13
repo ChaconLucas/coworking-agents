@@ -915,3 +915,9 @@ body.tv .bar .counts { transform: scale(1.35); transform-origin: center; }
 #tv-exit:hover, #tv-exit:focus { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { #tv-exit { transition: none; } }
 body.tv .help, body.tv .talk, body.tv .dpop, body.tv .hmore, body.tv .scene-more { display: none !important; }
+.hot code { max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bars.hot li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "f t" "b b"; gap: 2px 12px; align-items: center; margin: 0 0 10px; }
+.bars.hot li code { grid-area: f; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bars.hot li .t { grid-area: t; white-space: nowrap; font-size: 12px; opacity: .85; }
+.bars.hot li .tbar { grid-area: b; width: 100%; }
+@media (max-width: 600px) { .bars.hot li { grid-template-columns: minmax(0, 1fr); grid-template-areas: "f" "t" "b"; } }

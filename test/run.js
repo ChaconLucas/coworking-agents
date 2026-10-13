@@ -342,6 +342,14 @@ sleepK.kill();
   global.__sweep = sweep;
 }
 
+// hot files: counted per session, newest first among equals, nothing in private mode
+{
+  const { hotFiles } = require('../src/collect');
+  const hf = hotFiles();
+  assert.ok(Array.isArray(hf) && hf.every(x => typeof x.sessions === 'number' && x.sessions > 0 && !('abs' in x)), 'hot files: counts, no absolute paths');
+  assert.deepStrictEqual(hotFiles({ privacy: true }), [], 'hot files: nothing in private mode');
+}
+
 // search in what was said: user and agent text only, never tool output
 {
   const { said } = require('../src/said');

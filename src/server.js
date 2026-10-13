@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { snapshot: real, report, ended } = require('./collect');
+const { snapshot: real, report, ended, hotFiles } = require('./collect');
 const { demoSnapshot, demoReport } = require('./demo');
 const { focus, sendText, launch, switchCfg } = require('./focus');
 const { usage } = require('./usage');
@@ -262,6 +262,11 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return;
     }
     if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id'), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }
+    if (url.pathname === '/api/hotfiles' && req.method === 'GET') { // files touched most this week (off in private mode)
+      if (demo) return send(res, 200, 'application/json', JSON.stringify(require('./demo').demoHot ? require('./demo').demoHot() : []));
+      once('hot', async () => hotFiles({ privacy })).then(r => send(res, 200, 'application/json', JSON.stringify(Array.isArray(r) ? r : []))).catch(() => send(res, 200, 'application/json', '[]'));
+      return;
+    }
     if (url.pathname === '/api/said' && req.method === 'GET') { // search in what was asked and answered (off in private mode)
       if (privacy || demo) return send(res, 200, 'application/json', JSON.stringify(demo ? [{ agent: 'claude', id: 'demo-0-Refactor checkout flow', role: 'assistant', at: Date.now() - 6e5, snippet: '…the migration adds a nullable column first, then backfills…' }] : []));
       once('said', () => require('./said').search(url.searchParams.get('q') || '')).then(r => send(res, 200, 'application/json', JSON.stringify(Array.isArray(r) ? r : []))).catch(() => send(res, 200, 'application/json', '[]'));

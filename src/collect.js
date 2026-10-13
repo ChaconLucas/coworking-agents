@@ -218,6 +218,22 @@ function report({ privacy = false } = {}) {
   return { since, now, rows, topFiles, totals: { sessions: rows.length, activeMs: sum('activeMs'), tools: sum('tools'), files: fileCount.size, outTokens: sum('outTokens'), turns: sum('turns') } };
 }
 
+// the files the agents touched most in the last days: how many sessions edited each one, which AIs, and when last
+function hotFiles({ days = 7, privacy = false } = {}) {
+  if (privacy) return [];
+  const since = Date.now() - days * 864e5, byFile = new Map();
+  for (const src of SOURCES) {
+    let list = []; try { list = src.today ? src.today(since) : []; } catch {}
+    for (const { agent, st } of list) for (const [f, at] of st.files.entries()) {
+      if (at < since) continue;
+      const e = byFile.get(f) || byFile.set(f, { sessions: 0, agents: new Set(), last: 0 }).get(f);
+      e.sessions++; e.agents.add(agent); e.last = Math.max(e.last, at);
+    }
+  }
+  return [...byFile.entries()].sort((a, b) => b[1].sessions - a[1].sessions || b[1].last - a[1].last).slice(0, 40)
+    .map(([f, e]) => { const { abs, ...rel } = relFile(f); return { ...rel, sessions: e.sessions, agents: [...e.agents], last: e.last }; });
+}
+
 // sessions that ended within the last hour, with their measured timeline, so the replay can show them too
 function ended({ privacy = false } = {}) {
   const now = Date.now(), since = now - 3600 * 1000, live = new Set(snapshot().people.map(p => p.id)), out = [];
@@ -235,4 +251,4 @@ function ended({ privacy = false } = {}) {
   return out.slice(0, 40);
 }
 
-module.exports = { snapshot, report, ended };
+module.exports = { hotFiles, snapshot, report, ended };

@@ -115,4 +115,9 @@ function demoTasks() {
   ];
 }
 
-module.exports = { demoSnapshot, demoReport, demoUsage, demoTasks };
+function demoHot() {
+  const n = Date.now();
+  return [['src/checkout/payment.ts', 'shop', 9, ['claude', 'codex']], ['src/api/orders.ts', 'api', 7, ['claude']], ['package.json', 'web-app', 6, ['claude', 'codex']], ['src/auth/session.ts', 'api', 4, ['codex']], ['README.md', 'docs', 3, ['claude']], ['migrations/0042_orders.sql', 'api', 2, ['claude']]]
+    .map(([rel, repo, sessions, agents], i) => ({ rel, repo, sessions, agents, last: n - i * 36e5 }));
+}
+module.exports = { demoHot, demoSnapshot, demoReport, demoUsage, demoTasks };
