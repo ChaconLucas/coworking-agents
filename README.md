@@ -188,6 +188,9 @@ Open **Tasks** and describe the work, pick a folder, an agent (Claude Code, Code
 - **Ready to ship?** Concluding first lists tests, review verdict, files changed, what is not committed and the branch. *Commit* (editable message) and *Open PR* (pushes the branch and runs `gh pr create`, needs `gh auth login`) run only when you press them.
 - **Schedules, chains and batches:** run a saved template every day, on weekdays or on one weekday (while the office is open); *chain* a task so it starts when the previous one ended well and receives its result (a failure stops the chain); repeat a new task in several folders at once.
 - **Compare models** on your own finished tasks (cost, attempts, tests, ended well) and **search what was said**: the search box also looks in what you asked and what the agents answered over the last 7 days (never tool output, off in private mode).
+- **Safety nets:** *Ready to ship?* blocks a commit that carries keys, tokens, private keys or credential files until you remove them or confirm; standing **permission rules** answer on their own (deny anywhere always wins; allow only an exact command, nothing chained); budgets **per day and per repository** hold new tasks and stop running ones.
+- **GitHub (through your gh):** turn an open issue into a task, or review a pull request by number with a read-only reviewer that gets the diff as data.
+- **Per repository:** standing instructions sent with every task there, and a **cleanup** of finished tasks' worktrees that never removes uncommitted work or unmerged branches.
 - **Templates:** save a request you repeat (folder, agent, profile, role, test command) and fire it again with one click.
 - **Queue:** priority, "after task X" dependencies, how many agents run at once and how many attempts a task gets.
 - **Model and effort:** Claude `haiku`/`sonnet`/`opus` with efforts low → max; Codex models and efforts from Codex's own model list. *Save*, *More capacity*, *Apply recommendation* or pick by hand. A change made while a step runs is shown as **pending** and marked **applied** when the next step starts.
@@ -208,6 +211,8 @@ The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *
 
 - **📦 Repositories:** who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity.
 - **📣 Message several agents:** one request to the agents you pick, typed into terminal sessions that are waiting and continued in the background for VS Code and app conversations; busy ones are left out.
+- **📺 TV mode** (or `?tv=1`): full screen, only the office and big counters; Esc leaves.
+- **Waiting on you today** in the daily report: measured time the agents waited on your answers and tasks stood blocked on you.
 - **Sounds and do not disturb** (Personalise): each sound on or off, and a daily quiet window that mutes sounds and system notifications.
 
 ## Phone panel (opt-in)
