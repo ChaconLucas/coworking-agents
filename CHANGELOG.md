@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- TV mode (☰ → 📺 or `?tv=1`): full screen with only the office and big counters; Esc leaves
 - Waiting on you today (daily report and the pasted summary): measured time the agents waited on your answers and office tasks stood blocked on you, with the longest waits
 - Budgets per day and per repository: once reached, new office tasks wait and running ones stop
 - Standing instructions per repository (Repositories panel): sent with every task the office creates there

@@ -907,3 +907,11 @@ input[type="time"][data-quiet] { width: 120px; flex: none; }
 [data-tsearch] { width: 100%; min-width: 0; box-sizing: border-box; } .trow label:has([data-tsearch]) { flex-direction: row !important; align-items: center; gap: 6px; width: 100%; }
 .rnote textarea { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; background: rgba(0,0,0,.25); color: inherit; border: 1px solid #3a3045; padding: 6px; margin-top: 6px; } .rnote summary { cursor: pointer; font-size: 13px; }
 .rbudget input { width: 90px; } .rbudget label { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+/* TV mode: the office and the counters only */
+body.tv .bar .tools, body.tv #clashes, body.tv #panel, body.tv .toast, body.tv .toasts, body.tv #report, body.tv .admin, body.tv #empty { display: none !important; }
+body.tv .bar { justify-content: center; }
+body.tv .bar .counts { transform: scale(1.35); transform-origin: center; }
+#tv-exit { position: fixed; top: 10px; right: 10px; z-index: 9999; opacity: .15; transition: opacity .2s; }
+#tv-exit:hover, #tv-exit:focus { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #tv-exit { transition: none; } }
+body.tv .help, body.tv .talk, body.tv .dpop, body.tv .hmore, body.tv .scene-more { display: none !important; }

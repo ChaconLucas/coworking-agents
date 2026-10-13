@@ -571,10 +571,10 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  if (menu) for (const [tab, icon] of [['tv', '📺'], ['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
-    b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); openReport(tab); });
+    b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); if (tab === 'tv') return setTv(true); openReport(tab); });
   }
 }
 // repositories at a glance: who is in each one now, what is not committed or pushed, task branches and PRs, today's activity
@@ -702,6 +702,19 @@ function sendVisitFrame() {
 }
 setInterval(sendVisitFrame, 5000);
 api('api/phone').then(d => { if (d && d.visit) visitUntil = d.visit.until; }).catch(() => {});
+// TV mode: only the office and the counters, big, full screen; Esc or the corner button leaves
+function setTv(on) {
+  document.body.classList.toggle('tv', on);
+  let x = document.getElementById('tv-exit');
+  if (on && !x) { x = document.createElement('button'); x.id = 'tv-exit'; x.className = 'btn small ghost'; x.onclick = () => setTv(false); document.body.appendChild(x); }
+  if (x) { x.textContent = '✕ ' + T.tv.exit; x.hidden = !on; }
+  if (on) { closeReport(); selected = null; if (typeof renderPanel === 'function') renderPanel(); try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); } catch {} }
+  else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  try { window.dispatchEvent(new Event('resize')); } catch {}
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tv')) setTv(false); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('tv')) setTv(false); });
+if (new URLSearchParams(location.search).get('tv') === '1') setTimeout(() => setTv(true), 500);
 function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); }
 setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);
 
