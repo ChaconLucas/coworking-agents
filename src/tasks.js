@@ -219,6 +219,17 @@ function op(m = {}) {
     settings.schedules = [...(settings.schedules || []).filter(x => x.id !== sc.id), sc].slice(0, 30); save(); return { ok: true, schedules: settings.schedules };
   }
   if (m.op === 'unschedule') { settings.schedules = (settings.schedules || []).filter(x => x.id !== m.id); save(); return { ok: true, schedules: settings.schedules }; }
+  if (m.op === 'permRule') { // a standing allow / deny rule (validated; deny rules win)
+    const tool = /^[\w*.-]{1,40}$/.test(m.tool || '') ? m.tool : '', match = s(m.match, 200).trim(), action = ['allow', 'deny'].includes(m.action) ? m.action : '';
+    if (!tool || !action || (action === 'allow' && !match)) return { ok: false, reason: 'rule' };
+    const r = { id: Math.random().toString(36).slice(2, 10), tool, match, action };
+    settings.permRules = [...(settings.permRules || []).filter(x => !(x.tool === tool && x.match === match)), r].slice(0, 60); save(); return { ok: true, rules: settings.permRules };
+  }
+  if (m.op === 'unpermRule') { settings.permRules = (settings.permRules || []).filter(x => x.id !== m.id); save(); return { ok: true, rules: settings.permRules }; }
+  if (m.op === 'permPreset') { // the usual dangerous ones, denied everywhere
+    for (const match of ['rm -rf', 'push --force', 'push -f', 'reset --hard', 'sudo ', 'mkfs', 'chmod -R 777', 'curl | sh', 'curl | bash']) if (!(settings.permRules || []).some(x => x.match === match)) settings.permRules = [...(settings.permRules || []), { id: Math.random().toString(36).slice(2, 10), tool: '*', match, action: 'deny' }];
+    save(); return { ok: true, rules: settings.permRules };
+  }
   if (m.op === 'untemplate') { settings.templates = (settings.templates || []).filter(x => x.name !== s(m.name, 40)); save(); return { ok: true, templates: settings.templates }; }
   if (m.op === 'recommend') { const t = tasks.find(x => x.id === m.id); return { ok: true, rec: recommend(s(m.desc || (t && t.desc), 12000), m.agent || (t && t.agent), t, m.live && typeof m.live === 'object' ? m.live : null) }; }
   const t = tasks.find(x => x.id === m.id); if (!t) return { ok: false, reason: 'notask' };
@@ -347,7 +358,18 @@ async function run(t) {
 }
 // a tool the agent may not use waits here until the office answers (op 'permit'); "always" is remembered for the task
 const askers = new Map();
-function ask(t, tool, what, answer) {
+// your standing rules: deny if the text appears anywhere (always wins); allow only an exact command, or one that starts with it
+// and chains nothing else (no ; & | ` $( > < or new line), so "npm test" never lets "npm test && rm -rf ~" through
+const CHAIN = /[;&|`<>\n]|\$\(/;
+function ruleFor(rules, tool, detail) {
+  const d = String(detail || '').trim(), low = d.toLowerCase(), fits = r => r.tool === '*' || r.tool === tool;
+  const deny = (rules || []).find(r => r.action === 'deny' && fits(r) && (!r.match || low.includes(r.match.toLowerCase())));
+  if (deny) return deny;
+  return (rules || []).find(r => r.action === 'allow' && fits(r) && r.match && (d === r.match || (d.startsWith(r.match + ' ') && !CHAIN.test(d.slice(r.match.length))) || (d.startsWith(r.match) && /\/$/.test(r.match) && !d.includes('..') && !CHAIN.test(d)))) || null;
+}
+function ask(t, tool, what, answer, detail = '') {
+  const rule = ruleFor(settings.permRules, tool, detail || what);
+  if (rule) { log(t, { kind: 'permit', tool, allow: rule.action === 'allow', rule: rule.match || '*', text: s(detail || what, 200) }); return answer(rule.action === 'allow', false); }
   if (t.allowed.includes(tool)) return answer(true, false);
   t.ask = { tool, what: s(what, 300), at: now() };
   askers.set(t.id, (allow, always) => {
@@ -362,7 +384,7 @@ function control(t, c, j) {
   const deny = message => send({ subtype: 'success', request_id: j.request_id, response: { behavior: 'deny', message } });
   if (t.readOnly && /^(ExitPlanMode|Write|Edit|MultiEdit|NotebookEdit)$/.test(r.tool_name)) return deny('Review only: do not change anything, answer with your findings.');
   ask(t, s(r.tool_name, 60), r.description || toolWhat(r.input), allow => send({ subtype: 'success', request_id: j.request_id,
-    response: allow ? { behavior: 'allow', updatedInput: r.input || {} } : { behavior: 'deny', message: 'The user denied this from the office.' } }));
+    response: allow ? { behavior: 'allow', updatedInput: r.input || {} } : { behavior: 'deny', message: 'The user denied this from the office.' } }), toolWhat(r.input));
 }
 // Codex runs as `codex app-server` (JSON-RPC on stdio): the only headless mode where it can ask before leaving its sandbox
 function runCodex(t, prompt, sys) {
@@ -430,7 +452,8 @@ function subagentCost(t, since) {
 function codexRequest(t, j, write) {
   const p = j.params || {}, m = j.method, reply = result => write({ id: j.id, result });
   const v1 = m === 'execCommandApproval' || m === 'applyPatchApproval', decide = (allow, always) => reply({ decision: v1 ? (allow ? (always ? 'approved_for_session' : 'approved') : 'denied') : allow ? (always ? 'acceptForSession' : 'accept') : 'decline' });
-  if (m === 'item/commandExecution/requestApproval' || m === 'execCommandApproval') return ask(t, 'command', [Array.isArray(p.command) ? p.command.join(' ') : p.command, p.reason].filter(Boolean).join(' — '), decide);
+  const cmd = Array.isArray(p.command) ? p.command.join(' ') : String(p.command || '');
+  if (m === 'item/commandExecution/requestApproval' || m === 'execCommandApproval') return ask(t, 'command', [cmd, p.reason].filter(Boolean).join(' — '), decide, cmd.replace(/^\/bin\/(?:ba|z)?sh -lc '(.*)'$/s, '$1'));
   if ((m === 'item/fileChange/requestApproval' || m === 'applyPatchApproval') && t.readOnly) return decide(false, false);
   if (m === 'item/fileChange/requestApproval' || m === 'applyPatchApproval') return ask(t, 'file_change', p.reason || p.grantRoot || 'file changes', decide);
   write({ id: j.id, error: { code: -32601, message: 'not supported by coworking-agents' } }); // anything else is refused, never approved silently
@@ -647,4 +670,4 @@ function onEvent(fn) { listeners.add(fn); }
 function _reset(o = {}) { tasks = []; events.clear(); procs.clear(); loaded = false; settings = { maxParallel: 2, maxAttempts: 3, autoApply: false, autoMax: 'bal', autoPerTask: 1 }; load(o); }
 async function _idle(ms = 30000) { const t0 = now(); while (now() - t0 < ms) { if (!tasks.some(t => ['pending', 'running'].includes(t.state))) return true; await new Promise(r => setTimeout(r, 50)); } return false; }
 
-module.exports = { op, list, get, diff, check, ship, search, recommend, options, startQueue, onEvent, load, tick, handoffText, STATES, PROFILES, ROLES, ALLOWED, _reset, _idle };
+module.exports = { ruleFor, op, list, get, diff, check, ship, search, recommend, options, startQueue, onEvent, load, tick, handoffText, STATES, PROFILES, ROLES, ALLOWED, _reset, _idle };

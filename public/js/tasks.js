@@ -222,6 +222,23 @@ function rankingHtml() {
     <div><h4>${esc(X.bySession)}</h4><ul>${sessions.map(x => bar(x.title || x.id.slice(0, 8), x.usd, '#b07cff')).join('') || `<li class="note">—</li>`}</ul><small class="note">${esc(X.sessionsNote)}</small></div></div>
     <p class="note">${esc(X.costNote)}</p>`;
 }
+// standing permission rules: always allow an exact command, always deny anything containing a text
+function rulesHtml(st) {
+  const P = TT().rules, rules = st.permRules || [];
+  return `<h4>🛡 ${esc(P.title)}</h4><p class="note">${esc(P.sub)}</p>${rules.length ? `<ul class="tscheds">${rules.map(r => `<li><span class="tpill ${r.action === 'deny' ? 'st-failed' : 'st-done'}">${esc(P[r.action])}</span> <code>${esc(r.tool)}</code> ${r.match ? `<code>${esc(r.match)}</code>` : esc(P.any)} <button class="hb" data-ruledel="${esc(r.id)}" title="${esc(P.del)}">✕</button></li>`).join('')}</ul>` : ''}
+    <div class="trow tsched-add"><label>${esc(P.action)}<select data-rule="action"><option value="deny">${esc(P.deny)}</option><option value="allow">${esc(P.allow)}</option></select></label>
+      <label>${esc(P.tool)}<select data-rule="tool">${['*', 'Bash', 'command', 'Write', 'Edit', 'file_change', 'WebFetch'].map(x => `<option value="${x}">${esc(x === '*' ? P.anyTool : x)}</option>`).join('')}</select></label>
+      <label>${esc(P.match)}<input data-rule="match" placeholder="npm test"></label><button class="btn small" data-ruleadd>＋ ${esc(P.add)}</button></div>
+    <p><button class="btn small ghost" data-rulepreset>🛡 ${esc(P.preset)}</button></p>`;
+}
+document.addEventListener('click', async e => {
+  const add = e.target.closest('[data-ruleadd]'), del = e.target.closest('[data-ruledel]'), pre = e.target.closest('[data-rulepreset]'); if (!add && !del && !pre) return;
+  let r = { ok: true };
+  if (del) r = await api('api/tasks', { op: 'unpermRule', id: del.dataset.ruledel });
+  else if (pre) r = await api('api/tasks', { op: 'permPreset' });
+  else { const v = k => (reportEl.querySelector(`[data-rule="${k}"]`) || {}).value || ''; r = await api('api/tasks', { op: 'permRule', action: v('action'), tool: v('tool'), match: v('match') }); }
+  await pollTasks(); renderTasks(); if (!r.ok) { const m = document.getElementById('tmsg'); if (m) m.textContent = TT().rules.bad; }
+});
 // schedules: a saved template at a time, every day / weekdays / one weekday (only while the office is open)
 function schedHtml(st) {
   const X = TT(), S = X.sched, tpls = st.templates || [], days = S.days;
@@ -252,7 +269,7 @@ function settingsHtml() {
     <label class="tchk"><input type="checkbox" data-tset="autoReview" ${st.autoReview ? 'checked' : ''}> ${esc(X.autoReview)}</label>
     <div class="trow"><label>${esc(X.autoMax)}<select data-tset="autoMax">${['eco', 'bal', 'deep'].map(k => `<option value="${k}" ${st.autoMax === k ? 'selected' : ''}>${esc(X.profiles[k])}</option>`).join('')}</select></label>
     <label>${esc(X.autoPerTask)}<input type="number" min="0" max="5" value="${Number(st.autoPerTask) || 0}" data-tset="autoPerTask"></label></div><p class="note">${esc(X.autoNote)}</p>
-    ${schedHtml(st)}</details>`;
+    ${schedHtml(st)}${rulesHtml(st)}</details>`;
 }
 let tformOpen = false; // the form stays open across the periodic refresh
 let tsetOpen = false;
