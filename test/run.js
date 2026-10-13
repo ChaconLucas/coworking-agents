@@ -278,6 +278,12 @@ sleepK.kill();
   assert.strictEqual(run("notices.filter(n => n.key.startsWith('goal:')).length"), 1, 'goal reached: one notice');
   assert.ok(run('costGoalHtml(usageData)').includes('data-cost-goal'), 'goal shown in the usage tab');
 
+  // XSS: every HTML builder escapes what comes from agents, tasks and files
+  run(`var P = '<img src=x onerror=1><b data-xss>'; var tx = { id: 'x"><b data-xss>', title: P, state: 'blocked', reason: 'review', agent: P, model: P, effort: P, profile: 'bal', cost: 1, tokens: { output: 1 }, attempts: 1, events: [], updated: 1, ask: { tool: P, what: P, at: 1 }, warn: { why: 'loop', name: P, at: 1 }, review: { id: P, text: P } };
+    var px = { id: 'p"><b data-xss>', agent: 'claude', cwd: P, name: P, title: P, model: P, effort: P, state: 'idle' };`);
+  for (const f of ['rowHtml(tx)', 'askPermHtml(tx)', "shipHtml(tx, { ok: true, dirty: [P], dirtyCount: 1, branch: P, suggest: P, files: 1, canPr: true, gh: true, tests: { code: 0 }, review: { ok: true } })", 'askHtml(px)', 'recCardHtml(null, px)', 'taskCardHtml(px)'])
+    assert.ok(!/<img|<b data-xss|data-xss>/.test(run(f).replace(/&lt;b data-xss&gt;/g, '')), 'XSS escaped in ' + f);
+
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
   run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
     data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);
@@ -295,6 +301,37 @@ sleepK.kill();
     '#######.#...#.##...#.', '#.....#..######..#..#', '#.###.#.#.#.#..#..#..', '#.###.#.##..#..#..#..', '#.###.#.#..#.#..###..', '#.....#.##.....##.#..', '#######.####.#..####.'];
   assert.deepStrictEqual(encode('hi', 2).map(r => r.map(x => (x ? '#' : '.')).join('')), ref, 'QR matches the reference encoder');
   assert.strictEqual(encode('http://192.168.0.10:4778/?t=' + 'a'.repeat(32)).length, 33, 'a phone link fits version 4');
+}
+
+// pentest sweep: every route in server.js is read from the source, so a new one is covered without remembering to add it
+{
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
+  const routes = [...src.matchAll(/url\.pathname === '(\/[a-z/-]+)'(?: && req\.method === '(GET|POST)')?/g)].map(m => [m[1], m[2] || 'GET']);
+  assert.ok(routes.length >= 20, 'routes found in server.js');
+  const sweep = (async () => {
+    const http = require('http'), net = require('net');
+    const hq = await require('../src/server').start({ port: 0, demo: true }), port = hq.server.address().port, ck = { Cookie: 'cw=' + hq.token };
+    const rq = (p, { method = 'GET', headers = {}, body } = {}) => new Promise(r => { const q = http.request({ host: '127.0.0.1', port, path: p, method, headers: { Host: '127.0.0.1:' + port, ...headers } }, res => { let b = ''; res.on('data', d => { b += d; }); res.on('end', () => r({ code: res.statusCode, h: res.headers, body: b })); }); q.on('error', () => r({ code: 0 })); if (body) q.write(body); q.end(); });
+    for (const [p, m] of routes) {
+      if (p === '/events' || p === '/api/ping') continue;
+      assert.strictEqual((await rq(p, { method: m, body: m === 'POST' ? '{}' : undefined })).code, 401, `pentest: ${m} ${p} without the cookie`);
+      if (m !== 'POST') continue;
+      assert.strictEqual((await rq(p, { method: 'POST', headers: ck, body: '{}' })).code, 403, `pentest: POST ${p} without the custom header`);
+      for (const o of ['https://evil.example', 'null', 'http://127.0.0.1.evil.example', 'http://localhost.evil.example:4777'])
+        assert.strictEqual((await rq(p, { method: 'POST', headers: { ...ck, 'X-Coworking': '1', Origin: o }, body: '{}' })).code, 403, `pentest: POST ${p} from ${o}`);
+    }
+    for (const raw of ['GET /api/state HTTP/1.0\r\nCookie: cw=' + hq.token + '\r\n\r\n', 'GET /api/state HTTP/1.1\r\nHost: 127.0.0.1.evil.example\r\nCookie: cw=' + hq.token + '\r\nConnection: close\r\n\r\n']) {
+      const line = await new Promise(r => { const s = net.connect(port, '127.0.0.1', () => s.write(raw)); let b = ''; s.on('data', d => { b += d; }); s.on('close', () => r(b.split('\r\n')[0])); });
+      assert.ok(/ 421 /.test(line), 'pentest: a missing or foreign Host is refused (' + line + ')');
+    }
+    for (const p of ['/../package.json', '/..%2fpackage.json', '/%2e%2e/package.json', '/js/..%2f..%2fsrc%2fserver.js', '//etc/passwd', '/.git/config', '/phone/../../src/phone.js'])
+      assert.ok(!/require\(|\[core\]|root:|"name": "coworking/.test((await rq(p, { headers: ck })).body), 'pentest: no file outside public/ via ' + p);
+    const red = await rq('/?t=' + hq.token + '&x=//evil.example'); assert.ok(/^\/(\?|$)/.test(red.h.location) && !/^\/\//.test(red.h.location), 'pentest: the login redirect stays on the page');
+    for (const p of ['/', '/nope', '/api/state']) { const r = await rq(p, { headers: p === '/' ? {} : ck }); for (const k of ['content-security-policy', 'x-frame-options', 'x-content-type-options', 'referrer-policy']) assert.ok(r.h[k], `pentest: ${k} on ${p} (${r.code})`); }
+    hq.close();
+  })();
+  sweep.catch(e => { console.error(e); process.exit(1); });
+  global.__sweep = sweep;
 }
 
 // secrets in commands never show up
@@ -652,5 +689,5 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
 
   fakeAider.kill(); sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
   fs.rmSync(root, { recursive: true, force: true });
-  console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
+  await global.__sweep; console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
 })().catch(e => { console.error(e); process.exit(1); });

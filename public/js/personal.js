@@ -176,7 +176,9 @@ document.addEventListener('change', async e => {
   const m = document.getElementById('backup-msg'), say = t => { if (m) m.textContent = t; };
   let j = null; try { j = JSON.parse(await f.files[0].text()); } catch {} f.value = '';
   if (!j || j.app !== 'coworking-agents' || j.kind !== 'backup') return say('⚠ ' + T.backup.bad);
-  if (!confirm(T.backup.sure)) return;
+  // a template's test command runs on your machine: an imported one is shown before you accept it
+  const cmds = (Array.isArray(j.templates) ? j.templates : []).filter(t => t && t.testCmd).map(t => `• ${String(t.name || '').slice(0, 40)}: ${String(t.testCmd).slice(0, 200)}`);
+  if (!confirm(T.backup.sure + (cmds.length ? '\n\n' + T.backup.cmds + '\n' + cmds.join('\n') : ''))) return;
   const st = Object.fromEntries(BACKUP_SETTINGS.filter(k => j.settings && j.settings[k] !== undefined).map(k => [k, j.settings[k]]));
   if (Object.keys(st).length) await api('api/tasks', { op: 'settings', ...st }); // the server validates every value
   let n = 0; for (const t of Array.isArray(j.templates) ? j.templates.slice(0, 30) : []) if ((await api('api/tasks', { op: 'template', ...t })).ok) n++;

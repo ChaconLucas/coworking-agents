@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Security: a pentest sweep in the tests reads every route from server.js (cookie, custom header, foreign and look-alike origins, missing/foreign Host, path traversal, login redirect, security headers); XSS checks on every HTML builder; PR links only as https; importing a backup lists the templates' test commands before you accept
+
 ## 0.6.0 — 2026-10-13
 - Tasks redesigned: list grouped by waiting on you / running / done with coloured state pills; detail with a clear header, alerts on top, result and review on the left, cost and model on the right, one primary action, quiet secondary ones and a red cancel, activity folded
 - Backup: export and import templates, queue and economy settings, cost goal, decor, outfits and progress as one JSON file (Personalise tab)

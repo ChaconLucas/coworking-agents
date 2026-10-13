@@ -300,7 +300,7 @@ function renderTaskDetail(body) {
       ${taskShip && taskShip.id === t.id ? shipHtml(t, taskShip) : ''}
       ${t.review ? `<div class="treview"><b>🔎 ${esc(X.reviewTitle)}</b> · <a href="#" data-popen="${esc(t.review.id)}">${esc(X.openTask)}</a>${t.review.text ? `<pre>${esc(t.review.text)}</pre>` : `<p class="note">${esc(X.reviewRunning)}</p>`}</div>` : ''}
       ${t.reviewOf ? `<p class="note">🔎 ${esc(X.reviewOfNote)} · <a href="#" data-popen="${esc(t.reviewOf)}">${esc(X.openTask)}</a></p>` : ''}
-      ${t.pr ? `<p>🔗 PR: <a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr)}</a></p>` : ''}
+      ${t.pr && /^https:\/\//.test(t.pr) ? `<p>🔗 PR: <a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr)}</a></p>` : ''}
       ${t.files && t.files.length ? `<section class="tsec"><h4>${esc(X.files)} <small>${t.files.length}</small></h4><p class="tfiles">${t.files.slice(0, 30).map(f => `<code>${esc(f)}</code>`).join(' ')}</p>${btn(['blocked', 'failed', 'done'].includes(st) && !taskData.privacy, 'diff', esc(X.diff))}</section>` : ''}
       ${taskDiff ? taskDiff.ok ? `<pre class="tdiff">${esc(taskDiff.base ? X.since(taskDiff.base.slice(0, 8)) + '\n' : '')}${esc(taskDiff.stat)}${taskDiff.untracked && taskDiff.untracked.length ? '\n' + esc(X.newFiles) + ': ' + esc(taskDiff.untracked.join(', ')) : ''}\n\n${esc(taskDiff.diff)}</pre>` : `<p class="note">${esc(X.fail[taskDiff.reason] || X.fail.state)}</p>` : ''}
       ${['blocked', 'failed'].includes(st) ? `<section class="tsec treply"><h4>${esc(X.replyTitle)}</h4><textarea data-treply rows="3" placeholder="${esc(X.reply)}"></textarea><p><button class="btn small" data-tact="reply">➤ ${esc(X.send)}</button></p></section>` : ''}
