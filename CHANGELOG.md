@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Phone app, live: the office pushes every change as it happens (the 3-second poll only runs while the stream is down)
+- Phone app: tap an agent to see it in full: what it is asking or doing now, your last request, its last answer, what it did, the files it touched, helpers, model, context, cost (texts hidden in private mode)
+- Phone app: write to an agent that finished its turn, typed into its terminal (same rule as the office)
+- Phone app: see a task's changes (summary and coloured diff) before concluding
 - Menu bar (and Windows tray tip): the fullest token limit as a small bar next to the counts, so token use is visible at a glance
 - macOS notifications now come from a small hidden Coworking Agents app (the menu bar script compiled with osacompile, office icon, re-signed ad hoc), so they show its name and icon instead of Script Editor's
 - Phone tab bar sits lower, closer to the bottom edge

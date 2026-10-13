@@ -38,10 +38,27 @@ function view({ snapshot, tasks, privacy, extra }) {
     repo: p.repo ? p.repo.name : '', branch: privacy ? '' : p.branch || '', since: p.since || 0,
     ask: p.doing && (p.state === 'needs_you' || p.state === 'waiting') ? (privacy ? '' : p.doing.ask || p.doing.what || p.doing.tool || '') : '',
     options: p.doing && p.doing.options && !p.doing.multi && p.doing.qcount === 1 ? p.doing.options.map(o => (privacy ? '' : String(o.label || o).slice(0, 80))) : null,
+    lastPrompt: privacy ? '' : cut(p.lastPrompt, 200), lastReply: privacy ? '' : cut(p.lastReply, 300), model: p.model || '', usd: p.cost ? p.cost.usd : 0,
+    ctxPct: p.ctxMax ? Math.round(p.ctx / p.ctxMax * 100) : 0, canMsg: canMsg(p),
   }));
   const tl = tasks.list({ privacy });
   const list = tl.tasks.map(t => ({ id: t.id, title: t.title, state: t.state, reason: t.reason, agent: t.agent, cost: t.cost, costUnknown: t.costUnknown, ask: t.ask || null, result: privacy ? '' : String(t.result || '').slice(0, 600), review: t.review && !privacy ? String(t.review.text || '').slice(0, 600) : '', updated: t.updated, attempts: t.attempts }));
   return { now: Date.now(), privacy, people, tasks: list, folders: privacy ? [] : folders(snap, tl), usage: extra ? extra() : null, limits: limitsOf(snap), frameAt };
+}
+// a message can be typed only into a session that finished its turn, in a terminal (the same rule as the office)
+const canMsg = p => ['claude', 'codex'].includes(p.agent) && p.entrypoint !== 'claude-desktop' && ['idle', 'asleep'].includes(p.state);
+// one agent in full: what you asked last, its last answer, what it did, the files it touched (texts hidden in private mode)
+function agent(snap, id, privacy) {
+  const p = (snap.people || []).find(x => x.id === id && !x.leaving); if (!p) return null;
+  const cut = (x, n) => (privacy ? '' : String(x || '').slice(0, n)), home = s => String(s || '').replace(/^\/Users\/[^/]+|^\/home\/[^/]+/, '~');
+  const d = p.doing;
+  return { id: p.id, name: p.name, agent: p.agent, state: p.state, title: cut(p.title, 200), model: p.model || '', effort: p.effort || '', ctx: p.ctx || 0, ctxMax: p.ctxMax || 0,
+    usd: p.cost ? p.cost.usd : 0, turns: p.turns || 0, startedAt: p.startedAt || 0, since: p.since || 0, repo: p.repo ? p.repo.name : '', branch: privacy ? '' : p.branch || '', cwd: privacy ? '' : home(p.cwd),
+    lastPrompt: cut(p.lastPrompt, 3000), lastPromptAt: p.lastPromptAt || 0, lastReply: cut(p.lastReplyLong || p.lastReply, 8000), lastReplyAt: p.lastReplyAt || 0,
+    doing: d ? { tool: d.tool, what: cut(d.what, 1000), ask: cut(d.ask, 3000), options: d.options && !d.multi && d.qcount === 1 ? d.options.map(o => cut(o.label || o, 120)) : null } : null,
+    recent: (p.recent || []).slice(0, 20).map(r => ({ tool: r.tool, what: cut(r.what, 200), ts: r.ts || 0 })),
+    files: privacy ? [] : (p.files || []).slice(0, 20).map(f => ({ name: String(f.rel || f.path || f).slice(-120), at: f.at || 0 })),
+    subagents: (p.subagents || []).slice(0, 10).map(a => cut(a.name || a.type || a.description || 'agent', 80)), canMsg: canMsg(p) };
 }
 // folders a phone may start a task in: where your agents and tasks already work (the server still checks each one)
 function folders(snap, tl) {
@@ -61,6 +78,22 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
   const ip = lanIp();
   if (!ip) return Promise.resolve({ ok: false, reason: 'nolan' });
   let token = /^[0-9a-f]{32}$/.test(kept || '') ? kept : crypto.randomBytes(16).toString('hex'); // kept across restarts so the home-screen icon keeps working
+  // live view: one timer for every open phone, sending only when something changed (and a ping so proxies keep it open)
+  const streams = new Set(); let streamTimer = null, lastView = '', lastPing = 0, usageAt = 0, usageNow = null;
+  const usageCached = () => { if (!extra) return null; if (Date.now() - usageAt > 30000) { usageAt = Date.now(); try { usageNow = extra(); } catch {} } return usageNow; };
+  const viewJson = () => JSON.stringify(view({ snapshot, tasks, privacy, extra: usageCached }));
+  function startStream() {
+    if (streamTimer) return;
+    streamTimer = setInterval(() => {
+      if (!streams.size) { clearInterval(streamTimer); streamTimer = null; lastView = ''; return; }
+      phoneSeen = Date.now();
+      let body; try { body = viewJson(); } catch { return; }
+      const key = body.replace(/"now":\d+,/, '');
+      if (key !== lastView) { lastView = key; lastPing = Date.now(); for (const r of streams) if (!r.write(`data: ${body}\n\n`)) { streams.delete(r); r.destroy(); } }
+      else if (Date.now() - lastPing > 15000) { lastPing = Date.now(); for (const r of streams) r.write(': ping\n\n'); }
+    }, 1000);
+    streamTimer.unref();
+  }
   return new Promise((resolve, reject) => {
     let host = '';
     const server = http.createServer((req, res) => {
@@ -88,7 +121,17 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
         if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, url.pathname === '/' ? String(d).replace(/__V__/g, BUILD) : d))); } // files named with this run, so a home-screen icon never keeps an old page
-        if (url.pathname === '/api/m' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(view({ snapshot, tasks, privacy, extra }))); }
+        if (url.pathname === '/api/m' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', viewJson()); }
+        if (url.pathname === '/api/stream' && req.method === 'GET') { // the view pushed on every change, like the office's own stream
+          if (streams.size >= 4) { res.writeHead(503); return res.end(); }
+          phoneSeen = Date.now(); res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' });
+          const first = viewJson(); res.write(`data: ${first}\n\n`); streams.add(res); req.on('close', () => streams.delete(res)); startStream(); return;
+        }
+        if (url.pathname === '/api/agent' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(agent(snapshot({ privacy }), String(url.searchParams.get('id') || ''), privacy))); }
+        if (url.pathname === '/api/task-diff' && req.method === 'GET') { // what a task changed, to check before concluding (off in private mode)
+          tasks.diff(String(url.searchParams.get('id') || ''), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d.ok ? { ...d, diff: String(d.diff || '').slice(0, 60000) } : d)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
+          return;
+        }
         if (url.pathname === '/frame.png' && req.method === 'GET') { phoneSeen = Date.now(); return frame ? (res.writeHead(200, { 'Content-Type': 'image/png' }), res.end(frame)) : send(res, 404, 'text/plain', 'no picture yet'); } // the office drawn without names
         if (url.pathname === '/api/m' && req.method === 'POST') {
           if (req.headers['x-coworking'] !== '1' || req.headers.origin !== 'http://' + host) { res.writeHead(403); return res.end(); }
@@ -102,6 +145,10 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
               if (m.op === 'create') { // only in a folder your agents or tasks already use, isolated in its own worktree
                 const dir = String(m.dir || ''); if (!folders(snapshot({ privacy }), tasks.list({ privacy })).includes(dir)) return send(res, 200, 'application/json', '{"ok":false,"reason":"nodir"}');
                 return send(res, 200, 'application/json', JSON.stringify(tasks.op({ op: 'create', dir, desc: String(m.text || '').slice(0, 8000), agent: ['claude', 'codex'].includes(m.agent) ? m.agent : 'auto', worktree: true, from: 'phone' })));
+              }
+              if (m.op === 'message') { // free text, only to a session waiting for your next message, typed into its terminal
+                const p = people().find(x => x.id === String(m.id || ''));
+                return send(res, 200, 'application/json', JSON.stringify(!p ? { ok: false, reason: 'gone' } : !canMsg(p) ? { ok: false, reason: 'busy' } : await sendText(p, String(m.text || '').slice(0, 4000))));
               }
               if (m.op === 'answer') { // the same rule as the office: one single-choice question, a valid number
                 const p = people().find(x => x.id === String(m.id || '')), d = p && p.doing, n = Number(m.choice);
@@ -120,7 +167,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
     server.once('error', reject);
     server.listen(port, ip, () => {
       host = `${ip}:${server.address().port}`;
-      resolve({ ok: true, url: `http://${host}/?t=${token}`, host, close: () => { visits.clear(); server.close(); },
+      resolve({ ok: true, url: `http://${host}/?t=${token}`, host, close: () => { visits.clear(); for (const r of streams) r.destroy(); streams.clear(); server.close(); },
         rotate: () => { token = crypto.randomBytes(16).toString('hex'); if (onToken) onToken(token); return `http://${host}/?t=${token}`; }, // every phone has to scan again
         addVisit: minutes => { const t = crypto.randomBytes(16).toString('hex'), until = Date.now() + Math.min(240, Math.max(5, Number(minutes) || 60)) * 60000; visits.set(t, { until }); return { url: `http://${host}/v/${t}`, until }; },
         endVisits: () => { visits.clear(); frame = null; },
@@ -130,4 +177,4 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
   });
 }
 
-module.exports = { startPhone, lanIp, view };
+module.exports = { startPhone, lanIp, view, agent };

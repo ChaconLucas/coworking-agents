@@ -1,9 +1,9 @@
 'use strict';
-// phone app: four tabs (Now, Tasks, Office, Usage) over the restricted phone server
+// phone app: four tabs (Now, Tasks, Office, Usage) and one agent in full, live over the restricted phone server
 const P = T.phone, X = T.tasks;
 const app = document.getElementById('app'), statusEl = document.getElementById('status'), tabsEl = document.getElementById('tabs');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let last = null, busy = false, tab = 'now', d = null;
+let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {};
 try { tab = localStorage.getItem('cw.phone.tab') || 'now'; } catch {}
 const post = body => fetch('api/m', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
 const usd = n => 'US$ ' + (Number(n) || 0).toFixed(2);
@@ -19,13 +19,13 @@ function nowTab() {
   if (!need.length && !asking.length) h.push(`<p class="empty">✓ ${esc(P.nothing)}</p>`);
   for (const t of asking) h.push(`<div class="card need"><b>🔐 ${esc(t.title)}</b><small>${esc(X.permAsk(t.ask.tool))}</small>${t.ask.what ? `<pre>${esc(t.ask.what)}</pre>` : ''}
     <div class="row"><button data-op="permit" data-id="${esc(t.id)}" data-allow="1">✓ ${esc(X.permAllow)}</button><button class="bad" data-op="permit" data-id="${esc(t.id)}">✕ ${esc(X.permDeny)}</button></div><p class="msg" data-msg="${esc(t.id)}"></p></div>`);
-  for (const p of need) h.push(`<div class="card need"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><b>${esc(p.name)}</b><small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.title ? ' · ' + esc(p.title) : ''}</small>${p.ask ? `<pre>${esc(p.ask)}</pre>` : ''}
+  for (const p of need) h.push(`<div class="card need" data-agent="${esc(p.id)}"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><b>${esc(p.name)}</b><small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.title ? ' · ' + esc(p.title) : ''}</small>${p.ask ? `<pre>${esc(p.ask)}</pre>` : ''}
     ${p.options ? `<div class="row">${p.options.map((o, i) => `<button class="ghost" data-op="answer" data-id="${esc(p.id)}" data-choice="${i + 1}">${i + 1}. ${esc(o)}</button>`).join('')}</div>` : `<p class="msg">${esc(P.openOffice)}</p>`}<p class="msg" data-msg="${esc(p.id)}"></p></div></div></div>`);
   h.push(`<h2>${esc(P.agents)} <small>${others.length}</small></h2>`);
   if (!others.length) h.push(`<p class="empty">${esc(P.noAgents)}</p>`);
-  for (const p of others) h.push(`<div class="card agent"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><div class="line"><b>${esc(p.name)}</b>${pill(stateCls(p.state), T.states[p.state] || p.state)}</div>
+  for (const p of others) h.push(`<div class="card agent" data-agent="${esc(p.id)}"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><div class="line"><b>${esc(p.name)}</b>${pill(stateCls(p.state), T.states[p.state] || p.state)}</div>
     <small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.branch ? ' · ' + esc(p.branch) : ''}${p.since ? ' · ' + esc(ago(d.now - p.since)) : ''}</small>
-    ${p.doing && working(p) ? `<p class="doing">${esc(p.doing)}</p>` : p.title ? `<p class="doing dim">${esc(p.title)}</p>` : ''}</div></div></div>`);
+    ${p.doing && working(p) ? `<p class="doing">${esc(p.doing)}</p>` : p.title ? `<p class="doing dim">${esc(p.title)}</p>` : ''}${p.lastReply && !working(p) ? `<p class="said">💬 ${esc(p.lastReply)}</p>` : ''}</div><span class="more">›</span></div></div>`);
   return h.join('');
 }
 function tasksTab() {
@@ -41,9 +41,43 @@ function tasksTab() {
       <small>${t.reason ? esc(X.reasons[t.reason] || t.reason) + ' · ' : ''}${esc(t.agent)} · ${t.costUnknown && !t.cost ? '?' : esc(usd(t.cost))} · ${esc(ago(d.now - t.updated))}</small>
       ${t.ask ? `<p class="doing">🔐 ${esc(X.permAsk(t.ask.tool))}</p>` : ''}${t.result ? `<pre>${esc(t.result)}</pre>` : ''}${t.review ? `<pre>🔎 ${esc(t.review)}</pre>` : ''}
       ${g === 'need' ? `<textarea data-text="${esc(t.id)}" placeholder="${esc(X.reply)}"></textarea><div class="row"><button data-op="reply" data-id="${esc(t.id)}">➤ ${esc(X.send)}</button>${t.state === 'blocked' ? `<button class="ghost" data-op="conclude" data-id="${esc(t.id)}">✔ ${esc(X.conclude)}</button>` : ''}<button class="ghost" data-op="retry" data-id="${esc(t.id)}">↻ ${esc(X.retry)}</button></div>` : ''}
-      ${g === 'active' ? `<div class="row"><button class="ghost" data-op="cancel" data-id="${esc(t.id)}">✖ ${esc(X.cancel)}</button></div>` : ''}<p class="msg" data-msg="${esc(t.id)}"></p></div>`);
+      ${g === 'active' ? `<div class="row"><button class="ghost" data-op="cancel" data-id="${esc(t.id)}">✖ ${esc(X.cancel)}</button></div>` : ''}
+      ${d.privacy ? '' : `<div class="row"><button class="ghost" data-diff="${esc(t.id)}">${diffs[t.id] ? '▾ ' + esc(P.diffHide) : '▸ ' + esc(P.diff)}</button></div>${diffView(diffs[t.id])}`}<p class="msg" data-msg="${esc(t.id)}"></p></div>`);
   }
   if (!d.tasks.length) h.push(`<p class="empty">${esc(P.noTasks)}</p>`);
+  return h.join('');
+}
+// what a task changed: the summary, then each line coloured (added, removed, where)
+function diffView(x) {
+  if (!x) return '';
+  if (x === 'loading') return `<p class="msg dim">…</p>`;
+  if (!x.ok) return `<p class="msg">⚠ ${esc(P.fail[x.reason] || x.reason || '?')}</p>`;
+  if (!x.stat && !x.diff) return `<p class="msg dim">${esc(P.noDiff)}</p>`;
+  const lines = String(x.diff || '').split('\n').slice(0, 1500).map(l => `<span class="${l.startsWith('@@') ? 'hunk' : l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('diff ') ? 'file' : ''}">${esc(l)}</span>`).join('\n');
+  return `${x.stat ? `<pre>${esc(x.stat)}</pre>` : ''}<pre class="diff">${lines}</pre>`;
+}
+// one agent in full
+function agentView() {
+  const a = dd, back = `<button class="ghost back" data-back>‹ ${esc(P.back)}</button>`;
+  if (!a) return back + `<p class="empty">${dd === undefined ? esc(P.agentGone) : '…'}</p>`;
+  const need = a.state === 'needs_you' || a.state === 'waiting', h = [back];
+  h.push(`<div class="card${need ? ' need' : ''}"><div class="who"><span class="face" data-face="${esc(a.id)}"></span><div class="txt"><div class="line"><b>${esc(a.name)}</b>${pill(stateCls(a.state), T.states[a.state] || a.state)}</div>
+    <small>${esc(a.agent)}${a.repo ? ' · ' + esc(a.repo) : ''}${a.branch ? ' · ' + esc(a.branch) : ''}${a.since ? ' · ' + esc(ago(Date.now() - a.since)) : ''}</small>${a.title ? `<p class="doing dim">${esc(a.title)}</p>` : ''}</div></div></div>`);
+  if (a.doing) {
+    h.push(`<h2>${esc(need ? P.asking : P.doingNow)}</h2><div class="card${need ? ' need' : ''}"><b>${esc(a.doing.tool)}</b>${a.doing.ask || a.doing.what ? `<pre>${esc(a.doing.ask || a.doing.what)}</pre>` : ''}
+      ${need ? (a.doing.options ? `<div class="row">${a.doing.options.map((o, i) => `<button class="ghost" data-op="answer" data-id="${esc(a.id)}" data-choice="${i + 1}">${i + 1}. ${esc(o)}</button>`).join('')}</div>` : `<p class="msg">${esc(P.openOffice)}</p>`) : ''}<p class="msg" data-msg="${esc(a.id)}"></p></div>`);
+  }
+  if (a.lastPrompt) h.push(`<h2>${esc(P.lastAsk)} <small>${a.lastPromptAt ? esc(ago(Date.now() - a.lastPromptAt)) : ''}</small></h2><div class="card"><p class="text">${esc(a.lastPrompt)}</p></div>`);
+  if (a.lastReply) h.push(`<h2>${esc(P.lastReply)} <small>${a.lastReplyAt ? esc(ago(Date.now() - a.lastReplyAt)) : ''}</small></h2><div class="card"><p class="text">${esc(a.lastReply)}</p></div>`);
+  h.push(`<div class="card">${a.canMsg ? `<textarea data-text="msg" placeholder="${esc(P.msgPh)}"></textarea><div class="row"><button data-op="message" data-id="${esc(a.id)}">➤ ${esc(P.msgSend)}</button></div>` : `<p class="msg dim">${esc(P.msgOnlyIdle)}</p>`}<p class="msg" data-msg="msg"></p></div>`);
+  if (a.recent.length) h.push(`<h2>${esc(P.recent)}</h2><div class="card">${a.recent.map(r => `<div class="act"><b>${esc(r.tool)}</b><span>${esc(r.what)}</span><small>${r.ts ? esc(ago(Date.now() - r.ts)) : ''}</small></div>`).join('')}</div>`);
+  if (a.files.length) h.push(`<h2>${esc(P.files)} <small>${a.files.length}</small></h2><div class="card">${a.files.map(f => `<div class="act"><span>${esc(f.name)}</span><small>${f.at ? esc(ago(Date.now() - f.at)) : ''}</small></div>`).join('')}</div>`);
+  if (a.subagents.length) h.push(`<h2>${esc(P.helpers)}</h2><div class="card">${a.subagents.map(n => `<div class="act"><span>● ${esc(n)}</span></div>`).join('')}</div>`);
+  const pct = a.ctxMax ? Math.round(a.ctx / a.ctxMax * 100) : 0;
+  h.push(`<h2>${esc(P.info)}</h2><div class="card"><div class="act"><span>${esc(P.model)}</span><b>${esc(a.model || '?')}${a.effort ? ' · ' + esc(a.effort) : ''}</b></div>
+    ${a.ctxMax ? `<div class="act"><span>${esc(P.ctx)}</span><b>${pct}%</b></div><div class="bar"><i style="width:${Math.min(100, pct)}%" class="${pct > 85 ? 'hi' : pct > 60 ? 'mid' : ''}"></i></div>` : ''}
+    <div class="act"><span>${esc(P.cost)}</span><b>${esc(usd(a.usd))}</b></div><div class="act"><span>${esc(P.turns)}</span><b>${a.turns}</b></div>
+    ${a.startedAt ? `<div class="act"><span>${esc(P.open)}</span><b>${esc(ago(Date.now() - a.startedAt))}</b></div>` : ''}${a.cwd ? `<div class="act"><span>${esc(P.folder)}</span><b>${esc(a.cwd)}</b></div>` : ''}</div>`);
   return h.join('');
 }
 function officeTab() {
@@ -63,37 +97,66 @@ function usageTab() {
 }
 function render() {
   const n = d.people.filter(p => p.state === 'needs_you' || p.state === 'waiting').length + d.tasks.filter(t => t.ask).length;
-  statusEl.textContent = P.status(d.people.filter(working).length, n);
+  statusEl.textContent = P.status(d.people.filter(working).length, n) + (Date.now() - streamAt < 20000 ? ' · ● ' + P.live : '');
   tabsEl.innerHTML = [['now', '●', P.tabNow, n], ['tasks', '☰', P.tabTasks, d.tasks.filter(t => ['blocked', 'failed'].includes(t.state)).length], ['office', '▦', P.tabOffice, 0], ['usage', '$', P.tabUsage, 0]]
     .map(([k, icon, label, badge]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span class="ic">${icon}</span>${esc(label)}${badge ? `<i>${badge}</i>` : ''}</button>`).join('');
-  app.innerHTML = tab === 'tasks' ? tasksTab() : tab === 'office' ? officeTab() : tab === 'usage' ? usageTab() : nowTab();
+  app.innerHTML = detail ? agentView() : tab === 'tasks' ? tasksTab() : tab === 'office' ? officeTab() : tab === 'usage' ? usageTab() : nowTab();
   // each agent's face, drawn by the office's own pixel art (the same look as on the computer)
   if (window.Art) app.querySelectorAll('[data-face]').forEach(el => { try { el.appendChild(Art.portrait(el.dataset.face)); } catch {} });
 }
+const typing = () => { const a = document.activeElement; return busy || (a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) || document.querySelector('details[open].new'); };
+// a new view: drawn now, or kept until you stop typing (never wipes what is being written)
+function apply(r, force) {
+  if (!force && typing()) { pending = r; return; }
+  pending = null;
+  const key = JSON.stringify({ ...r, now: 0 }); d = r;
+  if (force || key !== last) { last = key; if (detail) loadDetail(); else { const y = app.scrollTop; render(); app.scrollTop = y; } }
+}
 async function load(force) {
-  const a = document.activeElement;
-  if (!force && (busy || (a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) || document.querySelector('details[open].new'))) return; // don't wipe what is being typed
+  if (!force && typing()) return;
   const r = await fetch('api/m').then(x => (x.ok ? x.json() : null)).catch(() => null);
   if (!r) { statusEl.textContent = P.offline; return; }
-  const key = JSON.stringify({ ...r, now: 0 }); d = r; if (force || key !== last) { last = key; const y = app.scrollTop; render(); app.scrollTop = y; }
+  apply(r, force);
 }
-tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
+async function loadDetail() {
+  const id = detail; if (!id) return;
+  const r = await fetch('api/agent?id=' + encodeURIComponent(id)).then(x => (x.ok ? x.json() : false)).catch(() => false);
+  if (detail !== id || r === false) return;
+  dd = r || undefined; if (typing()) return;
+  const y = app.scrollTop; render(); app.scrollTop = y;
+}
+// live: the office pushes every change; the 3-second poll only runs while the stream is down
+function stream() {
+  if (!window.EventSource) return;
+  const es = new EventSource('api/stream');
+  es.onmessage = e => { streamAt = Date.now(); try { apply(JSON.parse(e.data)); } catch {} };
+}
+document.addEventListener('focusout', () => setTimeout(() => { if (pending && !typing()) apply(pending, true); }, 0));
+tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; detail = null; dd = null; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
 app.addEventListener('click', async e => {
-  const b = e.target.closest('[data-op]'); if (!b) return;
+  if (e.target.closest('[data-back]')) { detail = null; dd = null; render(); app.scrollTop = 0; return; }
+  const df = e.target.closest('[data-diff]');
+  if (df) { const id = df.dataset.diff; if (diffs[id]) delete diffs[id]; else { diffs[id] = 'loading'; fetch('api/task-diff?id=' + encodeURIComponent(id)).then(x => x.json()).catch(() => ({ ok: false, reason: 'unknown' })).then(r => { if (diffs[id]) { diffs[id] = r; render(); } }); } render(); return; }
+  const b = e.target.closest('[data-op]');
+  const card = !b && !e.target.closest('textarea, select, a, pre') && e.target.closest('[data-agent]');
+  if (card) { detail = card.dataset.agent; dd = null; render(); app.scrollTop = 0; loadDetail(); return; }
+  if (!b) return;
   const op = b.dataset.op, id = b.dataset.id || 'new', body = { op, id };
   if (op === 'permit') body.allow = !!b.dataset.allow;
   if (op === 'answer') body.choice = Number(b.dataset.choice);
+  if (op === 'message') { const ta = app.querySelector('[data-text="msg"]'); body.text = ta ? ta.value.trim() : ''; if (!body.text) return ta && ta.focus(); }
   if (op === 'reply') { const ta = app.querySelector(`[data-text="${CSS.escape(id)}"]`); body.text = ta ? ta.value.trim() : ''; if (!body.text) return ta && ta.focus(); }
   if (op === 'create') { const ta = app.querySelector('[data-new-text]'); body.text = ta ? ta.value.trim() : ''; if (!body.text) return ta && ta.focus(); body.dir = app.querySelector('[data-new-dir]').value; body.agent = app.querySelector('[data-new-agent]').value; }
   if (op === 'cancel' && !confirm(X.cancelSure)) return;
   busy = true; b.disabled = true;
   const r = await post(body); busy = false;
-  const m = app.querySelector(`[data-msg="${CSS.escape(id)}"]`); if (m) m.textContent = r.ok ? '✓ ' + P.done : '⚠ ' + (P.fail[r.reason] || r.reason || '?');
+  if (op === 'message' && r.ok) { const ta = app.querySelector('[data-text="msg"]'); if (ta) ta.value = ''; }
+  const m = app.querySelector(`[data-msg="${CSS.escape(op === 'message' ? 'msg' : id)}"]`); if (m) m.textContent = r.ok ? '✓ ' + P.done : '⚠ ' + (P.fail[r.reason] || r.reason || '?');
   b.disabled = false; last = null;
   if (op === 'create' && r.ok) { const det = app.querySelector('details.new'); if (det) det.open = false; setTimeout(() => load(true), 600); return; }
   setTimeout(load, 800);
 });
-load(true); setInterval(load, 3000);
+load(true); stream(); setInterval(() => { if (Date.now() - streamAt > 20000) load(); if (detail && !typing()) loadDetail(); }, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
 // tap the logo: how this page is running (full-screen app or inside Safari), screen heights and the notch / home-bar insets
 document.querySelector('.brand').addEventListener('click', () => {

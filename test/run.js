@@ -743,6 +743,23 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.ok(cr.ok && cr.task.worktree && cr.task.from === 'phone', 'phone task created, in its own worktree');
     tasks.op({ op: 'cancel', id: cr.task.id }); await tasks._idle();
     const vw = await (await get('/api/m', ck)).json(); assert.ok(Array.isArray(vw.folders) && vw.folders.includes(known) && Array.isArray(vw.limits), 'phone view: folders and limits');
+    // live view, one agent in full, writing to it and a task's changes: all behind the same code and POST rules
+    { const sr = await fetch(base + '/api/stream', { headers: ck }), rd = sr.body.getReader(), first = new TextDecoder().decode((await rd.read()).value); rd.cancel();
+      assert.ok(sr.headers.get('content-type') === 'text/event-stream' && /^data: \{.*"people"/.test(first), 'phone stream: the view pushed'); }
+    assert.strictEqual((await get('/api/stream')).status, 401, 'phone stream: no code, nothing');
+    assert.strictEqual(await (await get('/api/agent?id=nobody', ck)).json(), null, 'phone agent: unknown id');
+    assert.strictEqual((await get('/api/agent?id=x')).status, 401, 'phone agent: no code, nothing');
+    assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'message', id: 'nobody', text: 'hi' })).json()).reason, 'gone', 'phone message: only to a live session');
+    assert.strictEqual((await post({ 'X-Coworking': '1', Origin: 'http://evil.example' }, { op: 'message', id: 'x', text: 'hi' })).status, 403, 'phone message: own origin only');
+    assert.strictEqual((await (await get('/api/task-diff?id=nope', ck)).json()).reason, 'notask', 'phone diff: a known task only');
+    { const { view: pv } = require('../src/phone'), snapA = () => ({ people: [{ id: 'a1', name: 'Ana', agent: 'claude', state: 'idle', title: 'secret title', lastPrompt: 'secret prompt', lastReply: 'secret reply', cwd: '/Users/x/p', recent: [{ tool: 'Edit', what: 'secret.js', ts: 1 }] }] });
+      const pub = pv({ snapshot: snapA, tasks, privacy: false }).people[0];
+      assert.ok(pub.canMsg && pub.lastReply === 'secret reply', 'phone view: last answer and who takes a message');
+      const busyP = pv({ snapshot: () => ({ people: [{ ...snapA().people[0], state: 'working' }] }), tasks, privacy: false }).people[0];
+      assert.ok(!busyP.canMsg, 'phone view: no message while it works');
+      const full = require('../src/phone').agent(snapA(), 'a1', false), priv = require('../src/phone').agent(snapA(), 'a1', true);
+      assert.ok(full.lastPrompt === 'secret prompt' && full.cwd === '~/p' && full.recent[0].what === 'secret.js', 'phone agent: in full');
+      assert.ok(!JSON.stringify(priv).includes('secret') && !priv.cwd, 'phone agent: private mode shows no text'); }
     // home screen: the manifest and icons need no code; the code can be replaced, and the old one stops working
     assert.strictEqual((await get('/manifest.webmanifest')).status, 200, 'phone manifest is public (no data)');
     assert.strictEqual((await get('/icon-192.png')).status, 200);
