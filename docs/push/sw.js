@@ -14,8 +14,10 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || '', target = new URL(url ? './#go=' + encodeURIComponent(url) : './', self.registration.scope).href;
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+  // also left for the page to pick up, in case iOS opens the app at its start instead of the address asked for
+  const left = url ? caches.open('cw').then(c => c.put('go', new Response(JSON.stringify({ url, at: Date.now() })))).catch(() => {}) : Promise.resolve();
+  e.waitUntil(left.then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     const c = list[0];
     return c ? c.focus().then(w => (w || c).navigate(target)).catch(() => self.clients.openWindow(target)) : self.clients.openWindow(target);
-  }));
+  })));
 });
