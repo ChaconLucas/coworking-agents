@@ -2,7 +2,7 @@
 // ---------------- tasks you hand out, the notification center, the releases board and the office admin ----------------
 
 const api = (url, body) => fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) } : {}).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
-let taskSaid = [];
+let taskSaid = [], ghIssuesList = [];
 let taskData = { tasks: [], settings: { maxParallel: 2 }, options: {}, roles: [], privacy: false }, taskSel = '', taskDetail = null, taskDiff = null, taskPeriod = 'week', taskSearch = [], taskWhy = '';
 const tasksWaiting = () => taskData.tasks.filter(t => t.state === 'blocked').length;
 const taskOfPerson = id => taskData.tasks.find(t => t.sessionId && t.sessionId === id);
@@ -279,6 +279,8 @@ function formHtml() {
   const sel = (name, opts, v) => `<select data-tf="${name}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   return `<details class="tform" ${!taskData.tasks.length || tformOpen ? 'open' : ''}><summary>＋ ${esc(X.newT)}</summary>
     ${(taskData.settings.templates || []).length ? `<div class="tpls"><small>${esc(X.tplTitle)}</small>${taskData.settings.templates.map((x, i) => `<span class="tpl"><button class="btn small ghost" data-tpl="${i}" title="${esc(x.desc.slice(0, 200))}">${esc(x.name)}</button><button class="hb" data-tplrun="${i}" title="${esc(X.tplRun)}">▶</button><button class="hb" data-tpldel="${i}" title="${esc(X.tplDel)}">✕</button></span>`).join('')}</div>` : ''}
+    <div class="tgh"><button class="btn small ghost" data-gh="issues">📥 ${esc(X.gh.fromIssue)}</button><span data-ghissues>${ghIssuesList.length ? `<select data-ghissue><option value="">${esc(X.gh.pick(ghIssuesList.length))}</option>${ghIssuesList.map((x, i) => `<option value="${i}">#${x.number} ${esc(x.title)}</option>`).join('')}</select>` : ''}</span>
+      <span class="tgh-pr"><label>🔎 ${esc(X.gh.reviewPr)} #<input data-ghpr inputmode="numeric" size="5"></label><button class="btn small ghost" data-gh="review">${esc(X.gh.review)}</button></span></div>
     <label>${esc(X.desc)}<textarea data-tf="desc" rows="3"></textarea></label>
     <label>${esc(X.title)}<input data-tf="title" maxlength="80"></label>
     <label>${esc(X.folder)}<input data-tf="dir" list="tdirs" value="${esc(folders[0] ? folders[0][0] : '')}"><datalist id="tdirs">${folders.map(([d]) => `<option value="${esc(d)}">`).join('')}</datalist></label>
@@ -296,6 +298,28 @@ function formHtml() {
     <label class="tchk"><input type="checkbox" data-tf="lean"> ${esc(X.lean)}</label>
     <p><button class="btn small ghost" data-tact="recommend">💡 ${esc(X.rec)}</button> <button class="btn" data-tact="create">➤ ${esc(X.create)}</button> <button class="btn small ghost" data-tact="saveTpl">💾 ${esc(X.tplSave)}</button></p><p class="note" id="tmsg">${esc(taskWhy)}</p></details>`;
 }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-gh]'); if (!b || reportTab !== 'tasks') return;
+  const X = TT(), dir = (reportEl.querySelector('[data-tf="dir"]') || {}).value || '', msg = t => { const m = document.getElementById('tmsg'); if (m) m.textContent = t; };
+  const post = body => fetch('api/gh', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
+  b.disabled = true; msg(X.gh.loading);
+  if (b.dataset.gh === 'issues') {
+    const r = await post({ op: 'issues', dir }); b.disabled = false;
+    if (!r.ok) return msg('⚠ ' + (X.gh.fail[r.reason] || r.reason) + (r.detail ? ' — ' + r.detail : ''));
+    ghIssuesList = r.issues; msg(r.issues.length ? '' : X.gh.noIssues);
+    renderTasks(); return;
+  }
+  const n = (reportEl.querySelector('[data-ghpr]') || {}).value || '', agent = (reportEl.querySelector('[data-tf="agent"]') || {}).value || 'auto';
+  const r = await post({ op: 'review', dir, n, agent }); b.disabled = false;
+  if (!r.ok) return msg('⚠ ' + (X.gh.fail[r.reason] || r.reason) + (r.detail ? ' — ' + r.detail : ''));
+  await pollTasks(); loadTask(r.task.id);
+});
+document.addEventListener('change', e => {
+  const sel = e.target.closest('[data-ghissue]'); if (!sel) return;
+  const x = ghIssuesList[Number(sel.value)]; if (!x) return;
+  const set = (k, v) => { const el = reportEl.querySelector(`[data-tf="${k}"]`); if (el) el.value = v; };
+  set('title', `#${x.number} ${x.title}`.slice(0, 80)); set('desc', `Resolve GitHub issue #${x.number}: ${x.title}${x.url ? ' (' + x.url + ')' : ''}\n\n${x.body}`);
+});
 function rowHtml(t) {
   const X = TT(), why = t.reason && ['blocked', 'failed'].includes(t.state) || t.reason === 'restart' || t.reason === 'detached' ? X.reasons[t.reason] || '' : '';
   return `<li class="trow-item st-${t.state}" data-topen="${esc(t.id)}"><span class="tdot"></span><span class="tmainc"><b>${esc(t.title)}</b>

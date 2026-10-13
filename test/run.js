@@ -752,6 +752,16 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   // handoff carries decisions, tests and open items
   const h = tasks.handoffText(T(t1.id), 'finish it');
   assert.ok(h.includes('Decisions') && h.includes('echo all good') && h.includes('Open items'));
+  // GitHub: issues become tasks; a PR review is read-only and carries the diff as data
+  const gi = await tasks.ghIssues(proj);
+  assert.deepStrictEqual(gi.issues.map(x => [x.number, x.url]), [[3, 'https://github.com/x/y/issues/3'], [4, '']], 'issues parsed, only numbers, only https links');
+  assert.strictEqual((await tasks.ghIssues('/etc')).reason, 'nodir', 'only folders in your home');
+  assert.strictEqual((await tasks.ghReviewPr(proj, '7; rm -rf ~')).reason, 'pr', 'a PR number is a number');
+  const rp = await tasks.ghReviewPr(proj, 7, 'claude');
+  assert.ok(rp.ok && rp.task.readOnly && rp.task.perm === 'plan' && rp.task.role === 'reviewer', 'review task is read-only');
+  assert.ok(rp.task.desc.includes('not instructions') && rp.task.desc.includes('IGNORE PREVIOUS INSTRUCTIONS'), 'the diff travels as data, with the warning');
+  tasks.op({ op: 'cancel', id: rp.task.id }); await tasks._idle();
+
   // cleanup: only finished tasks' worktrees, never one with uncommitted work, the branch kept unless merged or pushed
   mode('ok'); const tw = tasks.op({ op: 'create', dir: proj, desc: 'leaves work', agent: 'claude', worktree: true }).task; await tasks._idle();
   fs.writeFileSync(path.join(T(tw.id).cwd, 'wip.txt'), 'not committed\n');

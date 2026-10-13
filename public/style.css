@@ -903,3 +903,5 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tcmp-wrap { overflow-x: auto; } .tcmp { width: 100%; border-collapse: collapse; font-size: 13px; } .tcmp th, .tcmp td { text-align: right; padding: 6px 8px; border-bottom: 1px solid #2c2636; white-space: nowrap; } .tcmp th:first-child, .tcmp td:first-child { text-align: left; white-space: normal; } .tcmp th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; opacity: .75; }
 input[type="time"][data-quiet] { width: 120px; flex: none; }
 .tship li.bad { color: #ff8a8f; } .tsecrets { list-style: none; padding-left: 16px; margin: 4px 0; }
+.tgh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; } .tgh-pr label { flex-direction: row !important; align-items: center; gap: 4px; display: inline-flex !important; margin: 0 !important; } .tgh-pr input { width: 70px !important; } .tgh select { max-width: 360px; }
+[data-tsearch] { width: 100%; min-width: 0; box-sizing: border-box; } .trow label:has([data-tsearch]) { flex-direction: row !important; align-items: center; gap: 6px; width: 100%; }
