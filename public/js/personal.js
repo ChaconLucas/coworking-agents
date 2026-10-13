@@ -134,6 +134,7 @@ function renderOffice() {
     ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}
     <h3>📲 ${esc(T.appx.title)}</h3><p class="note">${esc(T.appx.sub)}</p>
     <p><button class="btn small" data-appinstall ${matchMedia('(display-mode: standalone)').matches ? 'disabled' : ''}>📲 ${esc(matchMedia('(display-mode: standalone)').matches ? T.appx.installed : T.appx.install)}</button> <small class="note" data-app-msg></small></p>
+    <p class="opts"><span class="note">${esc(T.appx.opensIn)}</span> <button class="opt ${((taskData.settings || {}).appChoice || '') === 'app' ? 'on' : ''}" data-appchoice="app">${esc(T.appx.optApp)}</button><button class="opt ${((taskData.settings || {}).appChoice || '') !== 'app' ? 'on' : ''}" data-appchoice="browser">${esc(T.appx.optBrowser)}</button></p>
     <p><label class="tchk"><input type="checkbox" data-autostart disabled> ${esc(T.appx.autostart)}</label> <small class="note" data-as-msg></small></p>
     <p class="note">${esc(T.appx.cli)} <code>npx coworking-agents --app</code></p>
     <h3>🖥 ${esc(T.menubar.title)}</h3><p class="note">${esc(T.menubar.sub)}</p><p data-mb-box><label class="tchk"><input type="checkbox" data-menubar disabled> ${esc(T.menubar.on)}</label> <small class="note" data-mb-msg></small></p>
@@ -210,6 +211,32 @@ document.addEventListener('change', async e => {
   c.disabled = true; const r = await fetch('api/menubar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: c.checked }) }).then(x => x.json()).catch(() => ({ ok: false }));
   c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-mb-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.menubar.shown[r.kind] || T.menubar.shown.mac : '') : '⚠ ' + (T.menubar.fail[r.reason] || r.reason || '');
 });
+// first run: ask once whether to use it as an app; the answer is remembered and decides how it opens next time
+function askAppOnce() {
+  const standalone = matchMedia('(display-mode: standalone)').matches;
+  if (standalone || !taskData || !taskData.settings || taskData.settings.appChoice || document.getElementById('app-ask') || (data && data.host === 'demo')) return;
+  const A = T.appx, box = document.createElement('div');
+  box.id = 'app-ask'; box.className = 'app-ask';
+  box.innerHTML = `<b>📲 ${esc(A.askTitle)}</b><p>${esc(A.askText)}</p><label class="tchk"><input type="checkbox" data-appask-auto> ${esc(A.autostart)}</label>
+    <p><button class="btn" data-appask="app">📲 ${esc(A.install)}</button> <button class="btn small ghost" data-appask="browser">${esc(A.keep)}</button></p><p class="note" data-appask-msg></p>`;
+  document.body.appendChild(box);
+}
+setTimeout(function tryAsk() { if (taskData && taskData.settings) askAppOnce(); else setTimeout(tryAsk, 1000); }, 2500);
+async function chooseApp(choice, auto) {
+  await api('api/tasks', { op: 'settings', appChoice: choice });
+  if (auto) await fetch('api/autostart', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: true }) }).catch(() => {});
+  if (typeof pollTasks === 'function') pollTasks();
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-appask]'); if (!b) return;
+  const box = document.getElementById('app-ask'), auto = !!(box && box.querySelector('[data-appask-auto]:checked')), m = box && box.querySelector('[data-appask-msg]');
+  if (b.dataset.appask === 'browser') { await chooseApp('browser', auto); if (box) box.remove(); return; }
+  await chooseApp('app', auto);
+  if (installPrompt) { installPrompt.prompt(); await installPrompt.userChoice.catch(() => {}); installPrompt = null; if (box) box.remove(); return; }
+  // no install prompt here (Safari, Firefox, or already installed): next time it opens in an app window anyway
+  if (m) m.textContent = T.appx.nextTime + ' ' + (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? T.appx.safari : /Firefox/.test(navigator.userAgent) ? '' : T.appx.chrome);
+  setTimeout(() => box && box.remove(), 9000);
+});
 // installing as an app: the browser's own prompt when it offers one, instructions otherwise
 let installPrompt = null;
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
@@ -228,3 +255,4 @@ document.addEventListener('change', async e => {
   c.disabled = true; const r = await fetch('api/autostart', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: c.checked }) }).then(x => x.json()).catch(() => ({ ok: false }));
   c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-as-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.appx.asOn : T.appx.asOff) : '⚠';
 });
+document.addEventListener('click', async e => { const o = e.target.closest('[data-appchoice]'); if (!o) return; await chooseApp(o.dataset.appchoice, false); await (typeof pollTasks === 'function' ? pollTasks() : null); renderReport(); });

@@ -45,8 +45,13 @@ if (flag('--json')) {
   return;
 }
 
+// the choice made in the office the first time ("use as an app" or "keep the browser") decides how it opens next time
+function wantsApp() {
+  if (flag('--app')) return true;
+  try { return JSON.parse(fs.readFileSync(path.join(os.homedir(), '.config', 'coworking-agents', 'tasks', 'tasks.json'), 'utf8')).settings.appChoice === 'app'; } catch { return false; }
+}
 function open(url) {
-  if (flag('--app') && openApp(url)) return;
+  if (wantsApp() && openApp(url)) return;
   const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
   const a = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
   execFile(cmd, a, () => {});

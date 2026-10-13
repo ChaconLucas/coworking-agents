@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- First run asks once: *Install as an app* (and optionally start with the computer) or *Keep the browser*; the answer decides how it opens from the terminal next time and can be changed in Personalise
 - Use it as an app, if you want: *Install as an app* (its own window and Dock/taskbar icon; nothing cached), `--app` for an app window of Chrome/Edge/Brave/Chromium, and *Start with the computer* (`coworking-agents autostart on|off`): hidden at login with the tray icon, through each system's own login entry, no shell. The browser keeps working as before
 - Tray icon on Windows (PowerShell + Windows Forms: red dot, menu, balloons) and Linux (zenity icon and tooltip, or notify-send notices); on macOS a red count, today's spend, limits, who is working and tasks asking permission; system notifications when nobody has the office open, outside quiet hours
 - macOS menu bar icon (Personalise or `--menubar`): how many are working and who needs you; clicking one opens the office on that agent; it goes away when the office closes. No dependency: the system's own JavaScript for Automation reads a private status file

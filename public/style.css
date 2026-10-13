@@ -921,3 +921,6 @@ body.tv .help, body.tv .talk, body.tv .dpop, body.tv .hmore, body.tv .scene-more
 .bars.hot li .t { grid-area: t; white-space: nowrap; font-size: 12px; opacity: .85; }
 .bars.hot li .tbar { grid-area: b; width: 100%; }
 @media (max-width: 600px) { .bars.hot li { grid-template-columns: minmax(0, 1fr); grid-template-areas: "f" "t" "b"; } }
+.app-ask { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 9998; width: min(460px, calc(100vw - 32px)); background: #221f27; color: #ece7df; border: 2px solid #8b5cf6; border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.45); font-size: 14px; }
+.app-ask p { margin: 8px 0; } .app-ask .tchk { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+body.tv .app-ask { display: none; }

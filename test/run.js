@@ -813,6 +813,10 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.deepStrictEqual(tasks.list({ privacy: true }).settings.repoNotes, {}, 'hidden in private mode');
   tasks.op({ op: 'repoNote', dir: proj, text: '' }); assert.ok(!tasks.list().settings.repoNotes[proj], 'empty removes it');
 
+  // first-run choice: app or browser, only those two values
+  tasks.op({ op: 'settings', appChoice: 'evil' }); assert.ok(!tasks.list().settings.appChoice, 'unknown choice ignored');
+  tasks.op({ op: 'settings', appChoice: 'app' }); assert.strictEqual(tasks.list().settings.appChoice, 'app'); tasks.op({ op: 'settings', appChoice: '' });
+
   // quiet hours kept on the server too (for the tray icon), validated
   tasks.op({ op: 'settings', quiet: { on: true, from: '23:00', to: '99:99' } });
   assert.deepStrictEqual(tasks.list().settings.quiet, { on: true, from: '23:00', to: '08:00' }, 'quiet hours validated');
