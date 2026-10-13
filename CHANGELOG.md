@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Message several agents (☰ → 📣): one request to the agents you pick; typed into terminal sessions that are waiting, continued in the background for VS Code and app conversations, busy ones left out
 - Repositories panel (☰ → 📦): who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity
 - Batch: repeat a new task in other folders (one per line), one task each, every folder checked by the server
 - Schedules: run a saved template every day, on weekdays or on one weekday at a set time (while the office is open; catches up the same day)

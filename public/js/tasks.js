@@ -512,13 +512,45 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['phone', '📱'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  if (menu) for (const [tab, icon] of [['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); openReport(tab); });
   }
 }
 // repositories at a glance: who is in each one now, what is not committed or pushed, task branches and PRs, today's activity
+// one message to several agents: typed into the ones waiting in a terminal, sent in the background to the others
+let bcPick = new Set(), bcOut = {};
+function bcRoute(p) {
+  const busy = !['idle', 'asleep'].includes(p.state);
+  if (typeof canType === 'function' && canType() && p.pid && !['claude-desktop', 'claude-vscode', 'codex-vscode', 'codex-desktop'].includes(p.entrypoint)) return busy ? 'busy' : 'terminal';
+  return canAsk(p) && !taskOfPerson(p.id) ? (busy ? 'busy' : 'background') : 'none';
+}
+function renderBroadcast() {
+  const B = T.bcast, body = reportEl.querySelector('.report-body'), list = ((data && data.people) || []).filter(p => ['claude', 'codex'].includes(p.agent) && !p.leaving);
+  const draft = (reportEl.querySelector('[data-bc-text]') || {}).value || '';
+  body.innerHTML = tabsHtml() + `<h3>📣 ${esc(B.title)}</h3><p class="sub">${esc(B.sub)}</p>
+    <div class="tsec"><p><button class="btn small ghost" data-bc-all>${esc(B.all)}</button> <button class="btn small ghost" data-bc-none>${esc(B.none)}</button></p>
+    <ul class="bclist">${list.map(p => { const r = bcRoute(p), can = r === 'terminal' || r === 'background'; return `<li><label class="tchk"><input type="checkbox" data-bc="${esc(p.id)}" ${can ? '' : 'disabled'} ${can && bcPick.has(p.id) ? 'checked' : ''}> <b>${esc(p.name)}</b> <small class="note">${esc(p.agent)} · ${esc(T.states[p.state] || p.state)}${p.title ? ' · ' + esc(p.title) : ''}</small></label> <span class="tpill ${r === 'terminal' ? 'st-running' : r === 'background' ? 'st-done' : 'st-pending'}">${esc(B.route[r])}</span>${bcOut[p.id] ? ` <small>${esc(bcOut[p.id])}</small>` : ''}</li>`; }).join('') || `<li class="note">${esc(B.empty)}</li>`}</ul></div>
+    <div class="tsec"><textarea data-bc-text rows="3" maxlength="4000" placeholder="${esc(B.ph)}">${esc(draft)}</textarea><p><button class="btn" data-bc-send>➤ ${esc(B.send(bcPick.size))}</button></p><p class="note">${esc(B.note)}</p></div>`;
+}
+document.addEventListener('change', e => { const c = e.target.closest('[data-bc]'); if (!c) return; if (c.checked) bcPick.add(c.dataset.bc); else bcPick.delete(c.dataset.bc); renderBroadcast(); });
+document.addEventListener('click', async e => {
+  if (reportTab !== 'broadcast') return;
+  if (e.target.closest('[data-bc-all]')) { for (const p of data.people) if (['terminal', 'background'].includes(bcRoute(p)) && ['claude', 'codex'].includes(p.agent)) bcPick.add(p.id); return renderBroadcast(); }
+  if (e.target.closest('[data-bc-none]')) { bcPick.clear(); return renderBroadcast(); }
+  const b = e.target.closest('[data-bc-send]'); if (!b) return;
+  const text = (reportEl.querySelector('[data-bc-text]') || {}).value.trim(); if (!text || !bcPick.size) return;
+  b.disabled = true; bcOut = {};
+  for (const id of bcPick) {
+    const p = data.people.find(x => x.id === id), r = p ? bcRoute(p) : 'none'; let out = { ok: false, reason: 'gone' };
+    if (r === 'terminal') out = await fetch('api/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ id, text }) }).then(x => x.json()).catch(() => ({ ok: false, reason: 'unknown' }));
+    else if (r === 'background') out = await api('api/tasks', { op: 'create', resume: p.id, dir: p.cwd, agent: p.agent, desc: text, title: (p.title || p.name).slice(0, 70) });
+    else out = { ok: false, reason: r };
+    bcOut[id] = out.ok ? '✓ ' + T.bcast.sent : '⚠ ' + (T.bcast.fail[out.reason] || out.reason || '?');
+  }
+  const ta = reportEl.querySelector('[data-bc-text]'); if (ta) ta.value = ''; bcPick.clear(); if (typeof pollTasks === 'function') await pollTasks(); renderBroadcast();
+});
 document.addEventListener('click', e => { const pp = reportTab === 'repos' && e.target.closest('[data-tperson]'); if (!pp) return; e.preventDefault(); closeReport(); selected = pp.dataset.tperson; renderOverlay(); renderPanel(); });
 function renderRepos() {
   const R = T.repos, body = reportEl.querySelector('.report-body'), repos = new Map();
