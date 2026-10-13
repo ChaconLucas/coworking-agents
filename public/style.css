@@ -906,3 +906,4 @@ input[type="time"][data-quiet] { width: 120px; flex: none; }
 .tgh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; } .tgh-pr label { flex-direction: row !important; align-items: center; gap: 4px; display: inline-flex !important; margin: 0 !important; } .tgh-pr input { width: 70px !important; } .tgh select { max-width: 360px; }
 [data-tsearch] { width: 100%; min-width: 0; box-sizing: border-box; } .trow label:has([data-tsearch]) { flex-direction: row !important; align-items: center; gap: 6px; width: 100%; }
 .rnote textarea { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; background: rgba(0,0,0,.25); color: inherit; border: 1px solid #3a3045; padding: 6px; margin-top: 6px; } .rnote summary { cursor: pointer; font-size: 13px; }
+.rbudget input { width: 90px; } .rbudget label { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }

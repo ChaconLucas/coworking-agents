@@ -752,6 +752,20 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   // handoff carries decisions, tests and open items
   const h = tasks.handoffText(T(t1.id), 'finish it');
   assert.ok(h.includes('Decisions') && h.includes('echo all good') && h.includes('Open items'));
+  // day budget: once the day's office spend reaches it, new tasks wait
+  mode('ok'); tasks.op({ op: 'settings', dayBudget: 0.0001 });
+  const tb = tasks.op({ op: 'create', dir: proj, desc: 'over the day budget', agent: 'claude' }).task; tasks.tick();
+  await new Promise(r => setTimeout(r, 300));
+  assert.deepStrictEqual([T(tb.id).state, tasks.list().dayStopped], ['pending', true], 'a new task waits once the day budget is spent');
+  tasks.op({ op: 'settings', dayBudget: 0, repoBudget: 0.0001, dir: proj }); tasks.tick(); await new Promise(r => setTimeout(r, 300));
+  assert.strictEqual(T(tb.id).state, 'pending', 'and so does a task in a repository over its budget');
+  tasks.op({ op: 'settings', repoBudget: 0, dir: proj }); await tasks._idle();
+  assert.notStrictEqual(T(tb.id).state, 'pending', 'it runs once the limit is lifted');
+  mode('slow'); const ts = tasks.op({ op: 'create', dir: proj, desc: 'stops mid-run', agent: 'claude' }).task;
+  await new Promise(r => setTimeout(r, 250)); tasks.op({ op: 'settings', dayBudget: 0.0001 }); await tasks._idle();
+  assert.deepStrictEqual([T(ts.id).state, T(ts.id).reason, T(ts.id).events.some(e => e.why === 'dayBudget')], ['blocked', 'budget', true], 'a running task stops when the day budget is crossed');
+  tasks.op({ op: 'settings', dayBudget: 0 }); mode('ok');
+
   // standing instructions per repository reach every task there (and only there)
   assert.strictEqual(tasks.op({ op: 'repoNote', dir: '/etc', text: 'x' }).reason, 'nodir');
   tasks.op({ op: 'repoNote', dir: proj, text: 'Use pnpm here.' }); mode('ok');

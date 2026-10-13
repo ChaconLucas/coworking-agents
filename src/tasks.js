@@ -201,6 +201,8 @@ function op(m = {}) {
     if (m.autoApply !== undefined) settings.autoApply = !!m.autoApply;
     if (m.autoReview !== undefined) settings.autoReview = !!m.autoReview;
     if (m.monthGoal !== undefined) settings.monthGoal = Math.max(0, Math.min(1e6, Number(m.monthGoal) || 0));
+    if (m.dayBudget !== undefined) settings.dayBudget = Math.max(0, Math.min(1e5, Number(m.dayBudget) || 0));
+    if (m.repoBudget !== undefined) { const dir = validDir(m.dir); if (dir) { const b = { ...(settings.repoBudgets || {}) }, v = Math.max(0, Math.min(1e5, Number(m.repoBudget) || 0)); if (v) b[dir] = v; else delete b[dir]; settings.repoBudgets = b; } }
     if (ORDER.includes(m.autoMax)) settings.autoMax = m.autoMax;
     if (m.autoPerTask !== undefined) settings.autoPerTask = Math.min(5, Math.max(0, Number(m.autoPerTask) || 0));
     save(); tick(); return { ok: true, settings };
@@ -278,6 +280,17 @@ function handoffText(t, next) {
 }
 
 // ---- queue: highest priority first, then oldest; a dependency must be done first ----
+// spend today across office tasks (optionally only those under a folder), counting what is still running
+function spentToday(under) {
+  const d = dayKey(now());
+  return tasks.filter(t => !under || t.dir === under || t.dir.startsWith(under + '/')).reduce((n, t) => n + ((t.costByDay || {})[d] || 0) + (t.live && !t.live.committed && t.state === 'running' ? t.live.usd : 0), 0);
+}
+// which limit stops this task right now: the day's budget or its repository's
+function overLimit(t) {
+  if (settings.dayBudget && spentToday() >= settings.dayBudget) return 'dayBudget';
+  const k = Object.keys(settings.repoBudgets || {}).find(k => t.dir === k || t.dir.startsWith(k + '/'));
+  return k && spentToday(k) >= settings.repoBudgets[k] ? 'repoBudget' : '';
+}
 function tick() {
   if (demo) return;
   const running = tasks.filter(t => t.state === 'running').length;
@@ -290,7 +303,7 @@ function tick() {
   const depOk = t => { const d = tasks.find(x => x.id === t.dependsOn) || {}; return d.state === 'done' || (t.chain && d.state === 'blocked' && d.reason === 'review' && (!d.tests || d.tests.code === 0)); };
   const ready = tasks.filter(t => t.state === 'pending' && (!t.dependsOn || depOk(t)))
     .sort((a, b) => b.priority - a.priority || a.created - b.created);
-  for (const t of ready.slice(0, Math.max(0, settings.maxParallel - running))) run(t);
+  for (const t of ready.filter(t => !overLimit(t)).slice(0, Math.max(0, settings.maxParallel - running))) run(t);
 }
 
 // schedules: once a day at most, from the set time until the end of that day (a closed office catches up when it opens)
@@ -473,6 +486,8 @@ function commitLive(t) {
 }
 function budget(t, c) {
   const L0 = t.live; if (L0 && !L0.highWarned) { const runUsd = L0.committed ? 0 : L0.usd, done0 = tasks.filter(x => x.state === 'done' && x.cost > 0).map(x => x.cost).sort((a, b) => a - b), med = done0.length >= 3 ? done0[done0.length >> 1] : 0; if (med && runUsd > 3 * med) { L0.highWarned = true; log(t, { kind: 'warn', why: 'high', usd: runUsd, median: med, rec: proposal(t, -1, 'high') }); } }
+  const lim = !t.cancelling && overLimit(t);
+  if (lim) { t.overBudget = true; t.cancelling = true; c.kill('SIGTERM'); log(t, { kind: 'warn', why: lim }); return; }
   if (!t.budget || t.cancelling) return;
   const L = t.live, spent = t.cost + (L.committed ? 0 : L.usd);
   if ((t.costUnknown || L.unknown) && !t.budgetWarned) { t.budgetWarned = true; log(t, { kind: 'warn', why: 'budgetUnknown' }); }
@@ -712,8 +727,8 @@ function mask(t, i) {
 }
 function pub(t) { const { live, ...rest } = t; return rest; }
 function list({ privacy = false } = {}) {
-  load(); const opts = { claude: options('claude'), codex: options('codex') };
-  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })), repoNotes: {} } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
+  load(); const opts = { claude: options('claude'), codex: options('codex') }, spent = spentToday();
+  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })), repoNotes: {}, repoBudgets: {} } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy, spentToday: spent, dayStopped: !!(settings.dayBudget && spent >= settings.dayBudget) };
 }
 function get(id, { privacy = false } = {}) {
   load(); const i = tasks.findIndex(x => x.id === id); if (i < 0) return null;

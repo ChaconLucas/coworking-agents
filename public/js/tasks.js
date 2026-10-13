@@ -264,7 +264,8 @@ function settingsHtml() {
   const X = TT(), st = taskData.settings || {};
   return `<details class="tform tset" ${tsetOpen ? 'open' : ''}><summary>⚙ ${esc(X.settings)}</summary><div class="trow">
     <label>${esc(X.parallel)}<input type="number" min="1" max="6" value="${Number(st.maxParallel) || 2}" data-tset="maxParallel"></label>
-    <label>${esc(X.maxAttempts)}<input type="number" min="1" max="10" value="${Number(st.maxAttempts) || 3}" data-tset="maxAttempts"></label></div>
+    <label>${esc(X.maxAttempts)}<input type="number" min="1" max="10" value="${Number(st.maxAttempts) || 3}" data-tset="maxAttempts"></label>
+    <label>${esc(X.dayBudget)}<input type="number" min="0" step="1" value="${Number(st.dayBudget) || 0}" data-tset="dayBudget"></label></div>
     <label class="tchk"><input type="checkbox" data-tset="autoApply" ${st.autoApply ? 'checked' : ''}> ${esc(X.autoApply)}</label>
     <label class="tchk"><input type="checkbox" data-tset="autoReview" ${st.autoReview ? 'checked' : ''}> ${esc(X.autoReview)}</label>
     <div class="trow"><label>${esc(X.autoMax)}<select data-tset="autoMax">${['eco', 'bal', 'deep'].map(k => `<option value="${k}" ${st.autoMax === k ? 'selected' : ''}>${esc(X.profiles[k])}</option>`).join('')}</select></label>
@@ -353,7 +354,7 @@ function renderTasks() {
 function renderTaskList(X, body) {
   const order = ['blocked', 'running', 'pending', 'failed', 'done', 'cancelled'], list = taskData.tasks.slice().sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state) || b.priority - a.priority || b.updated - a.updated);
   const kindL = { task: X.kinds.task, session: X.kinds.session, today: X.kinds.today, month: X.kinds.month };
-  body.innerHTML = tabsHtml() + `<p class="sub">${esc(X.sub)}</p>${taskData.privacy ? `<p class="note">🔒 ${esc(X.privateNote)}</p>` : ''}` + formHtml() + settingsHtml()
+  body.innerHTML = tabsHtml() + `<p class="sub">${esc(X.sub)}</p>${taskData.privacy ? `<p class="note">🔒 ${esc(X.privateNote)}</p>` : ''}${taskData.dayStopped ? `<div class="talert">⏸ ${esc(X.dayStopped(fmtUSD(taskData.spentToday || 0), fmtUSD(taskData.settings.dayBudget || 0)))}</div>` : ''}` + formHtml() + settingsHtml()
     + `<div class="trow"><label style="flex:2">🔎 <input data-tsearch placeholder="${esc(X.search)}"></label></div>`
     + (taskSaid.length ? `<h4 class="tsaid-h">💬 ${esc(X.saidTitle(taskSaid.length))}</h4><ul class="queue tsaid">${taskSaid.map(r => { const live = data && data.people.some(p => p.id === r.id); return `<li ${live ? `data-tperson="${esc(r.id)}"` : ''}><span><small>${esc(r.agent)} · ${esc(r.role === 'user' ? X.saidYou : X.saidAgent)} · ${esc(ago(Date.now() - r.at))}${live ? ' · ' + esc(X.saidLive) : ''}</small><br>${esc(r.snippet)}</span></li>`; }).join('')}</ul>` : '')
     + (taskSearch.length ? `<ul class="queue">${taskSearch.map(r => `<li ${r.kind === 'task' ? `data-topen="${esc(r.id)}"` : r.live ? `data-tperson="${esc(r.id)}"` : ''}><b>${esc(r.title)}</b> <small>${esc(kindL[r.kind] || r.kind)} · ${esc(r.agent || '')}${r.state ? ' · ' + esc(X.states[r.state] || T.states[r.state] || r.state) : ''}</small></li>`).join('')}</ul>` : '')
@@ -630,11 +631,13 @@ function renderRepos() {
       ${trees.length > 1 ? `<p class="note">${esc(R.trees(trees.length))}: ${trees.map(g => `${esc(g.branch || '?')}${g.dirty ? ' ✎' + g.dirty : ''}${g.ahead ? ' ↑' + g.ahead : ''}`).join(' · ')}</p>` : ''}
       ${open.length ? `<p><b>${esc(R.tasks)}:</b> ${open.map(t => `<a href="#" data-popen="${esc(t.id)}">${esc(t.title)}</a> <span class="tpill st-${esc(t.state)}">${esc(T.tasks.states[t.state])}</span>`).join(' ')}</p>` : ''}
       ${prs.length ? `<p><b>PRs:</b> ${prs.map(t => `<a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr.replace(/^https:\/\/github\.com\//, ''))}</a>`).join(' · ')}</p>` : ''}
+      ${r.path && !taskData.privacy ? `<p class="rbudget"><label>💲 ${esc(R.budget)} <input type="number" min="0" step="1" value="${Number((taskData.settings.repoBudgets || {})[r.path]) || ''}" placeholder="0" data-repobudget="${esc(r.path)}"></label></p>` : ''}
       ${r.path && !taskData.privacy ? `<details class="rnote" ${(taskData.settings.repoNotes || {})[r.path] ? 'open' : ''}><summary>📌 ${esc(R.note)}${(taskData.settings.repoNotes || {})[r.path] ? ' ✓' : ''}</summary><textarea data-reponote="${esc(r.path)}" rows="3" maxlength="2000" placeholder="${esc(R.notePh)}">${esc((taskData.settings.repoNotes || {})[r.path] || '')}</textarea><p><button class="btn small" data-reponotesave="${esc(r.path)}">${esc(R.noteSave)}</button> <small class="note">${esc(R.noteHint)}</small></p></details>` : ''}</section>`;
   }).join('')}</div>` : `<p class="note">${esc(R.none)}</p>`);
   body.insertAdjacentHTML('beforeend', cleanHtml());
   if (!todayData && typeof loadToday === 'function') loadToday();
 }
+document.addEventListener('change', async e => { const i = e.target.closest('[data-repobudget]'); if (!i) return; await api('api/tasks', { op: 'settings', repoBudget: Number(i.value) || 0, dir: i.dataset.repobudget }); await pollTasks(); });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-reponotesave]'); if (!b) return;
   const ta = [...reportEl.querySelectorAll('[data-reponote]')].find(x => x.dataset.reponote === b.dataset.reponotesave);

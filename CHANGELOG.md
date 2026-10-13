@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Budgets per day and per repository: once reached, new office tasks wait and running ones stop
 - Standing instructions per repository (Repositories panel): sent with every task the office creates there
 - GitHub through gh: turn an open issue into a task (title, text and link), and review a pull request by number with a read-only reviewer that gets the diff as data
 - Cleanup (Repositories panel): remove worktrees of finished tasks; uncommitted work is never removed and a branch is deleted only when merged or pushed
