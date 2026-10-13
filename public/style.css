@@ -853,3 +853,7 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .gbar { position: relative; height: 12px; background: rgba(0,0,0,.3); border: 2px solid #3a3045; margin: 8px 0 4px; }
 .gbar i { position: absolute; left: 0; top: 0; bottom: 0; }
 .gbar i.proj { background: repeating-linear-gradient(45deg, rgba(254,174,52,.35) 0 4px, transparent 4px 8px); }
+.tship { border: 2px solid #63c74d; background: rgba(99,199,77,.08); padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+.tship ul { list-style: none; padding: 0; margin: 6px 0; }
+.tship li { margin: 2px 0; }
+.tship textarea { width: 100%; min-width: 0; box-sizing: border-box; }

@@ -505,6 +505,46 @@ async function changedFiles(t) {
   return [...set].slice(0, 200);
 }
 // everything since the task started: commits, staged, unstaged and new files
+// before concluding: everything that says "ready to ship" in one place (tests, review, files, what is not committed, the branch)
+async function check(id, { privacy = false } = {}) {
+  load(); const t = tasks.find(x => x.id === id); if (!t) return { ok: false, reason: 'notask' };
+  if (demo) return { ok: true, tests: t.tests || null, review: t.review ? { ok: /^\s*OK\b/i.test(t.review.text || ''), pending: !t.review.text } : null, files: t.files.length, dirty: privacy ? [] : ['src/app.js'], dirtyCount: 1, branch: 'coworking/' + t.id, base: 'main', ahead: 1, gh: true, canPr: true, suggest: t.title };
+  const cwd = t.cwd || t.dir;
+  const status = (await git(cwd, ['status', '--porcelain'])) || '', dirty = status.split('\n').filter(Boolean).map(l => l.slice(3));
+  const branch = ((await git(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])) || '').trim();
+  const ahead = t.baseCommit ? Number(((await git(cwd, ['rev-list', '--count', t.baseCommit + '..HEAD'])) || '0').trim()) || 0 : 0;
+  const remote = ((await git(cwd, ['remote'])) || '').split('\n').filter(Boolean).includes('origin');
+  const gh = remote && (await run1('gh', ['auth', 'status'], { cwd, timeout: 8000 })).code === 0;
+  return { ok: true, tests: t.tests || null, review: t.review ? { ok: /^\s*OK\b/i.test(t.review.text || ''), pending: !t.review.text } : null, files: t.files.length,
+    dirty: privacy ? dirty.map(() => '•') : dirty.slice(0, 30), dirtyCount: dirty.length, branch: privacy ? '' : branch, ahead, gh, canPr: gh && !!branch && !['main', 'master', 'HEAD'].includes(branch),
+    suggest: s(t.title, 72) };
+}
+// commit what the task changed, and open a pull request with gh: only when you press the button, never on its own
+async function ship(id, m = {}) {
+  load(); const t = tasks.find(x => x.id === id); if (!t) return { ok: false, reason: 'notask' };
+  if (demo) return { ok: false, reason: 'demo' };
+  if (t.state === 'running' || t.state === 'pending') return { ok: false, reason: 'state' };
+  const cwd = t.cwd || t.dir;
+  if (m.op === 'commit') {
+    const msg = s(m.message, 2000).trim(); if (!msg) return { ok: false, reason: 'nomsg' };
+    if (!((await git(cwd, ['status', '--porcelain'])) || '').trim()) return { ok: false, reason: 'clean' };
+    const add = await run1('git', ['-C', cwd, 'add', '-A']); if (add.code) return { ok: false, reason: 'git', detail: s(add.err, 300) };
+    const c = await run1('git', ['-C', cwd, 'commit', '-m', msg]); if (c.code) return { ok: false, reason: 'git', detail: s(c.err || c.out, 300) };
+    const sha = ((await git(cwd, ['rev-parse', '--short', 'HEAD'])) || '').trim(); log(t, { kind: 'commit', text: sha + ' ' + msg.split('\n')[0] }); save();
+    return { ok: true, sha };
+  }
+  if (m.op === 'pr') {
+    const ck = await check(id); if (!ck.canPr) return { ok: false, reason: ck.gh ? 'branch' : 'gh' };
+    if (ck.dirtyCount) return { ok: false, reason: 'dirty' };
+    const push = await run1('git', ['-C', cwd, 'push', '-u', 'origin', ck.branch], { timeout: 60000 }); if (push.code) return { ok: false, reason: 'push', detail: s(push.err, 300) };
+    const title = s(m.title || t.title, 200).trim(), body = s(m.body, 8000) || `${s(t.desc, 3000)}\n\n${t.review && t.review.text ? '### Review\n' + s(t.review.text, 3000) : ''}`;
+    const pr = await run1('gh', ['pr', 'create', '--head', ck.branch, '--title', title, '--body', body], { cwd, timeout: 60000 });
+    if (pr.code) return { ok: false, reason: 'gh', detail: s(pr.err || pr.out, 300) };
+    const url = (pr.out.match(/https:\/\/\S+/) || [''])[0]; log(t, { kind: 'pr', text: url }); t.pr = url; save();
+    return { ok: true, url };
+  }
+  return { ok: false, reason: 'op' };
+}
 async function diff(id, { privacy = false } = {}) {
   load(); const t = tasks.find(x => x.id === id); if (!t) return { ok: false, reason: 'notask' };
   if (privacy) return { ok: false, reason: 'private' };
@@ -546,4 +586,4 @@ function onEvent(fn) { listeners.add(fn); }
 function _reset(o = {}) { tasks = []; events.clear(); procs.clear(); loaded = false; settings = { maxParallel: 2, maxAttempts: 3, autoApply: false, autoMax: 'bal', autoPerTask: 1 }; load(o); }
 async function _idle(ms = 30000) { const t0 = now(); while (now() - t0 < ms) { if (!tasks.some(t => ['pending', 'running'].includes(t.state))) return true; await new Promise(r => setTimeout(r, 50)); } return false; }
 
-module.exports = { op, list, get, diff, search, recommend, options, startQueue, onEvent, load, tick, handoffText, STATES, PROFILES, ROLES, ALLOWED, _reset, _idle };
+module.exports = { op, list, get, diff, check, ship, search, recommend, options, startQueue, onEvent, load, tick, handoffText, STATES, PROFILES, ROLES, ALLOWED, _reset, _idle };

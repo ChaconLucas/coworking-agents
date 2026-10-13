@@ -464,6 +464,16 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(d1.diff.includes('+changed') && d1.diff.includes('brand new'), 'diff shows committed work and new files');
   assert.ok(t1.files.includes('a.txt') && t1.files.includes('new.txt'));
 
+  // ready to ship: tests, branch, commits since the start, what is not committed; commit only on request
+  let sk = await tasks.check(t1.id);
+  assert.ok(sk.ok && sk.tests && sk.tests.code === 0 && sk.branch === 'coworking/' + t1.id && sk.ahead >= 1, 'check: tests, branch and commits (' + JSON.stringify(sk) + ')');
+  assert.deepStrictEqual(sk.dirty, ['new.txt'], 'check: a new file the agent left uncommitted');
+  assert.strictEqual((await tasks.ship(t1.id, { op: 'commit', message: '' })).reason, 'nomsg');
+  const cm = await tasks.ship(t1.id, { op: 'commit', message: 'Add new.txt' }); assert.ok(cm.ok && cm.sha, 'commit made');
+  assert.strictEqual((await tasks.check(t1.id)).dirtyCount, 0, 'clean after the commit');
+  assert.strictEqual((await tasks.ship(t1.id, { op: 'commit', message: 'again' })).reason, 'clean', 'nothing to commit');
+  assert.strictEqual((await tasks.ship(t1.id, { op: 'pr' })).reason, 'gh', 'no PR without a logged-in gh and a remote');
+
   // pending config: shown as "next", confirmed as applied when the next run starts (same session)
   tasks.op({ op: 'config', id: t1.id, model: 'opus', effort: 'high' });
   assert.strictEqual(T(t1.id).configLog.slice(-1)[0].applies, 'now');

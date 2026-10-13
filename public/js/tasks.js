@@ -244,6 +244,22 @@ function rowHtml(t) {
   return `<li class="trow-item st-${t.state}" data-topen="${esc(t.id)}"><span class="tdot"></span><span><b>${esc(t.title)}</b><br><small>${esc(X.states[t.state])}${esc(why)} · ${esc(t.agent)} · ${esc(X.profiles[t.profile] || '')} · ${esc(mname(t, t.model))} · ${esc(t.effort)}</small></span>
     <span class="q-side"><small>${t.costUnknown && !t.cost ? '?' : esc(fmtUSD(t.cost || 0)) + (t.costUnknown ? '+?' : '')}</small><small>⌛ ${esc(ago(Date.now() - t.updated))}</small></span></li>`;
 }
+// "ready to ship?": tests, review, files, what is not committed and the branch, then commit / PR / conclude
+let taskShip = null;
+function shipHtml(t, c) {
+  const S = TT().ship, li = (ok, txt) => `<li class="${ok === true ? 'ok' : ok === false ? 'warn' : 'note'}">${ok === true ? '✓' : ok === false ? '⚠' : '•'} ${esc(txt)}</li>`;
+  if (!c.ok) return `<div class="tship"><p class="warn">⚠ ${esc(S.fail[c.reason] || c.reason || '?')}</p></div>`;
+  return `<div class="tship"><b>✅ ${esc(S.title)}</b><ul>
+    ${li(c.tests ? c.tests.code === 0 : null, c.tests ? (c.tests.code === 0 ? S.testsOk : S.testsBad) : S.noTests)}
+    ${li(c.review ? (c.review.pending ? null : c.review.ok) : null, c.review ? (c.review.pending ? S.reviewRunning : c.review.ok ? S.reviewOk : S.reviewBad) : S.noReview)}
+    ${li(null, S.files(c.files))}
+    ${li(c.dirtyCount === 0, c.dirtyCount ? S.dirty(c.dirtyCount) + ': ' + c.dirty.slice(0, 8).join(', ') + (c.dirtyCount > 8 ? '…' : '') : S.clean)}
+    ${c.branch ? li(null, S.branch(c.branch, c.ahead)) : ''}</ul>
+    ${c.dirtyCount ? `<label>${esc(S.msg)}<textarea data-ship-msg rows="2">${esc(c.suggest || t.title)}</textarea></label><p><button class="btn small" data-tact="shipCommit">⎇ ${esc(S.commit)}</button></p>` : ''}
+    ${c.canPr ? `<p><button class="btn small" data-tact="shipPr">⇪ ${esc(S.pr)}</button> <small class="note">${esc(S.prNote)}</small></p>` : `<p class="note">${esc(c.gh ? S.noPrBranch : S.noPrGh)}</p>`}
+    <p><button class="btn" data-tact="conclude">✔ ${esc(S.conclude)}</button> <button class="btn small ghost" data-tact="shipClose">${esc(S.close)}</button></p><p class="note" id="tship-msg"></p></div>`;
+}
+const shipApi = body => fetch('api/task-ship', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
 function renderTasks() {
   const X = TT(), body = reportEl.querySelector('.report-body');
   if (taskSel && taskDetail) return renderTaskDetail(body);
@@ -274,6 +290,8 @@ function renderTaskDetail(body) {
     ${askPermHtml(t)}${cfgHtml(t)}${recCardHtml(t)}${ctlHtml(t, 't')}
     <label class="tchk"><input type="checkbox" data-tcfg="lean" ${t.lean ? 'checked' : ''}> ${esc(X.lean)}</label>
     ${t.result ? `<pre class="tresult">${esc(t.result)}</pre>` : ''}
+    ${taskShip && taskShip.id === t.id ? shipHtml(t, taskShip) : ''}
+    ${t.pr ? `<p>🔗 PR: <a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr)}</a></p>` : ''}
     ${t.review ? `<div class="treview"><b>🔎 ${esc(X.reviewTitle)}</b> · <a href="#" data-popen="${esc(t.review.id)}">${esc(X.openTask)}</a>${t.review.text ? `<pre>${esc(t.review.text)}</pre>` : `<p class="note">${esc(X.reviewRunning)}</p>`}</div>` : ''}
     ${t.reviewOf ? `<p class="note">🔎 ${esc(X.reviewOfNote)} · <a href="#" data-popen="${esc(t.reviewOf)}">${esc(X.openTask)}</a></p>` : ''}
     ${t.tests ? `<p class="${t.tests.code === 0 ? 'ok' : 'warn'}">${esc(X.tests(t.tests.code))}</p>` : ''}
@@ -282,7 +300,7 @@ function renderTaskDetail(body) {
     ${t.files && t.files.length ? `<p><b>${esc(X.files)}:</b> ${t.files.slice(0, 30).map(f => `<code>${esc(f)}</code>`).join(' ')}</p>` : ''}
     ${['blocked', 'failed'].includes(t.state) ? `<div class="office-name"><textarea data-treply rows="2" placeholder="${esc(X.reply)}"></textarea></div><p><button class="btn" data-tact="reply">➤ ${esc(X.send)}</button></p>` : ''}
     <p>${['blocked', 'failed', 'done'].includes(t.state) && !taskData.privacy ? `<button class="btn small" data-tact="diff">${esc(X.diff)}</button>` : ''}
-      ${t.state === 'blocked' ? `<button class="btn small" data-tact="conclude">✔ ${esc(X.conclude)}</button>` : ''}
+      ${t.state === 'blocked' ? `<button class="btn small" data-tact="checkShip">✔ ${esc(X.conclude)}…</button>` : ''}
       ${['failed', 'cancelled', 'blocked'].includes(t.state) ? `<button class="btn small" data-tact="retry">↻ ${esc(X.retry)}</button>` : ''}
       ${['failed', 'blocked'].includes(t.state) && t.sessionId ? `<button class="btn small" data-tact="compact" title="${esc(X.compactTip)}">⤓ ${esc(X.compactNow)}</button>` : ''}
       ${['failed', 'blocked'].includes(t.state) ? `<button class="btn small" data-tact="fresh" title="${esc(X.freshTip)}">✦ ${esc(X.fresh)}</button>` : ''}
@@ -315,6 +333,18 @@ reportEl.addEventListener('click', async e => {
   if (act === 'create') { const r = await api('api/tasks', { op: 'create', ...tfVal() }); if (!r.ok) return msg(tFail(r)); taskWhy = ''; achBump('launches'); await pollTasks(); return loadTask(r.task.id); }
   if (act === 'back') { taskSel = ''; taskDetail = null; taskDiff = null; return renderTasks(); }
   const id = taskSel; if (!id) return;
+  if (act === 'checkShip') { taskShip = { id, ...(await shipApi({ op: 'check', id })) }; return loadTask(id); }
+  if (act === 'shipClose') { taskShip = null; return renderTasks(); }
+  if (act === 'conclude') taskShip = null;
+  if (act === 'shipCommit' || act === 'shipPr') {
+    const S = X.ship, m = document.getElementById('tship-msg'), mb = reportEl.querySelector('[data-ship-msg]');
+    b.disabled = true; if (m) m.textContent = S.working;
+    const r = await shipApi({ op: act === 'shipCommit' ? 'commit' : 'pr', id, message: mb ? mb.value : '' }); b.disabled = false;
+    if (!r.ok) { if (m) m.textContent = '⚠ ' + (S.fail[r.reason] || r.reason) + (r.detail ? ' — ' + r.detail : ''); return; }
+    taskShip = { id, ...(await shipApi({ op: 'check', id })) }; await loadTask(id);
+    const m2 = document.getElementById('tship-msg'); if (m2) m2.textContent = '✓ ' + (r.sha ? S.committed(r.sha) : S.prDone);
+    return;
+  }
   if (act === 'diff') { taskDiff = await api('api/task-diff?id=' + encodeURIComponent(id)); return renderTasks(); }
   if (act === 'cancel' && !confirm(X.cancelSure)) return;
   let r;

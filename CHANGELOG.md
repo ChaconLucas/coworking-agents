@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Ready to ship?: concluding a task first shows tests, review, files, what is not committed and the branch; commit with an editable message and open a PR with `gh`, only when you press it
 - Agents that say they are working but write nothing for 10 minutes get a notice
 - File clashes land in the notices, with a pause button when one side is an office task
 - Month's cost goal in Usage: spent so far, end-of-month projection, and a notice when the pace or the total goes over
