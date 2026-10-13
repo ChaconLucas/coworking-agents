@@ -74,3 +74,9 @@ nav#tabs { position: static; flex: none; }
 body.visit { overflow-y: auto; height: auto; display: block; padding: 0 max(14px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
 body.visit header { position: static; }
 header { border-bottom: 2px dashed var(--line); }
+/* the screen pinned to the phone's four real edges (iOS can leave 100dvh short of the bottom edge in a home-screen app);
+   backgrounds reach the edges, only the content keeps clear of the notch and the home bar */
+html { height: 100%; background: var(--bg); }
+body:not(.visit) { position: fixed; top: 0; right: 0; bottom: 0; left: 0; height: auto; width: auto; }
+header { background: var(--bg); box-shadow: 0 -60px 0 60px var(--bg); position: relative; z-index: 5; }
+nav#tabs { margin-top: auto; }
