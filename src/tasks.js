@@ -201,6 +201,7 @@ function op(m = {}) {
     if (m.autoApply !== undefined) settings.autoApply = !!m.autoApply;
     if (m.autoReview !== undefined) settings.autoReview = !!m.autoReview;
     if (m.monthGoal !== undefined) settings.monthGoal = Math.max(0, Math.min(1e6, Number(m.monthGoal) || 0));
+    if (m.menubar !== undefined) settings.menubar = !!m.menubar;
     if (m.dayBudget !== undefined) settings.dayBudget = Math.max(0, Math.min(1e5, Number(m.dayBudget) || 0));
     if (m.repoBudget !== undefined) { const dir = validDir(m.dir); if (dir) { const b = { ...(settings.repoBudgets || {}) }, v = Math.max(0, Math.min(1e5, Number(m.repoBudget) || 0)); if (v) b[dir] = v; else delete b[dir]; settings.repoBudgets = b; } }
     if (ORDER.includes(m.autoMax)) settings.autoMax = m.autoMax;

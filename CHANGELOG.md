@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- macOS menu bar icon (Personalise or `--menubar`): how many are working and who needs you; clicking one opens the office on that agent; it goes away when the office closes. No dependency: the system's own JavaScript for Automation reads a private status file
 - Office events: confetti when a task's tests pass, a PR is opened or a week ends under the cost goal; rain inside the office when tests or a task fail (calmer with reduced motion)
 - Office mood: *stuck* when many agents wait on you or sit silent — the room turns grey-blue and the radio slows; a warm tone when everything flows
 - Files touched most (Repositories panel): the files agent sessions edited most over the last 7 days, by repo and AI (off in private mode)

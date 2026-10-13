@@ -725,6 +725,8 @@ function sendVisitFrame() {
 }
 setInterval(sendVisitFrame, 5000);
 api('api/phone').then(d => { if (d && d.visit) visitUntil = d.visit.until; }).catch(() => {});
+// ?focus=<id> (from the menu bar icon): open that agent's panel once it is in the office
+{ const want = new URLSearchParams(location.search).get('focus'); if (want) { let tries = 0; const iv = setInterval(() => { tries++; if (data && data.people.some(p => p.id === want)) { clearInterval(iv); selected = want; renderOverlay(); renderPanel(); } else if (tries > 20) clearInterval(iv); }, 500); } }
 // TV mode: only the office and the counters, big, full screen; Esc or the corner button leaves
 function setTv(on) {
   document.body.classList.toggle('tv', on);

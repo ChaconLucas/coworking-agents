@@ -17,6 +17,7 @@ if (flag('-h') || flag('--help')) {
   --port      port to listen on (default 4777, falls back to a free one)
   --no-open   don't open the browser
   --private   hide session titles, paths and file names (screen sharing)
+  --menubar   show a menu bar icon with who needs you (macOS; also a switch in Personalise)
   --phone     also serve a small phone panel on your Wi-Fi (own token, QR code in the terminal; trusted networks only)
   --demo [N]  show a fake office with every state and N agents (default 10)
   --json      print one snapshot and exit
@@ -67,10 +68,11 @@ async function reuse() {
   if (!demo && !privacy) { try { const prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); if (/^[0-9a-f]{48}$/.test(prev.token)) token = prev.token; } catch {} }
   let hq;
   const phone = flag('--phone');
-  try { hq = await start({ port, privacy, demo, token, phone }); }
+  const menubar = flag('--menubar');
+  try { hq = await start({ port, privacy, demo, token, phone, menubar }); }
   catch (e) {
     if (e.code !== 'EADDRINUSE') throw e;
-    hq = await start({ port: 0, privacy, demo, token, phone }); // port taken by something else: use a free one
+    hq = await start({ port: 0, privacy, demo, token, phone, menubar }); // port taken by something else: use a free one
   }
   if (!demo && !privacy) {
     try {

@@ -354,6 +354,13 @@ sleepK.kill();
   global.__sweep = sweep;
 }
 
+// menu bar icon: counts and who needs you, each opening the office on that agent; the id is URL-encoded
+{
+  const { status } = require('../src/menubar');
+  const st = status({ people: [{ id: 'a&b=1', name: 'ada', title: 'docs', state: 'needs_you' }, { id: 'b', state: 'thinking' }, { id: 'c', state: 'idle' }, { id: 'd', state: 'thinking', leaving: true }] }, 'http://127.0.0.1:4777', 'tok');
+  assert.deepStrictEqual([st.work, st.need, st.list[0].url], [1, 1, 'http://127.0.0.1:4777/?t=tok&focus=a%26b%3D1'], 'menu bar status');
+}
+
 // hot files: counted per session, newest first among equals, nothing in private mode
 {
   const { hotFiles } = require('../src/collect');

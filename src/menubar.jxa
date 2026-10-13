@@ -1,0 +1,58 @@
+// macOS menu bar icon for coworking-agents (JavaScript for Automation, run by `osascript -l JavaScript`).
+// It only reads one status file the office writes (~/.config/coworking-agents/menubar.json, mode 0600):
+// counts, who needs you and the office link. No network, no token handling of its own.
+// Strings live here because this runs outside the page (no i18n.js); the language follows the system.
+ObjC.import('Cocoa');
+
+function run(argv) {
+  const statusFile = argv[0], iconFile = argv[1];
+  const pt = String(ObjC.unwrap($.NSLocale.preferredLanguages.firstObject) || '').startsWith('pt');
+  const L = pt
+    ? { open: 'Abrir o escritório', hide: 'Esconder o ícone', closed: 'O escritório está fechado', need: 'Precisam de você', working: n => `${n} trabalhando`, needN: n => `${n} precisa${n > 1 ? 'm' : ''} de você`, nobody: 'Ninguém precisa de você agora' }
+    : { open: 'Open the office', hide: 'Hide the icon', closed: 'The office is closed', need: 'Need you', working: n => `${n} working`, needN: n => `${n} need${n > 1 ? '' : 's'} you`, nobody: 'Nobody needs you right now' };
+
+  const app = $.NSApplication.sharedApplication;
+  app.setActivationPolicy($.NSApplicationActivationPolicyAccessory);
+  const item = $.NSStatusBar.systemStatusBar.statusItemWithLength($.NSVariableStatusItemLength);
+  const img = $.NSImage.alloc.initWithContentsOfFile(iconFile);
+  if (img && !img.isNil()) { img.setSize($.NSMakeSize(16, 16)); item.button.image = img; item.button.imagePosition = $.NSImageLeft; }
+  item.button.title = ' …';
+
+  let last = '', urls = [], staleSince = 0;
+  ObjC.registerSubclass({
+    name: 'CWMenuTarget',
+    methods: {
+      'tick:': { types: ['void', ['id']], implementation: function () { tick(); } },
+      'openAt:': { types: ['void', ['id']], implementation: function (sender) { const u = urls[sender.tag]; if (u) $.NSWorkspace.sharedWorkspace.openURL($.NSURL.URLWithString(u)); } },
+      'quit:': { types: ['void', ['id']], implementation: function () { app.terminate($()); } },
+    },
+  });
+  const target = $.CWMenuTarget.alloc.init;
+  const add = (menu, title, action, tag) => { const mi = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent(title, action || null, ''); if (action) { mi.target = target; mi.tag = tag || 0; } else mi.enabled = false; menu.addItem(mi); };
+
+  function tick() {
+    let s = null;
+    try { s = JSON.parse(ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(statusFile, $.NSUTF8StringEncoding, $()))); } catch (e) {}
+    const alive = s && Date.now() - s.at < 15000;
+    if (!alive) { staleSince = staleSince || Date.now(); if (Date.now() - staleSince > 60000) app.terminate($()); }
+    else staleSince = 0;
+    const key = alive ? JSON.stringify([s.work, s.need, s.list, s.url]) : 'closed';
+    if (key === last) return; last = key;
+    item.button.title = !alive ? ' –' : s.need ? ` ❗${s.need}  ●${s.work}` : ` ●${s.work}`;
+    const menu = $.NSMenu.alloc.init; urls = [];
+    if (!alive) add(menu, L.closed);
+    else {
+      add(menu, `${L.working(s.work)} · ${L.needN(s.need)}`);
+      menu.addItem($.NSMenuItem.separatorItem);
+      if (s.list.length) { add(menu, L.need); for (const p of s.list) { urls.push(p.url); add(menu, `❗ ${p.name}${p.title ? ' — ' + p.title : ''}`, 'openAt:', urls.length - 1); } }
+      else add(menu, L.nobody);
+      menu.addItem($.NSMenuItem.separatorItem);
+      urls.push(s.url); add(menu, L.open, 'openAt:', urls.length - 1);
+    }
+    add(menu, L.hide, 'quit:');
+    item.menu = menu;
+  }
+  tick();
+  $.NSTimer.scheduledTimerWithTimeIntervalTargetSelectorUserInfoRepeats(2, target, 'tick:', $(), true);
+  app.run;
+}

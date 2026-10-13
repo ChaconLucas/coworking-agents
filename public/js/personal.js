@@ -132,6 +132,7 @@ function renderOffice() {
     ${row('plants', STYLE.plants)}
     ${row('station', STYLE.station)}
     ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}
+    <h3>🖥 ${esc(T.menubar.title)}</h3><p class="note">${esc(T.menubar.sub)}</p><p data-mb-box><label class="tchk"><input type="checkbox" data-menubar disabled> ${esc(T.menubar.on)}</label> <small class="note" data-mb-msg></small></p>
     <h3>🔔 ${esc(T.quiet.title)}</h3>${(() => { const q = store.get('quiet', null) || {}, off = store.get('soundOff', {}) || {};
       return `<p class="note">${esc(T.quiet.sub)}</p><div class="opts">${SOUND_KINDS.map(k => `<label class="tchk"><input type="checkbox" data-soundkind="${k}" ${off[k] ? '' : 'checked'}> ${esc(T.quiet.kinds[k])}</label>`).join('')}</div>
       <p class="office-name"><label class="tchk"><input type="checkbox" data-quiet="on" ${q.on ? 'checked' : ''}> ${esc(T.quiet.dnd)}</label> <input type="time" data-quiet="from" value="${esc(q.from || '22:00')}"> ${esc(T.quiet.to)} <input type="time" data-quiet="to" value="${esc(q.to || '08:00')}"></p>
@@ -195,4 +196,13 @@ document.addEventListener('change', e => {
   const k = e.target.closest('[data-soundkind]'), q = e.target.closest('[data-quiet]');
   if (k) { const off = { ...(store.get('soundOff', {}) || {}) }; off[k.dataset.soundkind] = !k.checked; store.set('soundOff', off); if (k.checked) playTune(k.dataset.soundkind); }
   if (q) { const cur = { from: '22:00', to: '08:00', ...(store.get('quiet', null) || {}) }; cur[q.dataset.quiet] = q.type === 'checkbox' ? q.checked : q.value; store.set('quiet', cur); renderReport(); }
+});
+// the macOS menu bar icon switch: asks the server whether it can (macOS, not demo) and whether it is on
+function syncMenubar() {
+  fetch('api/menubar').then(r => r.json()).then(d => { const c = document.querySelector('[data-menubar]'), m = document.querySelector('[data-mb-msg]'); if (!c) return; c.disabled = !d.supported; c.checked = !!d.on; if (m) m.textContent = d.supported ? '' : T.menubar.notMac; }).catch(() => {});
+}
+document.addEventListener('change', async e => {
+  const c = e.target.closest('[data-menubar]'); if (!c) return;
+  c.disabled = true; const r = await fetch('api/menubar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: c.checked }) }).then(x => x.json()).catch(() => ({ ok: false }));
+  c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-mb-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.menubar.shown : '') : '⚠';
 });
