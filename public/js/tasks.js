@@ -195,6 +195,20 @@ document.addEventListener('change', async e => {
 // ---- the tab ----
 function periodSince() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() - ({ day: 0, week: 6, month: 29 })[taskPeriod] * 864e5; }
 const inPeriod = byDay => Object.entries(byDay || {}).filter(([k]) => new Date(k + 'T12:00').getTime() >= periodSince()).reduce((n, [, v]) => n + v, 0);
+// models compared on your own finished tasks: cost, attempts, tests and how often they ended well
+function compareHtml() {
+  const X = TT(), C = X.cmp, fin = taskData.tasks.filter(t => (['done', 'failed'].includes(t.state) || (t.state === 'blocked' && t.reason === 'review')) && t.attempts > 0 && !t.reviewOf); // only work that has ended, not a task waiting on a question
+  const groups = new Map();
+  for (const t of fin) { const k = `${t.agent} · ${mname(t, t.model)} · ${t.effort}`; (groups.get(k) || groups.set(k, []).get(k)).push(t); }
+  if (!groups.size) return '';
+  const rows = [...groups.entries()].map(([k, ts]) => {
+    const tested = ts.filter(t => t.tests), ok = ts.filter(t => t.state === 'done' || (t.state === 'blocked' && t.reason === 'review'));
+    return { k, n: ts.length, usd: ts.reduce((n, t) => n + (t.cost || 0), 0) / ts.length, unk: ts.some(t => t.costUnknown), att: ts.reduce((n, t) => n + t.attempts, 0) / ts.length, tests: tested.length ? tested.filter(t => t.tests.code === 0).length / tested.length : null, ok: ok.length / ts.length };
+  }).sort((a, b) => b.n - a.n);
+  const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
+  return `<h3>${esc(C.title)}</h3><p class="note">${esc(C.sub)}</p><div class="tcmp-wrap"><table class="tcmp"><thead><tr><th>${esc(C.model)}</th><th>${esc(C.n)}</th><th>${esc(C.cost)}</th><th>${esc(C.att)}</th><th>${esc(C.tests)}</th><th>${esc(C.ok)}</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${esc(r.k)}${r.n < 3 ? ` <small class="note">${esc(C.few)}</small>` : ''}</td><td>${r.n}</td><td>${esc(fmtUSD(r.usd))}${r.unk ? '+?' : ''}</td><td>${r.att.toFixed(1)}</td><td>${pct(r.tests)}</td><td>${pct(r.ok)}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function rankingHtml() {
   const X = TT(), ts = taskData.tasks.map(t => ({ t, usd: inPeriod(t.costByDay) })).filter(x => x.usd > 0 || x.t.costUnknown).sort((a, b) => b.usd - a.usd).slice(0, 8);
   const done = taskData.tasks.filter(t => t.state === 'done' && inPeriod(t.costByDay) > 0), doneUsd = done.reduce((n, t) => n + inPeriod(t.costByDay), 0);
@@ -305,7 +319,7 @@ function renderTaskList(X, body) {
       const items = list.filter(t => sts.includes(t.state)); if (!items.length) return '';
       const ul = `<ul class="queue tlist">${items.map(rowHtml).join('')}</ul>`;
       return g === 'done' ? `<details class="tgroup"><summary><h4>${esc(X.groups[g])} <small>${items.length}</small></h4></summary>${ul}</details>` : `<div class="tgroup"><h4>${esc(X.groups[g])} <small>${items.length}</small></h4>${ul}</div>`;
-    }).join('') : `<p class="note">${esc(X.empty)}</p>`) + rankingHtml();
+    }).join('') : `<p class="note">${esc(X.empty)}</p>`) + rankingHtml() + compareHtml();
 }
 function renderTaskDetail(body) {
   const X = TT(), t = taskDetail, ev = t.events || [], live = t.state === 'running';

@@ -281,7 +281,7 @@ sleepK.kill();
   // XSS: every HTML builder escapes what comes from agents, tasks and files
   run(`var P = '<img src=x onerror=1><b data-xss>'; var tx = { id: 'x"><b data-xss>', title: P, state: 'blocked', reason: 'review', agent: P, model: P, effort: P, profile: 'bal', cost: 1, tokens: { output: 1 }, attempts: 1, events: [], updated: 1, ask: { tool: P, what: P, at: 1 }, warn: { why: 'loop', name: P, at: 1 }, review: { id: P, text: P } };
     var px = { id: 'p"><b data-xss>', agent: 'claude', cwd: P, name: P, title: P, model: P, effort: P, state: 'idle' };`);
-  for (const f of ['rowHtml(tx)', 'askPermHtml(tx)', "shipHtml(tx, { ok: true, dirty: [P], dirtyCount: 1, branch: P, suggest: P, files: 1, canPr: true, gh: true, tests: { code: 0 }, review: { ok: true } })", 'askHtml(px)', 'recCardHtml(null, px)', 'taskCardHtml(px)'])
+  for (const f of ['rowHtml(tx)', 'askPermHtml(tx)', "shipHtml(tx, { ok: true, dirty: [P], dirtyCount: 1, branch: P, suggest: P, files: 1, canPr: true, gh: true, tests: { code: 0 }, review: { ok: true } })", 'askHtml(px)', 'recCardHtml(null, px)', 'taskCardHtml(px)', '(taskData.tasks = [tx], compareHtml())'])
     assert.ok(!/<img|<b data-xss|data-xss>/.test(run(f).replace(/&lt;b data-xss&gt;/g, '')), 'XSS escaped in ' + f);
 
   // limits: at the pace of the last hour, a window that runs out before it resets is announced once
