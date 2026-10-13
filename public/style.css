@@ -897,3 +897,4 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tform label.tchk, .tform .tchk { flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; }
 .tform input[type="checkbox"], .tsec input[type="checkbox"] { width: auto; flex: none; margin: 0; }
 .tscheds li label.tchk { margin: 2px 0; }
+.repos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; } .repo-name { font-size: 14px !important; text-transform: none !important; letter-spacing: 0 !important; opacity: 1 !important; } .repo p { margin: 6px 0; } .repo a { color: #8ecbff; }

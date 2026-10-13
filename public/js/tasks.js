@@ -512,11 +512,36 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['phone', '📱'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  if (menu) for (const [tab, icon] of [['phone', '📱'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); openReport(tab); });
   }
+}
+// repositories at a glance: who is in each one now, what is not committed or pushed, task branches and PRs, today's activity
+document.addEventListener('click', e => { const pp = reportTab === 'repos' && e.target.closest('[data-tperson]'); if (!pp) return; e.preventDefault(); closeReport(); selected = pp.dataset.tperson; renderOverlay(); renderPanel(); });
+function renderRepos() {
+  const R = T.repos, body = reportEl.querySelector('.report-body'), repos = new Map();
+  const get = name => repos.get(name) || repos.set(name, { name, path: '', people: [], trees: new Map(), tasks: [], today: null }).get(name);
+  for (const p of (data && data.people) || []) {
+    if (!p.repo) continue; const r = get(p.repo.name); r.path = r.path || p.repo.path; r.people.push(p);
+    if (p.git) r.trees.set(p.repo.worktree, { branch: p.branch, ...p.git, wt: p.repo.isWorktree });
+  }
+  for (const t of taskData.tasks || []) { const r = [...repos.values()].find(x => x.path && (t.dir === x.path || String(t.dir).startsWith(x.path + '/'))); if (r) r.tasks.push(t); }
+  for (const x of (todayData && todayData.rows) || []) if (x.repo && repos.has(x.repo)) { const r = repos.get(x.repo); r.today = r.today || { sessions: 0, ms: 0 }; r.today.sessions++; r.today.ms += x.activeMs; }
+  const hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
+  const list = [...repos.values()].sort((a, b) => b.people.length - a.people.length || a.name.localeCompare(b.name));
+  body.innerHTML = tabsHtml() + `<h3>📦 ${esc(R.title)}</h3><p class="sub">${esc(R.sub)}</p>` + (list.length ? `<div class="repos">${list.map(r => {
+    const trees = [...r.trees.values()], dirty = trees.reduce((n, g) => n + (g.dirty || 0), 0), ahead = trees.reduce((n, g) => n + (g.ahead || 0), 0), behind = trees.reduce((n, g) => n + (g.behind || 0), 0);
+    const open = r.tasks.filter(t => !['done', 'cancelled'].includes(t.state)), prs = r.tasks.filter(t => t.pr && /^https:\/\//.test(t.pr));
+    return `<section class="tsec repo"><h4 class="repo-name">${esc(r.name)}</h4>
+      <p class="repo-badges">${dirty ? `<span class="tpill st-blocked">${esc(R.dirty(dirty))}</span>` : `<span class="tpill st-done">${esc(R.clean)}</span>`}${ahead ? ` <span class="tpill st-running">↑ ${esc(R.ahead(ahead))}</span>` : ''}${behind ? ` <span class="tpill st-pending">↓ ${esc(R.behind(behind))}</span>` : ''}${r.today ? ` <small class="note">${esc(R.today(r.today.sessions, hrs(r.today.ms)))}</small>` : ''}</p>
+      <p><b>${esc(R.now)}:</b> ${r.people.map(p => `<a href="#" data-tperson="${esc(p.id)}">${esc(p.name)}</a> <small class="note">(${esc(T.states[p.state] || p.state)}${p.branch ? ' · ' + esc(p.branch) : ''})</small>`).join(', ')}</p>
+      ${trees.length > 1 ? `<p class="note">${esc(R.trees(trees.length))}: ${trees.map(g => `${esc(g.branch || '?')}${g.dirty ? ' ✎' + g.dirty : ''}${g.ahead ? ' ↑' + g.ahead : ''}`).join(' · ')}</p>` : ''}
+      ${open.length ? `<p><b>${esc(R.tasks)}:</b> ${open.map(t => `<a href="#" data-popen="${esc(t.id)}">${esc(t.title)}</a> <span class="tpill st-${esc(t.state)}">${esc(T.tasks.states[t.state])}</span>`).join(' ')}</p>` : ''}
+      ${prs.length ? `<p><b>PRs:</b> ${prs.map(t => `<a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr.replace(/^https:\/\/github\.com\//, ''))}</a>`).join(' · ')}</p>` : ''}</section>`;
+  }).join('')}</div>` : `<p class="note">${esc(R.none)}</p>`);
+  if (!todayData && typeof loadToday === 'function') loadToday();
 }
 // the phone panel: its link as a QR code when the office was started with --phone, how to turn it on otherwise
 async function renderPhone() {
