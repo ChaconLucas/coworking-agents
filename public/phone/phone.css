@@ -85,3 +85,7 @@ nav#tabs button { min-height: 50px; }
 /* tab bar right on the bottom edge: just enough room for the home indicator line (iPhone inset 34 → 6 px kept) */
 nav#tabs { padding-bottom: max(2px, calc(env(safe-area-inset-bottom) - 28px)); padding-top: 4px; }
 nav#tabs button { min-height: 48px; }
+/* whatever iOS keeps below the page (the home-bar strip, the bounce area) takes the tab bar's colour, so the bar reads as glued
+   to the bottom edge; the top half keeps the page colour behind the header */
+html:not(.visit) { background: linear-gradient(to bottom, var(--bg) 0 50%, #1d1a22 50% 100%); }
+html:not(.visit) body { background: transparent; }
