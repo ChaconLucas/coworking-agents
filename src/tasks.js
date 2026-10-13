@@ -561,6 +561,41 @@ async function changedFiles(t) {
   return [...set].slice(0, 200);
 }
 // everything since the task started: commits, staged, unstaged and new files
+// cleanup: worktrees of finished tasks (and leftovers of deleted ones). Only inside our own worktrees folder; a worktree with
+// uncommitted work is never removed; a branch is deleted only when it is merged into the main checkout or already pushed
+const WT_ROOT = () => path.join(os.homedir(), '.config', 'coworking-agents', 'worktrees');
+async function cleanupList() {
+  load(); if (demo) return { ok: true, items: [{ id: 'demo4', title: 'Flaky login test', state: 'failed', dirty: 0, merged: false, pushed: false }, { id: 'demo6', title: 'Dark mode toggle', state: 'done', dirty: 0, merged: true, pushed: true }] };
+  let dirs = []; try { dirs = fs.readdirSync(WT_ROOT()).filter(d => /^[a-z0-9]{8}$/.test(d)); } catch {}
+  const items = [];
+  for (const id of dirs) {
+    const t = tasks.find(x => x.id === id); if (t && !['done', 'cancelled', 'failed'].includes(t.state)) continue;
+    const wt = path.join(WT_ROOT(), id), main = t ? t.dir : path.dirname(((await git(wt, ['rev-parse', '--path-format=absolute', '--git-common-dir'])) || '').trim()), branch = 'coworking/' + id;
+    if (!main) continue;
+    const dirty = (((await git(wt, ['status', '--porcelain'])) || '').split('\n').filter(Boolean)).length;
+    const merged = (await run1('git', ['-C', main, 'merge-base', '--is-ancestor', branch, 'HEAD'])).code === 0;
+    const local = ((await git(main, ['rev-parse', '--verify', '-q', branch])) || '').trim(), remote = ((await git(main, ['rev-parse', '--verify', '-q', 'origin/' + branch])) || '').trim();
+    items.push({ id, title: t ? t.title : '', state: t ? t.state : 'deleted', dirty, merged, pushed: !!local && local === remote });
+  }
+  return { ok: true, items };
+}
+async function cleanup(ids) {
+  load(); if (demo) return { ok: false, reason: 'demo' };
+  const { items } = await cleanupList(), out = [];
+  for (const it of items.filter(x => (ids || []).includes(x.id))) {
+    const t = tasks.find(x => x.id === it.id), wt = path.join(WT_ROOT(), it.id);
+    if (!wt.startsWith(WT_ROOT() + path.sep)) continue;
+    if (it.dirty) { out.push({ id: it.id, done: false, why: 'dirty' }); continue; }
+    const main = t ? t.dir : path.dirname(((await git(wt, ['rev-parse', '--path-format=absolute', '--git-common-dir'])) || '').trim());
+    const rm = await run1('git', ['-C', main, 'worktree', 'remove', wt]); // no --force: git refuses if anything is left
+    if (rm.code) { out.push({ id: it.id, done: false, why: 'git', detail: s(rm.err, 200) }); continue; }
+    let branch = 'kept';
+    if (it.merged || it.pushed) branch = (await run1('git', ['-C', main, 'branch', it.merged ? '-d' : '-D', 'coworking/' + it.id])).code === 0 ? 'deleted' : 'kept';
+    if (t) { t.cwd = t.dir; t.cleaned = now(); log(t, { kind: 'cleanup', text: branch }); }
+    out.push({ id: it.id, done: true, branch });
+  }
+  save(); return { ok: true, out };
+}
 // secrets about to be committed: keys and tokens in the lines this task added and in its new files (the value itself is never returned)
 const SECRET_RULES = [
   ['aws', /AKIA[0-9A-Z]{16}/], ['github', /\bgh[pousr]_[A-Za-z0-9]{30,}/], ['anthropic', /\bsk-ant-[A-Za-z0-9_-]{20,}/], ['openai', /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}/],
@@ -670,4 +705,4 @@ function onEvent(fn) { listeners.add(fn); }
 function _reset(o = {}) { tasks = []; events.clear(); procs.clear(); loaded = false; settings = { maxParallel: 2, maxAttempts: 3, autoApply: false, autoMax: 'bal', autoPerTask: 1 }; load(o); }
 async function _idle(ms = 30000) { const t0 = now(); while (now() - t0 < ms) { if (!tasks.some(t => ['pending', 'running'].includes(t.state))) return true; await new Promise(r => setTimeout(r, 50)); } return false; }
 
-module.exports = { ruleFor, op, list, get, diff, check, ship, search, recommend, options, startQueue, onEvent, load, tick, handoffText, STATES, PROFILES, ROLES, ALLOWED, _reset, _idle };
+module.exports = { cleanupList, cleanup, ruleFor, op, list, get, diff, check, ship, search, recommend, options, startQueue, onEvent, load, tick, handoffText, STATES, PROFILES, ROLES, ALLOWED, _reset, _idle };

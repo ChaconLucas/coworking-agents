@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Cleanup (Repositories panel): remove worktrees of finished tasks; uncommitted work is never removed and a branch is deleted only when merged or pushed
 - Permission rules: always deny anything containing a text (wins over everything) and always allow an exact command, with arguments but nothing chained; one click denies the usual dangerous ones
 - Secrets before commit: Ready to ship? scans the lines the task added and its new files for keys, tokens, private keys and credential files; the commit is blocked until you remove them or confirm (the value is never shown)
 - Visits (with `--phone`): a one-hour, LAN-only, read-only link that shows a picture of the office drawn without names plus how many are working; its own token, PNG-only frames, ended on demand

@@ -752,6 +752,16 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   // handoff carries decisions, tests and open items
   const h = tasks.handoffText(T(t1.id), 'finish it');
   assert.ok(h.includes('Decisions') && h.includes('echo all good') && h.includes('Open items'));
+  // cleanup: only finished tasks' worktrees, never one with uncommitted work, the branch kept unless merged or pushed
+  mode('ok'); const tw = tasks.op({ op: 'create', dir: proj, desc: 'leaves work', agent: 'claude', worktree: true }).task; await tasks._idle();
+  fs.writeFileSync(path.join(T(tw.id).cwd, 'wip.txt'), 'not committed\n');
+  tasks.op({ op: 'conclude', id: tw.id }); tasks.op({ op: 'conclude', id: t1.id });
+  const wt1 = T(t1.id).cwd, wtw = T(tw.id).cwd, cl = await tasks.cleanupList();
+  assert.ok(cl.items.some(x => x.id === t1.id && !x.dirty && !x.merged) && cl.items.some(x => x.id === tw.id && x.dirty), 'cleanup list: ' + JSON.stringify(cl.items));
+  const cr = await tasks.cleanup([t1.id, tw.id]);
+  assert.deepStrictEqual(cr.out.map(x => [x.id === t1.id ? 't1' : 'tw', x.done, x.branch || x.why]).sort(), [['t1', true, 'kept'], ['tw', false, 'dirty']], 'cleanup result');
+  assert.ok(!fs.existsSync(wt1) && fs.existsSync(path.join(wtw, 'wip.txt')), 'clean one removed, the one with work kept');
+  assert.strictEqual(require('child_process').execFileSync('git', ['-C', proj, 'branch', '--list', 'coworking/' + t1.id]).toString().trim(), 'coworking/' + t1.id, 'unmerged branch kept with its commits');
   // restart: a running task whose process is gone is detected, not assumed alive
   mode('slow'); const t9 = tasks.op({ op: 'create', dir: proj, desc: 'detach', agent: 'claude' }).task;
   await new Promise(r => setTimeout(r, 300));

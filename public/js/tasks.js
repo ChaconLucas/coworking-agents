@@ -607,8 +607,31 @@ function renderRepos() {
       ${open.length ? `<p><b>${esc(R.tasks)}:</b> ${open.map(t => `<a href="#" data-popen="${esc(t.id)}">${esc(t.title)}</a> <span class="tpill st-${esc(t.state)}">${esc(T.tasks.states[t.state])}</span>`).join(' ')}</p>` : ''}
       ${prs.length ? `<p><b>PRs:</b> ${prs.map(t => `<a href="${esc(t.pr)}" target="_blank" rel="noopener noreferrer">${esc(t.pr.replace(/^https:\/\/github\.com\//, ''))}</a>`).join(' · ')}</p>` : ''}</section>`;
   }).join('')}</div>` : `<p class="note">${esc(R.none)}</p>`);
+  body.insertAdjacentHTML('beforeend', cleanHtml());
   if (!todayData && typeof loadToday === 'function') loadToday();
 }
+// cleanup of finished tasks' worktrees: list first, remove only what you tick (uncommitted work is never removed)
+let cleanData = null, cleanOut = null;
+function cleanHtml() {
+  const C = T.clean;
+  if (!cleanData) return `<h3>🧹 ${esc(C.title)}</h3><p class="note">${esc(C.sub)}</p><p><button class="btn small ghost" data-clean="list">${esc(C.find)}</button></p>`;
+  const items = cleanData.items || [];
+  return `<h3>🧹 ${esc(C.title)}</h3><p class="note">${esc(C.sub)}</p>${items.length ? `<ul class="bclist">${items.map(it => `<li><label class="tchk"><input type="checkbox" data-cleanid="${esc(it.id)}" ${it.dirty ? 'disabled' : ''}> <b>${esc(it.title || it.id)}</b> <small class="note">${esc(T.tasks.states[it.state] || C.deleted)}</small></label>
+    ${it.dirty ? `<span class="tpill st-blocked">${esc(C.dirty(it.dirty))}</span>` : ''} <span class="tpill ${it.merged || it.pushed ? 'st-done' : 'st-pending'}">${esc(it.merged ? C.merged : it.pushed ? C.pushed : C.keep)}</span>${cleanOut && cleanOut[it.id] ? ` <small>${esc(cleanOut[it.id])}</small>` : ''}</li>`).join('')}</ul>
+    <p><button class="btn small" data-clean="run">🧹 ${esc(C.run)}</button></p>` : `<p class="note">${esc(C.none)}</p>`}`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-clean]'); if (!b) return;
+  const post = body => fetch('api/cleanup', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false }));
+  b.disabled = true;
+  if (b.dataset.clean === 'run') {
+    const ids = [...reportEl.querySelectorAll('[data-cleanid]:checked')].map(x => x.dataset.cleanid); if (!ids.length) { b.disabled = false; return; }
+    if (!confirm(T.clean.sure(ids.length))) { b.disabled = false; return; }
+    const r = await post({ op: 'run', ids }); cleanOut = {}; for (const x of (r.out || [])) cleanOut[x.id] = x.done ? '✓ ' + (x.branch === 'deleted' ? T.clean.doneAll : T.clean.doneKept) : '⚠ ' + (T.clean.why[x.why] || x.why);
+    if (!r.ok) alert(T.clean.why[r.reason] || r.reason);
+  }
+  cleanData = await post({ op: 'list' }); renderRepos();
+});
 // the phone panel: its link as a QR code when the office was started with --phone, how to turn it on otherwise
 async function renderPhone() {
   const P = T.phone, body = reportEl.querySelector('.report-body');

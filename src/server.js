@@ -234,6 +234,14 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/replay' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(demo ? [] : ended({ privacy })));
     if (url.pathname === '/api/tasks' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.list({ privacy })));
     if (url.pathname === '/api/task' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(tasks.get(url.searchParams.get('id'), { privacy }) || null));
+    if (url.pathname === '/api/cleanup' && req.method === 'POST') { // list or remove finished worktrees (rules in tasks.cleanup)
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 1e4) req.destroy(); });
+      req.on('end', async () => { let m = {}; try { m = JSON.parse(body); } catch {} try { const out = privacy ? { ok: false, reason: 'private' } : m.op === 'run' ? await tasks.cleanup(Array.isArray(m.ids) ? m.ids.map(String).slice(0, 200) : []) : await tasks.cleanupList(); send(res, 200, 'application/json', JSON.stringify(out)); } catch { send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); } });
+      return;
+    }
     if (url.pathname === '/api/task-ship' && req.method === 'POST') { // check before concluding, commit, open a PR (same guards as every POST)
       const origin = req.headers.origin || '';
       if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
