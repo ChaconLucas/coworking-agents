@@ -98,16 +98,31 @@ function renderToday() {
     <div class="ltiles">${[[hrs(t.activeMs), D.active], [t.sessions, D.sessions], [t.tools, D.tools], [t.files, D.files], [fmtK(t.outTokens), D.tokens]].map(([v, l]) => `<div class="ltile" style="--c:#2ce8f5"><div class="ltop"><span>${esc(l)}</span></div><b>${esc(String(v))}</b></div>`).join('')}</div>
     <h3>${esc(D.who)}</h3>
     <ul class="bars today-list">${r.rows.map(x => `<li><code title="${esc(x.title)}"><i class="ailogo" data-ai="${esc(x.agent)}"></i>${esc(x.name || x.title || x.id.slice(0, 8))}</code><span class="tbar"><i style="width:${(x.activeMs / max * 100).toFixed(1)}%;background:${(AGENT[x.agent] || {}).color || '#888'}"></i></span><span class="t">${esc(hrs(x.activeMs))} · ${Number(x.tools) || 0} ${esc(D.toolsShort)} · ${fmtK(x.outTokens)}</span></li>`).join('')}</ul>
+    ${waitHtml(r, hrs)}
     ${repliesHtml()}
     ${goalHtml()}
     ${r.topFiles.length ? `<h3>${esc(D.filesTop)}</h3><ul class="list">${r.topFiles.map(f => `<li><span class="k">✎</span><code>${esc(f.rel)}</code><span class="t">${esc(f.repo)}${f.n > 1 ? ' · ' + f.n + '×' : ''}</span></li>`).join('')}</ul>` : ''}`;
   body.querySelectorAll('.ailogo[data-ai]').forEach(el => { const id = el.dataset.ai; el.appendChild(Art.aiIconEl(id, (AGENT[id] || {}).color || '#888')); });
+}
+// waiting on you today, measured: questions the agents asked and office tasks blocked on you
+function waitList(r) {
+  const out = [];
+  for (const x of r.rows || []) for (const w of x.waits || []) out.push({ who: x.name || x.title || x.id.slice(0, 8), what: x.title || '', ms: w.ms, at: w.from, kind: 'ask' });
+  for (const t of (typeof taskData !== 'undefined' && taskData.tasks) || []) if (t.waitToday > 0) out.push({ who: t.title, what: '', ms: t.waitToday, kind: 'task' });
+  return out.sort((a, b) => b.ms - a.ms);
+}
+function waitHtml(r, hrs) {
+  const W = T.today.wait, list = waitList(r); if (!list.length) return `<h3>${esc(W.title)}</h3><p class="note">${esc(W.none)}</p>`;
+  const total = list.reduce((n, x) => n + x.ms, 0);
+  return `<h3>${esc(W.title)}</h3><p><b>${esc(hrs(total))}</b> ${esc(W.total(list.length))}</p><ul class="list">${list.slice(0, 6).map(x => `<li><span class="k">${x.kind === 'ask' ? '❓' : '📋'}</span><span>${esc(x.who)}${x.what && x.what !== x.who ? ' <small class="note">' + esc(x.what) + '</small>' : ''}</span><span class="t">${esc(hrs(x.ms))}</span></li>`).join('')}</ul><p class="note">${esc(W.note)}</p>`;
 }
 // today's report as Markdown, ready to paste into a standup
 function todayMarkdown(r) {
   const D = T.today, hrs = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${(m / 60) | 0}h${String(m % 60).padStart(2, '0')}` : `${m}min`; };
   const day = new Date(r.now || Date.now()).toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en', { weekday: 'long', day: 'numeric', month: 'long' });
   const t = r.totals, lines = [`## ${D.title} · ${day}`, '', `**${hrs(t.activeMs)}** ${D.active} · **${t.sessions}** ${D.sessions} · **${t.tools}** ${D.tools} · **${t.files}** ${D.files} · **${fmtK(t.outTokens)}** ${D.tokens}`, '', `### ${D.who}`];
+  const waits = waitList(r), waitMs = waits.reduce((n, x) => n + x.ms, 0);
+  if (waitMs) lines.splice(3, 0, '', `${D.wait.title}: **${hrs(waitMs)}** (${D.wait.total(waits.length)})`);
   const usd = r.rows.reduce((a, x) => a + (x.usd || 0), 0);
   if (usd) lines.splice(3, 0, '', `${D.costLine}: **${fmtUSD(usd)}**${r.rows.some(x => x.unpriced) ? ' + ?' : ''}`);
   for (const x of r.rows) lines.push(`- **${x.name || x.title || x.id.slice(0, 8)}** (${(AGENT[x.agent] || {}).label || x.agent}${x.repo ? ', ' + x.repo : ''})${x.title && x.name ? ` — ${x.title}` : ''}: ${hrs(x.activeMs)}, ${Number(x.tools) || 0} ${D.toolsShort}${x.usd ? ', ' + fmtUSD(x.usd) : ''}`);

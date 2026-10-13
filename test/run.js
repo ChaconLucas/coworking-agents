@@ -264,6 +264,8 @@ sleepK.kill();
   run(`T = I18N.en; taskData.tasks = [{ title: 'Build', state: 'blocked', reason: 'review' }]; data = { now: Date.now(), people: [{ name: 'ada', title: 'docs', state: 'needs_you' }], limits: {} };
     var md = todayMarkdown({ now: Date.now(), totals: { activeMs: 36e5, sessions: 1, tools: 3, files: 1, outTokens: 1000 }, rows: [{ id: 'x1', agent: 'claude', name: 'ada', title: 'docs', repo: 'r', activeMs: 36e5, tools: 3, usd: 1.5 }], topFiles: [] });`);
   const md = run('md'), sl = run('toSlack(md)');
+  run(`taskData.tasks = [{ title: 'Build', state: 'blocked', reason: 'review', waitToday: 36e5 }]; var md2 = todayMarkdown({ now: Date.now(), totals: { activeMs: 0, sessions: 1, tools: 0, files: 0, outTokens: 0 }, rows: [{ id: 'x1', agent: 'claude', name: 'ada', title: 'docs', activeMs: 1, tools: 0, waits: [{ from: 1, ms: 18e5 }] }], topFiles: [] });`);
+  assert.ok(run('md2').includes('1h30'), 'waiting on you: questions and tasks added up');
   assert.ok(md.includes('1.50') && md.includes('Build — ') && md.includes('ada (docs)'), 'cost, open tasks and agents waiting go into the report');
   assert.ok(!sl.includes('##') && !sl.includes('**') && sl.includes('• '), 'Slack gets its own markup');
 
@@ -765,6 +767,12 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   await new Promise(r => setTimeout(r, 250)); tasks.op({ op: 'settings', dayBudget: 0.0001 }); await tasks._idle();
   assert.deepStrictEqual([T(ts.id).state, T(ts.id).reason, T(ts.id).events.some(e => e.why === 'dayBudget')], ['blocked', 'budget', true], 'a running task stops when the day budget is crossed');
   tasks.op({ op: 'settings', dayBudget: 0 }); mode('ok');
+
+  // waiting on you today is measured from the task's own events
+  const wt0 = tasks.list().tasks.find(x => x.id === tb.id);
+  assert.ok(typeof wt0.waitToday === 'number' && wt0.waitToday >= 0, 'wait time is reported');
+  const blockedT = tasks.list().tasks.find(x => x.state === 'blocked');
+  assert.ok(!blockedT || blockedT.waitToday > 0, 'a task waiting on you counts time');
 
   // standing instructions per repository reach every task there (and only there)
   assert.strictEqual(tasks.op({ op: 'repoNote', dir: '/etc', text: 'x' }).reason, 'nodir');

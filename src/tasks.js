@@ -726,9 +726,20 @@ function mask(t, i) {
   return { ...t, title: 'task ' + (i + 1), desc: '', dir: '', cwd: '', result: '', files: t.files.map(() => '•'), denials: t.denials.map(d => ({ tool: d.tool, what: '' })), testCmd: t.testCmd ? '•' : '', sessionId: '', baseCommit: '', ask: t.ask ? { ...t.ask, what: '' } : null };
 }
 function pub(t) { const { live, ...rest } = t; return rest; }
+// how long a task waited on you today: from becoming blocked until the next start, conclude or cancel (or now)
+function waitToday(t) {
+  const start = new Date(); start.setHours(0, 0, 0, 0); let ms = 0, since = 0;
+  if (t.updated < start.getTime() && t.state !== 'blocked') return 0; // untouched today: nothing to read
+  for (const e of eventsOf(t.id)) {
+    if (e.kind === 'state' && e.state === 'blocked') since = e.at;
+    else if (since && (e.kind === 'start' || (e.kind === 'state' && e.state !== 'blocked') || e.kind === 'done' || e.kind === 'cancelled')) { ms += Math.max(0, e.at - Math.max(since, start.getTime())); since = 0; }
+  }
+  if (since && t.state === 'blocked') ms += Math.max(0, now() - Math.max(since, start.getTime()));
+  return ms;
+}
 function list({ privacy = false } = {}) {
   load(); const opts = { claude: options('claude'), codex: options('codex') }, spent = spentToday();
-  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })), repoNotes: {}, repoBudgets: {} } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy, spentToday: spent, dayStopped: !!(settings.dayBudget && spent >= settings.dayBudget) };
+  return { tasks: tasks.map((t, i) => ({ ...(privacy ? mask(pub(t), i) : pub(t)), waitToday: waitToday(t) })), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })), repoNotes: {}, repoBudgets: {} } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy, spentToday: spent, dayStopped: !!(settings.dayBudget && spent >= settings.dayBudget) };
 }
 function get(id, { privacy = false } = {}) {
   load(); const i = tasks.findIndex(x => x.id === id); if (i < 0) return null;
