@@ -79,3 +79,6 @@ body.visit { padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-rig
 body.visit header { padding-left: 0; padding-right: 0; }
 body.visit main { padding-top: 8px; }
 body.visit #frame { display: block; width: 100%; height: auto; image-rendering: pixelated; border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); border-radius: 4px; background: #000; }
+/* tab bar close to the bottom edge: only part of the home-bar area is kept free (the gesture line still has room) */
+nav#tabs { padding-bottom: max(6px, calc(env(safe-area-inset-bottom) - 16px)); padding-top: 6px; }
+nav#tabs button { min-height: 50px; }

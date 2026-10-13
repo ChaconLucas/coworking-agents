@@ -61,6 +61,13 @@ function desktopEntry(cmd, icon) {
   return `[Desktop Entry]\nType=Application\nName=${APP_NAME}\nComment=A pixel office for your AI coding agents\nExec=${cmd.map(dq).join(' ')}\nIcon=${icon}\nCategories=Development;\nTerminal=false\n`;
 }
 
+// a macOS .icns from a PNG with the system's own sips and iconutil
+function icns(png, out) {
+  const set = path.join(os.tmpdir(), 'coworking-agents-' + process.pid + '-' + Date.now() + '.iconset'); fs.mkdirSync(set, { recursive: true });
+  for (const n of [16, 32, 64, 128, 256, 512]) { execFileSync('sips', ['-z', String(n), String(n), png, '--out', path.join(set, `icon_${n}x${n}.png`)], { stdio: 'ignore' }); if (n <= 256) execFileSync('sips', ['-z', String(n * 2), String(n * 2), png, '--out', path.join(set, `icon_${n}x${n}@2x.png`)], { stdio: 'ignore' }); }
+  execFileSync('iconutil', ['-c', 'icns', set, '-o', out], { stdio: 'ignore' });
+  fs.rmSync(set, { recursive: true, force: true });
+}
 function installed() { const p = places(); return [p.app, p.startMenu, p.desktopFile].some(f => f && fs.existsSync(f)); }
 
 function install(mode) {
@@ -70,12 +77,7 @@ function install(mode) {
     fs.mkdirSync(macos, { recursive: true }); fs.mkdirSync(res, { recursive: true });
     fs.writeFileSync(path.join(c, 'Info.plist'), macPlist());
     fs.writeFileSync(path.join(macos, 'coworking-agents'), macLauncher(cmd, process.env.PATH), { mode: 0o755 });
-    try { // icon: the system's own sips and iconutil
-      const set = path.join(os.tmpdir(), 'coworking-agents-' + process.pid + '.iconset'); fs.mkdirSync(set, { recursive: true });
-      for (const n of [16, 32, 64, 128, 256, 512]) { execFileSync('sips', ['-z', String(n), String(n), ICON_PNG, '--out', path.join(set, `icon_${n}x${n}.png`)], { stdio: 'ignore' }); if (n <= 256) execFileSync('sips', ['-z', String(n * 2), String(n * 2), ICON_PNG, '--out', path.join(set, `icon_${n}x${n}@2x.png`)], { stdio: 'ignore' }); }
-      execFileSync('iconutil', ['-c', 'icns', set, '-o', path.join(res, 'icon.icns')], { stdio: 'ignore' });
-      fs.rmSync(set, { recursive: true, force: true });
-    } catch {}
+    try { icns(ICON_PNG, path.join(res, 'icon.icns')); } catch {}
     try { execFileSync('touch', [p.app]); } catch {} // so Finder picks up the icon
     return { ok: true, where: p.app };
   }
@@ -100,4 +102,4 @@ function uninstall() {
   return { ok: true };
 }
 
-module.exports = { install, uninstall, installed, places, appCommand, macLauncher, desktopEntry, icoFromPng, APP_NAME };
+module.exports = { icns, install, uninstall, installed, places, appCommand, macLauncher, desktopEntry, icoFromPng, APP_NAME };

@@ -12,7 +12,7 @@ const { spawn, spawnSync } = require('child_process');
 const DIR = () => path.join(os.homedir(), '.config', 'coworking-agents');
 const FILE = () => path.join(DIR(), 'menubar.json');
 const ICON = path.join(__dirname, '..', 'public', 'favicon.png');
-let child = null, kind = null, base = '', token = '', lastBody = '', lastTip = '', seen = null;
+let child = null, kind = null, base = '', token = '', lastBody = '', lastTip = '', seen = null, notes = [];
 
 const has = cmd => { try { return spawnSync('which', [cmd], { stdio: 'ignore' }).status === 0; } catch { return false; } };
 // which way this system can show it: 'mac', 'win', 'zenity', 'notify' or null
@@ -59,8 +59,12 @@ function write(snap, extra = {}) {
   const body = status(snap, base, token, extra);
   // notifications for who just started needing you (not for what was already true when the icon started)
   const ids = new Set(body.list.map(p => p.id));
-  if (seen) for (const p of body.list) if (!seen.has(p.id) && body.notify && kind !== 'win') notifyNative(`${p.name} ${extra.needsYou || 'needs you'}`, p.title || '');
-  seen = ids;
+  if (seen) for (const p of body.list) if (!seen.has(p.id) && body.notify) {
+    const n = { id: p.id + ':' + Date.now(), title: `${p.name} ${extra.needsYou || 'needs you'}`, body: p.title || '' };
+    if (kind === 'mac' && macApp) notes = [...notes, n].slice(-10); // the menu app posts it, with its own name and icon
+    else if (kind !== 'win') notifyNative(n.title, n.body);
+  }
+  seen = ids; body.notes = notes;
   if (kind === 'zenity') {
     const tip = `coworking-agents · ●${body.work}${body.need ? ' · ❗' + body.need : ''}`;
     if (tip !== lastTip && child) { lastTip = tip; try { child.stdin.write(`tooltip: ${tip}\n`); } catch {} }
@@ -76,11 +80,33 @@ function write(snap, extra = {}) {
   } catch {}
 }
 
+// macOS: the menu script compiled into a small hidden app named "Coworking Agents" with the office icon, so its
+// notifications show that name and icon (a plain osascript shows Script Editor's). Rebuilt when the script changes.
+let macApp = null;
+function buildMacApp() {
+  const app = path.join(DIR(), 'menu', 'Coworking Agents.app'), src = path.join(__dirname, 'menubar.jxa'), stamp = path.join(DIR(), 'menu', 'built-from');
+  try {
+    const sig = String(fs.statSync(src).mtimeMs) + ':' + require('../package.json').version;
+    if (fs.existsSync(path.join(app, 'Contents', 'MacOS', 'applet')) && fs.readFileSync(stamp, 'utf8') === sig) return app;
+    fs.rmSync(app, { recursive: true, force: true }); fs.mkdirSync(path.dirname(app), { recursive: true, mode: 0o700 });
+    const run = (cmd, args) => spawnSync(cmd, args, { stdio: 'ignore' }).status === 0;
+    if (!run('osacompile', ['-l', 'JavaScript', '-s', '-o', app, src])) return null;
+    const plist = path.join(app, 'Contents', 'Info.plist'), pb = (...a) => run('/usr/libexec/PlistBuddy', ['-c', a.join(' '), plist]);
+    pb('Add', ':CFBundleIdentifier', 'string', 'io.coworking-agents.menu') || pb('Set', ':CFBundleIdentifier', 'io.coworking-agents.menu');
+    pb('Set', ':CFBundleName', 'Coworking Agents'); pb('Add', ':CFBundleDisplayName', 'string', 'Coworking Agents');
+    pb('Add', ':LSUIElement', 'bool', 'true') || pb('Set', ':LSUIElement', 'true');
+    try { require('./appinstall').icns(path.join(__dirname, '..', 'public', 'icon-512.png'), path.join(app, 'Contents', 'Resources', 'applet.icns')); } catch {}
+    fs.copyFileSync(ICON, path.join(app, 'Contents', 'Resources', 'menu.png'));
+    run('codesign', ['--force', '--deep', '-s', '-', app]); // its own ad-hoc signature again, after the changes
+    fs.writeFileSync(stamp, sig);
+    return app;
+  } catch { return null; }
+}
 function start(opts) {
   const k = how(); if (!k) return { ok: false, reason: process.platform === 'linux' ? 'linuxTools' : 'platform' };
   if (running()) return { ok: true, kind };
   base = opts.base; token = opts.token; lastBody = ''; lastTip = ''; seen = null; kind = k;
-  if (k === 'mac') child = spawn('osascript', ['-l', 'JavaScript', path.join(__dirname, 'menubar.jxa'), FILE(), ICON], { stdio: 'ignore' });
+  if (k === 'mac') { macApp = buildMacApp(); child = macApp ? spawn(path.join(macApp, 'Contents', 'MacOS', 'applet'), [], { stdio: 'ignore' }) : spawn('osascript', ['-l', 'JavaScript', path.join(__dirname, 'menubar.jxa'), FILE(), ICON], { stdio: 'ignore' }); }
   else if (k === 'win') child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', path.join(__dirname, 'tray.ps1'), FILE(), ICON], { stdio: 'ignore', windowsHide: true });
   else if (k === 'zenity') { child = spawn('zenity', ['--notification', '--listen', '--text=coworking-agents'], { stdio: ['pipe', 'ignore', 'ignore'] }); try { child.stdin.write(`icon: ${ICON}\n`); } catch {} }
   if (child) { const me = child; child.on('error', () => { if (child === me) child = null; }); child.on('exit', () => { if (child === me) child = null; }); if (child.stdin) child.stdin.on('error', () => {}); }

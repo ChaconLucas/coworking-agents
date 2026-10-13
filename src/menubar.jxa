@@ -5,7 +5,10 @@
 ObjC.import('Cocoa');
 
 function run(argv) {
-  const statusFile = argv[0], iconFile = argv[1];
+  // compiled into a small app (so notifications carry its name and icon) it gets no arguments: the defaults apply
+  const home = ObjC.unwrap($.NSHomeDirectory());
+  const statusFile = (argv && argv[0]) || home + '/.config/coworking-agents/menubar.json';
+  const iconFile = (argv && argv[1]) || ObjC.unwrap($.NSBundle.mainBundle.pathForResourceOfType('menu', 'png')) || '';
   const pt = String(ObjC.unwrap($.NSLocale.preferredLanguages.firstObject) || '').startsWith('pt');
   const L = pt
     ? { open: 'Abrir o escritório', hide: 'Esconder o ícone', closed: 'O escritório está fechado', need: 'Precisam de você', asks: 'Pedem permissão', workers: 'Trabalhando', today: 'Gasto hoje', working: n => `${n} trabalhando`, needN: n => `${n} precisa${n > 1 ? 'm' : ''} de você`, nobody: 'Ninguém precisa de você agora' }
@@ -18,7 +21,14 @@ function run(argv) {
   if (img && !img.isNil()) { img.setSize($.NSMakeSize(16, 16)); item.button.image = img; item.button.imagePosition = $.NSImageLeft; }
   item.button.title = ' …';
 
-  let last = '', urls = [], staleSince = 0;
+  let last = '', urls = [], staleSince = 0, seenNotes = null;
+  const sa = Application.currentApplication(); sa.includeStandardAdditions = true;
+  // system notifications, sent by this app (its own name and icon); the office decides when (nobody looking, not in quiet hours)
+  function notify(s) {
+    const ids = (s.notes || []).map(n => n.id);
+    if (seenNotes) for (const n of s.notes || []) if (!seenNotes.has(n.id)) { try { sa.displayNotification(n.body || '', { withTitle: n.title || 'coworking-agents' }); } catch (e) {} }
+    seenNotes = new Set(ids);
+  }
   ObjC.registerSubclass({
     name: 'CWMenuTarget',
     methods: {
@@ -34,6 +44,7 @@ function run(argv) {
     let s = null;
     try { s = JSON.parse(ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(statusFile, $.NSUTF8StringEncoding, $()))); } catch (e) {}
     const alive = s && Date.now() - s.at < 15000;
+    if (alive) notify(s);
     if (!alive) { staleSince = staleSince || Date.now(); if (Date.now() - staleSince > 60000) app.terminate($()); }
     else staleSince = 0;
     const key = alive ? JSON.stringify([s.work, s.need, s.list, s.url, s.usd, s.limits, s.asks, s.workers]) : 'closed';

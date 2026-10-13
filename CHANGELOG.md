@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- macOS notifications now come from a small hidden Coworking Agents app (the menu bar script compiled with osacompile, office icon, re-signed ad hoc), so they show its name and icon instead of Script Editor's
+- Phone tab bar sits lower, closer to the bottom edge
 - Phone app shell: the page no longer scrolls (only the middle does), so the header stays below the notch and the tab bar stays on the bottom on iPhone, even after the keyboard
 - Phone app in the office's own look: pixel font, pixel buttons and borders, each agent's face; the page names its files per run so a home-screen icon never keeps an old version
 - Phone app redone: tabs for Now (who needs you, every agent and what it is doing), Tasks (reply, allow, conclude, retry, cancel, and a new task in a folder already in use), Office (the live picture without names) and Usage (today, month, goal, limits); respects the notch and the home bar
