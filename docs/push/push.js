@@ -19,13 +19,16 @@ if (!/^[A-Za-z0-9_-]{80,100}$/.test(key) || !LAN.test(back)) { key = ''; back = 
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const raw = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+// what the phone reports, shown under a refusal so it can be told apart: asked and refused, or never asked
+const diag = before => { const v = /OS (\d+)_(\d+)/.exec(navigator.userAgent); document.getElementById('note').textContent = `${P.note} · ${before} → ${Notification.permission} · ${standalone ? 'app' : 'browser'} · iOS ${v ? v[1] + '.' + v[2] : '?'}`; };
+const blocked = before => { say(P.denied); diag(before); actions.textContent = ''; button(P.retry, () => show().catch(() => say(P.error))); };
 const handBack = sub => { say(P.sending); location.href = back + '#push=' + encodeURIComponent(JSON.stringify(sub)); };
 
 async function show() {
   actions.textContent = '';
   if (ios && !standalone) return say(P.install);
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return say(P.unsupported);
-  if (Notification.permission === 'denied') return say(P.denied);
+  if (Notification.permission === 'denied') return blocked('denied');
   const reg = await navigator.serviceWorker.register('sw.js');
   const sub = await reg.pushManager.getSubscription().catch(() => null);
   if (sub && Notification.permission === 'granted') {
@@ -37,7 +40,8 @@ async function show() {
   say(T.phone.pushHow);
   button(P.start, async () => {
     try {
-      if (await Notification.requestPermission() !== 'granted') return say(P.denied);
+      const before = Notification.permission;
+      if (await Notification.requestPermission() !== 'granted') return blocked(before);
       const r = await navigator.serviceWorker.ready;
       const s = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw(key) });
       handBack(s.toJSON());
