@@ -2,6 +2,7 @@
 // ---------------- tasks you hand out, the notification center, the releases board and the office admin ----------------
 
 const api = (url, body) => fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) } : {}).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
+let taskSaid = [];
 let taskData = { tasks: [], settings: { maxParallel: 2 }, options: {}, roles: [], privacy: false }, taskSel = '', taskDetail = null, taskDiff = null, taskPeriod = 'week', taskSearch = [], taskWhy = '';
 const tasksWaiting = () => taskData.tasks.filter(t => t.state === 'blocked').length;
 const taskOfPerson = id => taskData.tasks.find(t => t.sessionId && t.sessionId === id);
@@ -298,6 +299,7 @@ function renderTaskList(X, body) {
   const kindL = { task: X.kinds.task, session: X.kinds.session, today: X.kinds.today, month: X.kinds.month };
   body.innerHTML = tabsHtml() + `<p class="sub">${esc(X.sub)}</p>${taskData.privacy ? `<p class="note">🔒 ${esc(X.privateNote)}</p>` : ''}` + formHtml() + settingsHtml()
     + `<div class="trow"><label style="flex:2">🔎 <input data-tsearch placeholder="${esc(X.search)}"></label></div>`
+    + (taskSaid.length ? `<h4 class="tsaid-h">💬 ${esc(X.saidTitle(taskSaid.length))}</h4><ul class="queue tsaid">${taskSaid.map(r => { const live = data && data.people.some(p => p.id === r.id); return `<li ${live ? `data-tperson="${esc(r.id)}"` : ''}><span><small>${esc(r.agent)} · ${esc(r.role === 'user' ? X.saidYou : X.saidAgent)} · ${esc(ago(Date.now() - r.at))}${live ? ' · ' + esc(X.saidLive) : ''}</small><br>${esc(r.snippet)}</span></li>`; }).join('')}</ul>` : '')
     + (taskSearch.length ? `<ul class="queue">${taskSearch.map(r => `<li ${r.kind === 'task' ? `data-topen="${esc(r.id)}"` : r.live ? `data-tperson="${esc(r.id)}"` : ''}><b>${esc(r.title)}</b> <small>${esc(kindL[r.kind] || r.kind)} · ${esc(r.agent || '')}${r.state ? ' · ' + esc(X.states[r.state] || T.states[r.state] || r.state) : ''}</small></li>`).join('')}</ul>` : '')
     + (list.length ? [['need', ['blocked', 'failed']], ['active', ['running', 'pending']], ['done', ['done', 'cancelled']]].map(([g, sts]) => {
       const items = list.filter(t => sts.includes(t.state)); if (!items.length) return '';
@@ -410,7 +412,7 @@ reportEl.addEventListener('change', async e => {
 let tSearchT = 0;
 reportEl.addEventListener('input', e => {
   const q = e.target.closest('[data-tsearch]'); if (!q) return;
-  clearTimeout(tSearchT); tSearchT = setTimeout(async () => { taskSearch = q.value.trim().length > 1 ? await api('api/search?q=' + encodeURIComponent(q.value)) : []; if (!Array.isArray(taskSearch)) taskSearch = []; const v = q.value; renderTasks(); const n = reportEl.querySelector('[data-tsearch]'); n.value = v; n.focus(); }, 300);
+  clearTimeout(tSearchT); tSearchT = setTimeout(async () => { const v = q.value.trim(); taskSearch = v.length > 1 ? await api('api/search?q=' + encodeURIComponent(v)) : []; if (!Array.isArray(taskSearch)) taskSearch = []; const sd = v.length > 2 ? await api('api/said?q=' + encodeURIComponent(v)) : []; taskSaid = Array.isArray(sd) ? sd : []; const v = q.value; renderTasks(); const n = reportEl.querySelector('[data-tsearch]'); n.value = v; n.focus(); }, 300);
 });
 
 // ---- notification center: grouped by key, read state, actions; kept in this browser ----

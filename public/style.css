@@ -899,3 +899,4 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tscheds li label.tchk { margin: 2px 0; }
 .repos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; } .repo-name { font-size: 14px !important; text-transform: none !important; letter-spacing: 0 !important; opacity: 1 !important; } .repo p { margin: 6px 0; } .repo a { color: #8ecbff; }
 .bclist { list-style: none; padding: 0; margin: 6px 0; } .bclist li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid #2c2636; } .bclist label { flex: 1; min-width: 0; } [data-bc-text] { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; background: rgba(0,0,0,.25); color: inherit; border: 1px solid #3a3045; padding: 6px; }
+.tsaid li span { display: block; font-size: 13px; } .tsaid-h { margin: 10px 0 4px; font-size: 12px; opacity: .8; }

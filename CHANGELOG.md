@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Search what was said: the tasks search box also looks in what you asked and what Claude and Codex answered over the last 7 days (never tool output; off in private mode)
 - Message several agents (☰ → 📣): one request to the agents you pick; typed into terminal sessions that are waiting, continued in the background for VS Code and app conversations, busy ones left out
 - Repositories panel (☰ → 📦): who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity
 - Batch: repeat a new task in other folders (one per line), one task each, every folder checked by the server

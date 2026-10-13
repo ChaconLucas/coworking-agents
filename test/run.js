@@ -334,6 +334,16 @@ sleepK.kill();
   global.__sweep = sweep;
 }
 
+// search in what was said: user and agent text only, never tool output
+{
+  const { said } = require('../src/said');
+  assert.deepStrictEqual(said('claude', { type: 'user', sessionId: 'S', timestamp: '2026-01-01T00:00:00Z', message: { content: 'fix the migration' } }).text, 'fix the migration');
+  assert.strictEqual(said('claude', { type: 'assistant', message: { content: [{ type: 'text', text: 'done' }, { type: 'tool_use', name: 'Bash', input: { command: 'secret' } }] } }).text, 'done', 'tool calls are not searched');
+  assert.strictEqual(said('claude', { type: 'user', message: { content: [{ type: 'tool_result', content: 'API_KEY=x' }] } }), null, 'tool output is not searched');
+  assert.strictEqual(said('codex', { type: 'event_msg', payload: { type: 'agent_message', message: 'ok' } }).role, 'assistant');
+  assert.strictEqual(said('codex', { type: 'response_item', payload: { type: 'function_call_output', output: 'x' } }), null);
+}
+
 // secrets in commands never show up
 const { short } = require('../src/util');
 assert.ok(!short('export GITHUB_TOKEN=ghp_abc123 && x').includes('ghp_abc123'));

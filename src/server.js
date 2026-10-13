@@ -243,6 +243,11 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return;
     }
     if (url.pathname === '/api/task-diff' && req.method === 'GET') { tasks.diff(url.searchParams.get('id'), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d))); return; }
+    if (url.pathname === '/api/said' && req.method === 'GET') { // search in what was asked and answered (off in private mode)
+      if (privacy || demo) return send(res, 200, 'application/json', JSON.stringify(demo ? [{ agent: 'claude', id: 'demo-0-Refactor checkout flow', role: 'assistant', at: Date.now() - 6e5, snippet: '…the migration adds a nullable column first, then backfills…' }] : []));
+      require('./said').search(url.searchParams.get('q') || '').then(r => send(res, 200, 'application/json', JSON.stringify(r))).catch(() => send(res, 200, 'application/json', '[]'));
+      return;
+    }
     if (url.pathname === '/api/search' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify(searchAll(url.searchParams.get('q') || '', privacy, demo)));
     if (url.pathname === '/api/version' && req.method === 'GET') { (demo ? Promise.resolve() : maybeCheck()).then(() => send(res, 200, 'application/json', JSON.stringify(versionInfo()))); return; }
     if (url.pathname === '/api/tasks' && req.method === 'POST') {
