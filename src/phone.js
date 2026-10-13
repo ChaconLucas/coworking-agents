@@ -12,6 +12,9 @@ const crypto = require('crypto');
 const DIR = path.join(__dirname, '..', 'public', 'phone');
 const FILES = { '/': ['index.html', 'text/html; charset=utf-8'], '/i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], '/phone.js': ['phone.js', 'text/javascript; charset=utf-8'], '/phone.css': ['phone.css', 'text/css; charset=utf-8'] };
 const OPS = new Set(['permit', 'reply', 'conclude', 'cancel']);
+// visits: a read-only link that expires, showing only a picture of the office (drawn without names) and how many are working
+const VISIT_FILES = { '': ['visit.html', 'text/html; charset=utf-8'], 'i18n.js': ['../js/i18n.js', 'text/javascript; charset=utf-8'], 'visit.js': ['visit.js', 'text/javascript; charset=utf-8'], 'phone.css': ['phone.css', 'text/css; charset=utf-8'] };
+const visits = new Map(); let frame = null, frameAt = 0, counts = { working: 0, waiting: 0, total: 0 };
 
 function lanIp() {
   for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) {
@@ -47,6 +50,18 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
         const url = new URL(req.url, 'http://x');
+        const vm = /^\/v\/([0-9a-f]{32})(?:\/([a-z0-9.]*))?$/.exec(url.pathname);
+        if (vm) { // a visit: its own token in the path, nothing but the picture, the counts and the page itself
+          const v = visits.get(vm[1]); if (v && v.until < Date.now()) visits.delete(vm[1]);
+          if (!v || v.until < Date.now()) return send(res, 410, 'text/plain; charset=utf-8', 'This visit link has ended.');
+          if (req.method !== 'GET') { res.writeHead(405); return res.end(); } // read-only
+          if (vm[2] === undefined) { res.writeHead(302, { Location: url.pathname + '/' }); return res.end(); } // relative files resolve under the link
+          const f = vm[2] || '';
+          if (f === 'frame.png') return frame ? (res.writeHead(200, { 'Content-Type': 'image/png' }), res.end(frame)) : send(res, 404, 'text/plain', 'no picture yet');
+          if (f === 'info') return send(res, 200, 'application/json', JSON.stringify({ until: v.until, frameAt, ...counts }));
+          if (VISIT_FILES[f]) { const [file, type] = VISIT_FILES[f]; return fs.readFile(path.join(DIR, file), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
+          return send(res, 404, 'text/plain', 'not found');
+        }
         if (url.pathname === '/' && url.searchParams.has('t')) {
           if (!same(url.searchParams.get('t'), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code again.');
           res.writeHead(302, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' }); return res.end();
@@ -80,7 +95,11 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
     server.once('error', reject);
     server.listen(port, ip, () => {
       host = `${ip}:${server.address().port}`;
-      resolve({ ok: true, url: `http://${host}/?t=${token}`, host, close: () => server.close() });
+      resolve({ ok: true, url: `http://${host}/?t=${token}`, host, close: () => { visits.clear(); server.close(); },
+        addVisit: minutes => { const t = crypto.randomBytes(16).toString('hex'), until = Date.now() + Math.min(240, Math.max(5, Number(minutes) || 60)) * 60000; visits.set(t, { until }); return { url: `http://${host}/v/${t}`, until }; },
+        endVisits: () => { visits.clear(); frame = null; },
+        visiting: () => [...visits.values()].some(v => v.until > Date.now()),
+        setFrame: (buf, c) => { frame = buf; frameAt = Date.now(); counts = { working: Number(c.working) || 0, waiting: Number(c.waiting) || 0, total: Number(c.total) || 0 }; } });
     });
   });
 }

@@ -186,6 +186,8 @@ Open **Tasks** and describe the work, pick a folder, an agent (Claude Code, Code
 - **Review** everything since the task started: commits, staged and unstaged changes and new files, plus your test command's output (filtered to the failing lines and the tail).
 - **Automatic review** (opt-in in the settings): a task that finishes with changes gets a read-only reviewer with the same AI (Claude in plan mode, Codex in a read-only sandbox; edits are refused automatically); the verdict, problems with file:line and missing tests show on the original task.
 - **Ready to ship?** Concluding first lists tests, review verdict, files changed, what is not committed and the branch. *Commit* (editable message) and *Open PR* (pushes the branch and runs `gh pr create`, needs `gh auth login`) run only when you press them.
+- **Schedules, chains and batches:** run a saved template every day, on weekdays or on one weekday (while the office is open); *chain* a task so it starts when the previous one ended well and receives its result (a failure stops the chain); repeat a new task in several folders at once.
+- **Compare models** on your own finished tasks (cost, attempts, tests, ended well) and **search what was said**: the search box also looks in what you asked and what the agents answered over the last 7 days (never tool output, off in private mode).
 - **Templates:** save a request you repeat (folder, agent, profile, role, test command) and fire it again with one click.
 - **Queue:** priority, "after task X" dependencies, how many agents run at once and how many attempts a task gets.
 - **Model and effort:** Claude `haiku`/`sonnet`/`opus` with efforts low → max; Codex models and efforts from Codex's own model list. *Save*, *More capacity*, *Apply recommendation* or pick by hand. A change made while a step runs is shown as **pending** and marked **applied** when the next step starts.
@@ -202,11 +204,17 @@ Tasks live in `~/.config/coworking-agents/tasks/`. In private mode names, folder
 
 The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. It keeps working with the tab in the background and recovers what was already pending when you open the office. **Releases** shows the installed version, the newest on npm (or *unavailable*), when it checked, a clickable map of every release and the notes of the newer one, with the update command for how you installed it. The office admin appears behind the top-bar counter only when there's version news: he waves the sign until you've seen it, keeps holding it until you update, then celebrates.
 
+## More panels
+
+- **📦 Repositories:** who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity.
+- **📣 Message several agents:** one request to the agents you pick, typed into terminal sessions that are waiting and continued in the background for VS Code and app conversations; busy ones are left out.
+- **Sounds and do not disturb** (Personalise): each sound on or off, and a daily quiet window that mutes sounds and system notifications.
+
 ## Phone panel (opt-in)
 
 `npx coworking-agents --phone` also serves a small page for your phone on the same Wi-Fi: who needs you, tasks with their permission questions (*Allow* / *Deny*), reply, conclude or cancel a task, and pick an option when an agent asks a single-choice question. Scan the QR code printed in the terminal or shown in ☰ → 📱 Phone.
 
-It is a separate server that only answers on your LAN address, with its own token (new each run), an exact Host and Origin check, and none of the office's other routes (files, diffs, launching, windows). The office itself stays on `127.0.0.1`. The local network link is plain HTTP, so use it only on networks you trust.
+It is a separate server that only answers on your LAN address, with its own token (new each run), an exact Host and Origin check, and none of the office's other routes (files, diffs, launching, windows). The office itself stays on `127.0.0.1`. The local network link is plain HTTP, so use it only on networks you trust. With the phone panel on, **👀 Visit** creates a one-hour, read-only link (its own token) that shows only a picture of the office drawn without names and how many are working; end it any time.
 
 ## MCP (read-only)
 

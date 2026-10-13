@@ -597,10 +597,36 @@ async function renderPhone() {
   const d = await api('api/phone'); if (reportTab !== 'phone' || reportEl.hidden) return;
   if (!d || !d.on) { body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.how)}</p><p><code>npx coworking-agents --phone</code></p><p class="note">${esc(P.warn)}</p>`; return; }
   body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.scan)}</p><canvas class="qr" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.url)}</code></p><p class="note">${esc(P.warn)}</p>`;
-  const c = body.querySelector('canvas.qr'), n = d.qr.length, q = 4, s = 6, g = c.getContext('2d');
-  c.width = c.height = (n + q * 2) * s; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#000';
-  d.qr.forEach((row, r) => [...row].forEach((x, k) => { if (x === '1') g.fillRect((k + q) * s, (r + q) * s, s, s); }));
+  drawQr(body.querySelector('canvas.qr'), d.qr);
+  const V = T.visit; visitUntil = d.visit ? d.visit.until : 0;
+  body.insertAdjacentHTML('beforeend', `<h3>👀 ${esc(V.title)}</h3><p class="note">${esc(V.sub)}</p>${d.visit
+    ? `<p class="ok">${esc(V.live(new Date(d.visit.until).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' })))}</p><canvas class="qr qr-visit" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.visit.url)}</code></p><p><button class="btn small danger" data-visit="stop">✕ ${esc(V.stop)}</button></p>`
+    : `<p><button class="btn small" data-visit="start">👀 ${esc(V.start)}</button></p>`}`);
+  if (d.visit) drawQr(body.querySelector('canvas.qr-visit'), d.visit.qr);
 }
+function drawQr(c, qr) {
+  const n = qr.length, q = 4, s = 6, g = c.getContext('2d');
+  c.width = c.height = (n + q * 2) * s; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#000';
+  qr.forEach((row, r) => [...row].forEach((x, k) => { if (x === '1') g.fillRect((k + q) * s, (r + q) * s, s, s); }));
+}
+// while a visit is open, this page sends a picture of the office drawn without names every 5 seconds
+let visitUntil = 0;
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-visit]'); if (!b) return;
+  b.disabled = true;
+  const r = await fetch('api/visit?op=' + b.dataset.visit + '&min=60', { method: 'POST', headers: { 'X-Coworking': '1' } }).then(x => x.json()).catch(() => ({ ok: false }));
+  visitUntil = r.ok && r.until ? r.until : 0; if (visitUntil) sendVisitFrame(); renderPhone();
+});
+function sendVisitFrame() {
+  if (!visitUntil || Date.now() > visitUntil || typeof drawScene !== 'function' || !data) return;
+  const cv = document.getElementById('cv'); if (!cv) return;
+  snapshotMode = true;
+  try { drawScene(performance.now(), 0); } finally { snapshotMode = false; }
+  const ppl = data.people || [], w = ppl.filter(p => !['idle', 'asleep', 'needs_you', 'waiting'].includes(p.state)).length, n = ppl.filter(p => ['needs_you', 'waiting'].includes(p.state)).length;
+  cv.toBlob(blob => { if (!blob) return; fetch(`api/visit?op=frame&w=${w}&n=${n}&t=${ppl.length}`, { method: 'POST', headers: { 'Content-Type': 'image/png', 'X-Coworking': '1' }, body: blob }).then(x => x.json()).then(r => { if (r && r.active === false) visitUntil = 0; }).catch(() => {}); }, 'image/png');
+}
+setInterval(sendVisitFrame, 5000);
+api('api/phone').then(d => { if (d && d.visit) visitUntil = d.visit.until; }).catch(() => {});
 function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); }
 setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);
 

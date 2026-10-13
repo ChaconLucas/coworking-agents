@@ -675,6 +675,17 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await post({}, { op: 'permit' })).status, 403, 'phone: POST needs the header');
     assert.strictEqual((await post({ 'X-Coworking': '1', Origin: 'http://evil.example' }, { op: 'permit' })).status, 403, 'phone: and its own origin');
     assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'delete', id: 'x' })).json()).reason, 'op', 'phone: only allow, reply, conclude, cancel and answer');
+    // visits: own token in the path, read-only, nothing but the picture and counts, gone when ended
+    const vi = ph.addVisit(60), vpath = vi.url.replace(base, '');
+    assert.strictEqual((await get(vpath)).status, 302, 'visit: link redirects under itself');
+    assert.strictEqual((await get(vpath + '/')).status, 200, 'visit: the page');
+    assert.strictEqual((await get(vpath + '/frame.png')).status, 404, 'visit: no picture yet');
+    ph.setFrame(Buffer.from('89504e470d0a1a0a', 'hex'), { working: 2, waiting: 1, total: 4 });
+    assert.deepStrictEqual(await (await get(vpath + '/info')).json().then(j => [j.working, j.total]), [2, 4], 'visit: counts only');
+    assert.strictEqual((await fetch(base + vpath + '/info', { method: 'POST' })).status, 405, 'visit: read-only');
+    assert.strictEqual((await get(vpath + '/info')).status, 200, 'visit: a POST does not end it');
+    assert.deepStrictEqual([(await get('/v/' + '0'.repeat(32) + '/')).status, (await get(vpath + '/../api/m')).status, (await get('/api/m', {})).status], [410, 401, 401], 'visit: a guessed link or the visit token opens nothing else');
+    ph.endVisits(); assert.strictEqual((await get(vpath + '/info')).status, 410, 'visit: ended means gone');
     ph.close();
   }
 

@@ -74,7 +74,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     }
   }
   const timer = setInterval(() => { if (clients.size) tick(); }, interval);
-  let phoneInfo = null, phoneReason = phone ? 'starting' : 'off';
+  let phoneInfo = null, phoneReason = phone ? 'starting' : 'off', visitNow = null;
 
   const server = http.createServer((req, res) => {
     try { handle(req, res); } catch { if (!res.headersSent) send(res, 500, 'text/plain', 'error'); else res.destroy(); }
@@ -262,7 +262,28 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/state') return send(res, 200, 'application/json', safeSnapshot());
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
     // the phone link and its QR code, only to this machine (the phone server itself never serves this)
-    if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : { on: false, reason: phoneReason }));
+    if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')), visit: visitNow && visitNow.until > Date.now() ? { ...visitNow, qr: require('./qr').encode(visitNow.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : null } : { on: false, reason: phoneReason }));
+    if (url.pathname === '/api/visit' && req.method === 'POST') { // start/stop a visit and send its picture: same guards as every POST, and only with the phone panel on
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      if (!phoneInfo) return send(res, 200, 'application/json', '{"ok":false,"reason":"nophone"}');
+      const chunks = []; let size = 0;
+      req.on('data', c => { size += c.length; if (size > 4e6) req.destroy(); else chunks.push(c); });
+      req.on('end', () => {
+        try {
+          const op = url.searchParams.get('op');
+          if (op === 'start') { visitNow = phoneInfo.addVisit(Number(url.searchParams.get('min')) || 60); return send(res, 200, 'application/json', JSON.stringify({ ok: true, ...visitNow })); }
+          if (op === 'stop') { visitNow = null; phoneInfo.endVisits(); return send(res, 200, 'application/json', '{"ok":true}'); }
+          if (op === 'frame') {
+            const buf = Buffer.concat(chunks); if (buf.slice(0, 8).toString('hex') !== '89504e470d0a1a0a') return send(res, 200, 'application/json', '{"ok":false,"reason":"png"}'); // a PNG and nothing else
+            phoneInfo.setFrame(buf, { working: url.searchParams.get('w'), waiting: url.searchParams.get('n'), total: url.searchParams.get('t') });
+            return send(res, 200, 'application/json', JSON.stringify({ ok: true, active: phoneInfo.visiting() }));
+          }
+          send(res, 200, 'application/json', '{"ok":false,"reason":"op"}');
+        } catch { send(res, 500, 'application/json', '{"ok":false,"reason":"unknown"}'); }
+      });
+      return;
+    }
 
     const rel = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
     const file = path.join(PUBLIC, path.normalize(rel));

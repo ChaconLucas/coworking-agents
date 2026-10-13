@@ -17,3 +17,5 @@ button:disabled { opacity: .5; }
 textarea { width: 100%; min-height: 70px; font: inherit; background: #120f16; color: var(--text); border: 2px solid var(--line); border-radius: 8px; padding: 8px; margin-top: 8px; }
 .empty { color: var(--dim); }
 .msg { color: var(--warn); font-size: 13px; margin-top: 6px; }
+body.visit main { padding-top: 8px; }
+body.visit #frame { display: block; width: 100%; height: auto; image-rendering: pixelated; border: 2px solid var(--line); border-radius: 8px; background: #000; }
