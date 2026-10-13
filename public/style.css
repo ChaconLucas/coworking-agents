@@ -890,3 +890,10 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .tdspacer { flex: 1; }
 .tlog summary { cursor: pointer; list-style: none; } .tlog summary::-webkit-details-marker { display: none; }
 .tdetail-wrap .treview, .tdmain .treview, .tdmain .tship { margin-top: 0; }
+.tscheds { list-style: none; padding: 0; margin: 4px 0; } .tscheds li { display: flex; align-items: center; gap: 6px; } .tsched-add { align-items: end; }
+.tlist .tdot { display: none; } .tlist .trow-item { grid-template-columns: minmax(0, 1fr) auto; }
+.tdgrid { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
+.tsec .tcfg .btn.small { padding: 6px 8px; }
+.tform label.tchk, .tform .tchk { flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; }
+.tform input[type="checkbox"], .tsec input[type="checkbox"] { width: auto; flex: none; margin: 0; }
+.tscheds li label.tchk { margin: 2px 0; }

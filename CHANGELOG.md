@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Schedules: run a saved template every day, on weekdays or on one weekday at a set time (while the office is open; catches up the same day)
+- Chains: a task set to *chain* starts as soon as the previous one ended well (no need to conclude it) and gets its result; a failed step stops the chain and says so
 - Security: a pentest sweep in the tests reads every route from server.js (cookie, custom header, foreign and look-alike origins, missing/foreign Host, path traversal, login redirect, security headers); XSS checks on every HTML builder; PR links only as https; importing a backup lists the templates' test commands before you accept
 
 ## 0.6.0 — 2026-10-13

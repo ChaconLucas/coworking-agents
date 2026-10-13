@@ -207,18 +207,41 @@ function rankingHtml() {
     <div><h4>${esc(X.bySession)}</h4><ul>${sessions.map(x => bar(x.title || x.id.slice(0, 8), x.usd, '#b07cff')).join('') || `<li class="note">—</li>`}</ul><small class="note">${esc(X.sessionsNote)}</small></div></div>
     <p class="note">${esc(X.costNote)}</p>`;
 }
+// schedules: a saved template at a time, every day / weekdays / one weekday (only while the office is open)
+function schedHtml(st) {
+  const X = TT(), S = X.sched, tpls = st.templates || [], days = S.days;
+  const when = sc => (sc.every === 'weekly' ? days[sc.day] : S.every[sc.every]) + ' · ' + sc.at;
+  return `<h4>⏰ ${esc(S.title)}</h4>${(st.schedules || []).length ? `<ul class="tscheds">${st.schedules.map(sc => `<li><label class="tchk"><input type="checkbox" data-schon="${esc(sc.id)}" ${sc.on ? 'checked' : ''}> <b>${esc(sc.tpl)}</b> · ${esc(when(sc))}${sc.last ? ' · ' + esc(S.last(sc.last)) : ''}</label> <button class="hb" data-schdel="${esc(sc.id)}" title="${esc(S.del)}">✕</button></li>`).join('')}</ul>` : ''}
+    ${tpls.length ? `<div class="trow tsched-add"><label>${esc(S.tpl)}<select data-sch="tpl">${tpls.map(x => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select></label>
+      <label>${esc(S.when)}<select data-sch="every">${Object.entries(S.every).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}${days.map((d, i) => `<option value="w${i}">${esc(d)}</option>`).join('')}</select></label>
+      <label>${esc(S.at)}<input type="time" value="08:00" data-sch="at"></label><button class="btn small" data-schadd>＋ ${esc(S.add)}</button></div>` : `<p class="note">${esc(S.noTpl)}</p>`}
+    <p class="note">${esc(S.note)}</p>`;
+}
+document.addEventListener('click', async e => {
+  const add = e.target.closest('[data-schadd]'), del = e.target.closest('[data-schdel]'); if (!add && !del) return;
+  if (del) await api('api/tasks', { op: 'unschedule', id: del.dataset.schdel });
+  else { const v = k => (reportEl.querySelector(`[data-sch="${k}"]`) || {}).value || '', ev = v('every'); await api('api/tasks', { op: 'schedule', tpl: v('tpl'), every: ev.startsWith('w') ? 'weekly' : ev, day: ev.startsWith('w') ? Number(ev.slice(1)) : 0, at: v('at') }); }
+  await pollTasks(); renderTasks();
+});
+document.addEventListener('change', async e => {
+  const c = e.target.closest('[data-schon]'); if (!c) return;
+  const sc = (taskData.settings.schedules || []).find(x => x.id === c.dataset.schon); if (!sc) return;
+  await api('api/tasks', { op: 'schedule', ...sc, on: c.checked }); await pollTasks();
+});
 function settingsHtml() {
   const X = TT(), st = taskData.settings || {};
-  return `<details class="tform"><summary>⚙ ${esc(X.settings)}</summary><div class="trow">
+  return `<details class="tform tset" ${tsetOpen ? 'open' : ''}><summary>⚙ ${esc(X.settings)}</summary><div class="trow">
     <label>${esc(X.parallel)}<input type="number" min="1" max="6" value="${Number(st.maxParallel) || 2}" data-tset="maxParallel"></label>
     <label>${esc(X.maxAttempts)}<input type="number" min="1" max="10" value="${Number(st.maxAttempts) || 3}" data-tset="maxAttempts"></label></div>
     <label class="tchk"><input type="checkbox" data-tset="autoApply" ${st.autoApply ? 'checked' : ''}> ${esc(X.autoApply)}</label>
     <label class="tchk"><input type="checkbox" data-tset="autoReview" ${st.autoReview ? 'checked' : ''}> ${esc(X.autoReview)}</label>
     <div class="trow"><label>${esc(X.autoMax)}<select data-tset="autoMax">${['eco', 'bal', 'deep'].map(k => `<option value="${k}" ${st.autoMax === k ? 'selected' : ''}>${esc(X.profiles[k])}</option>`).join('')}</select></label>
-    <label>${esc(X.autoPerTask)}<input type="number" min="0" max="5" value="${Number(st.autoPerTask) || 0}" data-tset="autoPerTask"></label></div><p class="note">${esc(X.autoNote)}</p></details>`;
+    <label>${esc(X.autoPerTask)}<input type="number" min="0" max="5" value="${Number(st.autoPerTask) || 0}" data-tset="autoPerTask"></label></div><p class="note">${esc(X.autoNote)}</p>
+    ${schedHtml(st)}</details>`;
 }
 let tformOpen = false; // the form stays open across the periodic refresh
-document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('tform')) tformOpen = e.target.open; }, true);
+let tsetOpen = false;
+document.addEventListener('toggle', e => { const c = e.target.classList; if (!c || !c.contains('tform')) return; if (c.contains('tset')) tsetOpen = e.target.open; else tformOpen = e.target.open; }, true);
 function formHtml() {
   const X = TT(), folders = typeof knownFolders === 'function' ? knownFolders() : [];
   const sel = (name, opts, v) => `<select data-tf="${name}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
@@ -233,11 +256,12 @@ function formHtml() {
     <label>${esc(X.prio)}${sel('priority', [['3', X.prios[3]], ['2', X.prios[2]], ['1', X.prios[1]]], '2')}</label></div>
     <div class="trow"><label>${esc(X.perm)}${sel('perm', Object.entries(X.perms), 'acceptEdits')}</label>
     <label>${esc(X.dep)}${sel('dependsOn', [['', X.none], ...taskData.tasks.filter(t => !['done', 'cancelled'].includes(t.state)).map(t => [t.id, t.title])], '')}</label>
+    <label class="tchk" title="${esc(X.chainTip)}"><input type="checkbox" data-tf="chain"> ${esc(X.chain)}</label>
     <label>${esc(X.budget)}<input data-tf="budget" type="number" min="0" step="0.5" value="0"></label></div>
     <label>${esc(X.test)}<input data-tf="testCmd" placeholder="npm test"></label>
     <label class="tchk"><input type="checkbox" data-tf="worktree" checked> ${esc(X.wt)}</label>
     <label class="tchk"><input type="checkbox" data-tf="lean"> ${esc(X.lean)}</label>
-    <p><button class="btn small" data-tact="recommend">💡 ${esc(X.rec)}</button> <button class="btn" data-tact="create">➤ ${esc(X.create)}</button> <button class="btn small ghost" data-tact="saveTpl">💾 ${esc(X.tplSave)}</button></p><p class="note" id="tmsg">${esc(taskWhy)}</p></details>`;
+    <p><button class="btn small ghost" data-tact="recommend">💡 ${esc(X.rec)}</button> <button class="btn" data-tact="create">➤ ${esc(X.create)}</button> <button class="btn small ghost" data-tact="saveTpl">💾 ${esc(X.tplSave)}</button></p><p class="note" id="tmsg">${esc(taskWhy)}</p></details>`;
 }
 function rowHtml(t) {
   const X = TT(), why = t.reason && ['blocked', 'failed'].includes(t.state) || t.reason === 'restart' || t.reason === 'detached' ? X.reasons[t.reason] || '' : '';

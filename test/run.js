@@ -568,6 +568,28 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(!tasks.list().tasks.some(x => x.reviewOf === rv.id), 'a review is never reviewed');
   tasks.op({ op: 'settings', autoReview: false });
 
+  // schedules: a saved template runs once a day from its time on; a bad time or an unknown template is refused
+  tasks.op({ op: 'template', name: 'nightly', desc: 'nightly check', dir: proj, agent: 'claude' });
+  assert.strictEqual(tasks.op({ op: 'schedule', tpl: 'nope', every: 'daily', at: '00:00' }).reason, 'notpl');
+  assert.strictEqual(tasks.op({ op: 'schedule', tpl: 'nightly', every: 'daily', at: '25:00' }).reason, 'when');
+  tasks.op({ op: 'schedule', tpl: 'nightly', every: 'daily', at: '00:00' });
+  const nBefore = tasks.list().tasks.length; tasks.tick(); tasks.tick();
+  assert.strictEqual(tasks.list().tasks.filter(x => x.title === '⏰ nightly').length, 1, 'a schedule runs once a day');
+  await tasks._idle(); tasks.op({ op: 'unschedule', id: tasks.list().settings.schedules[0].id }); tasks.op({ op: 'untemplate', name: 'nightly' });
+  assert.ok(tasks.list().tasks.length === nBefore + 1);
+
+  // chains: the next starts when the previous ended well (no need to conclude) and gets its result; a failure stops it
+  const ca = tasks.op({ op: 'create', dir: proj, desc: 'first step', agent: 'claude' }).task;
+  const cb = tasks.op({ op: 'create', dir: proj, desc: 'second step', agent: 'claude', dependsOn: ca.id, chain: true }).task;
+  await tasks._idle();
+  assert.deepStrictEqual([T(ca.id).state, T(cb.id).state], ['blocked', 'blocked'], 'the chained task ran after the first, without concluding it');
+  assert.ok(String(lastArgs().pop()).startsWith('Result of the previous task "first step"'), 'and received its result');
+  mode('fail'); const cc = tasks.op({ op: 'create', dir: proj, desc: 'breaks', agent: 'claude' }).task;
+  const cd = tasks.op({ op: 'create', dir: proj, desc: 'after the break', agent: 'claude', dependsOn: cc.id, chain: true }).task;
+  await tasks._idle(); tasks.tick();
+  assert.deepStrictEqual([T(cd.id).state, T(cd.id).reason], ['blocked', 'depfailed'], 'a failed step stops the chain instead of waiting forever');
+  mode('ok');
+
   // failure, then a clean retry
   mode('fail'); let t2 = tasks.op({ op: 'create', dir: proj, desc: 'break', agent: 'claude' }).task; await tasks._idle();
   assert.strictEqual(T(t2.id).state, 'failed');

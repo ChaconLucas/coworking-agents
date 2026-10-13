@@ -171,7 +171,7 @@ function create(m) {
     role: ROLES[m.role] ? m.role : '', lean: m.lean === undefined ? profile === 'eco' : !!m.lean,
     perm: ['acceptEdits', 'plan', 'default'].includes(m.perm) ? m.perm : 'acceptEdits',
     priority: Math.min(3, Math.max(1, Number(m.priority) || 2)), budget: Math.max(0, Number(m.budget) || 0),
-    testCmd: s(m.testCmd, 300), worktree: !!m.worktree && !resume, dependsOn: tasks.some(x => x.id === m.dependsOn) ? m.dependsOn : '',
+    testCmd: s(m.testCmd, 300), worktree: !!m.worktree && !resume, dependsOn: tasks.some(x => x.id === m.dependsOn) ? m.dependsOn : '', chain: !!m.chain && tasks.some(x => x.id === m.dependsOn),
     from: s(m.from, 12), reviewOf: tasks.some(x => x.id === m.reviewOf) ? m.reviewOf : '', readOnly: !!m.readOnly, state: 'pending', reason: '', created: now(), updated: now(), sessionId: resume, adopted: !!resume, compactOnly: !!(m.compact && resume), cwd: dir, baseCommit: '', pid: 0,
     cost: 0, costUnknown: false, byModel: {}, costByDay: {}, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     attempts: 0, turns: 0, subagents: 0, result: '', files: [], denials: [], allowed: [], configLog: [], running: null,
@@ -211,6 +211,14 @@ function op(m = {}) {
       perm: ['acceptEdits', 'plan', 'default'].includes(m.perm) ? m.perm : 'acceptEdits', testCmd: s(m.testCmd, 300), worktree: !!m.worktree, lean: !!m.lean, priority: String(Math.min(3, Math.max(1, Number(m.priority) || 2))) };
     settings.templates = [tpl, ...(settings.templates || []).filter(x => x.name !== name)].slice(0, 30); save(); return { ok: true, templates: settings.templates };
   }
+  if (m.op === 'schedule') { // a saved template, every day / weekdays / one weekday, at a time; runs only while the office is open
+    if (!(settings.templates || []).some(x => x.name === m.tpl)) return { ok: false, reason: 'notpl' };
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(m.at || '') || !['daily', 'weekdays', 'weekly'].includes(m.every)) return { ok: false, reason: 'when' };
+    const sc = { id: /^[a-z0-9]{8}$/.test(m.id || '') ? m.id : Math.random().toString(36).slice(2, 10), tpl: s(m.tpl, 40), every: m.every, day: Math.min(6, Math.max(0, Number(m.day) || 0)), at: m.at, on: m.on !== false, last: '' };
+    const prev = (settings.schedules || []).find(x => x.id === sc.id); if (prev) sc.last = prev.last;
+    settings.schedules = [...(settings.schedules || []).filter(x => x.id !== sc.id), sc].slice(0, 30); save(); return { ok: true, schedules: settings.schedules };
+  }
+  if (m.op === 'unschedule') { settings.schedules = (settings.schedules || []).filter(x => x.id !== m.id); save(); return { ok: true, schedules: settings.schedules }; }
   if (m.op === 'untemplate') { settings.templates = (settings.templates || []).filter(x => x.name !== s(m.name, 40)); save(); return { ok: true, templates: settings.templates }; }
   if (m.op === 'recommend') { const t = tasks.find(x => x.id === m.id); return { ok: true, rec: recommend(s(m.desc || (t && t.desc), 12000), m.agent || (t && t.agent), t, m.live && typeof m.live === 'object' ? m.live : null) }; }
   const t = tasks.find(x => x.id === m.id); if (!t) return { ok: false, reason: 'notask' };
@@ -256,11 +264,31 @@ function handoffText(t, next) {
 function tick() {
   if (demo) return;
   const running = tasks.filter(t => t.state === 'running').length;
-  const ready = tasks.filter(t => t.state === 'pending' && (!t.dependsOn || (tasks.find(x => x.id === t.dependsOn) || {}).state === 'done'))
+  runSchedules(new Date());
+  // a chained task starts as soon as the one before ended well (no need to conclude it); if that one failed it stops and says so
+  for (const t of tasks.filter(x => x.state === 'pending' && x.dependsOn && x.chain)) {
+    const d = tasks.find(x => x.id === t.dependsOn);
+    if (d && (['failed', 'cancelled'].includes(d.state) || (d.state === 'blocked' && d.tests && d.tests.code !== 0))) { t.state = 'blocked'; t.reason = 'depfailed'; log(t, { kind: 'state', state: 'blocked', reason: 'depfailed' }); save(); }
+  }
+  const depOk = t => { const d = tasks.find(x => x.id === t.dependsOn) || {}; return d.state === 'done' || (t.chain && d.state === 'blocked' && d.reason === 'review' && (!d.tests || d.tests.code === 0)); };
+  const ready = tasks.filter(t => t.state === 'pending' && (!t.dependsOn || depOk(t)))
     .sort((a, b) => b.priority - a.priority || a.created - b.created);
   for (const t of ready.slice(0, Math.max(0, settings.maxParallel - running))) run(t);
 }
 
+// schedules: once a day at most, from the set time until the end of that day (a closed office catches up when it opens)
+function runSchedules(d) {
+  const day = dayKey(d.getTime()), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), dow = d.getDay();
+  for (const sc of settings.schedules || []) {
+    if (!sc.on || sc.last === day || hm < sc.at) continue;
+    if (sc.every === 'weekdays' && (dow === 0 || dow === 6)) continue;
+    if (sc.every === 'weekly' && dow !== sc.day) continue;
+    const tpl = (settings.templates || []).find(x => x.name === sc.tpl); sc.last = day; save();
+    if (!tpl) continue;
+    const { name, ...v } = tpl, r = create({ ...v, title: '⏰ ' + name, from: 'schedule' });
+    if (r.ok) log(r.task, { kind: 'scheduled', text: sc.every + ' ' + sc.at });
+  }
+}
 function child(t, cmd, args, opts) { // every process of a task is tracked, so cancel reaches it
   const c = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], env: process.env, ...opts });
   procs.set(t.id, c); t.pid = c.pid || 0; save();
@@ -287,7 +315,12 @@ async function run(t) {
   if (t.cancelling) return finish(t, 0, '');
   if (bad) { t.state = 'failed'; t.reason = bad === 'nogit' ? 'nogit' : 'worktree'; log(t, { kind: 'error', text: bad }); return done(t); }
   const sys = [t.role && ROLES[t.role], t.lean && LEAN].filter(Boolean).join('\n');
-  const prompt = t.compactOnly ? '/compact' : t.next || t.desc; t.next = '';
+  let prompt = t.compactOnly ? '/compact' : t.next || t.desc; t.next = '';
+  if (t.chain && t.dependsOn && !t.chainFed) { // the previous task's result travels with the request, once
+    const d = tasks.find(x => x.id === t.dependsOn);
+    if (d && d.result) prompt = `Result of the previous task "${s(d.title, 80)}":\n${s(d.result, 3000)}\n\n${prompt}`;
+    t.chainFed = true;
+  }
   const opt = options(t.agent);
   t.live = { model: t.agent === 'codex' ? t.model || opt.def : t.model, usd: 0, unknown: false, msgs: new Set(), seen: new Map(), byModel: new Map(), committed: false };
   log(t, { kind: 'start', model: t.model || opt.def, effort: t.effort, attempt: t.attempts, resume: !!t.sessionId });
@@ -564,7 +597,7 @@ function mask(t, i) {
 function pub(t) { const { live, ...rest } = t; return rest; }
 function list({ privacy = false } = {}) {
   load(); const opts = { claude: options('claude'), codex: options('codex') };
-  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })) } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
+  return { tasks: tasks.map((t, i) => privacy ? mask(pub(t), i) : pub(t)), settings: privacy ? { ...settings, templates: (settings.templates || []).map((x, i) => ({ ...x, name: 'template ' + (i + 1), desc: '', dir: '', testCmd: '' })), schedules: (settings.schedules || []).map(x => ({ ...x, tpl: 'template ' + ((settings.templates || []).findIndex(t => t.name === x.tpl) + 1) })) } : settings, profiles: PROFILES, options: opts, roles: Object.keys(ROLES), privacy };
 }
 function get(id, { privacy = false } = {}) {
   load(); const i = tasks.findIndex(x => x.id === id); if (i < 0) return null;
