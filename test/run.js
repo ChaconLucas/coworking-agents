@@ -260,6 +260,12 @@ sleepK.kill();
   assert.ok(html.includes('data-tpermit="tk1" data-allow="1"') && html.includes('data-always="1"') && html.includes('npm test'), 'allow, always and deny on the card');
   run('taskData.tasks = [asking]; globalThis.reply = () => ({ ok: true, tasks: [asking], options: taskData.options }); reportEl.hidden = true'); await run('pollTasks()');
   assert.ok(run("notices.some(n => n.key === 'ask:tk1' && n.ref.ask)"), 'a permission question becomes a notice');
+  // limits: at the pace of the last hour, a window that runs out before it resets is announced once
+  run(`var R = Date.now() + 3 * 36e5; notices = []; paceSaid = []; paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 50, resetsAt: R }]]]);
+    data = { now: Date.now(), people: [], limits: { claude: { primary: { usedPercent: 70, resetsAt: R } } } }; checkAlerts()`);
+  assert.ok(run("notices.some(n => n.key === 'pace:claude:5h')"), 'running out before the reset is announced');
+  run(`notices = []; paceSaid = []; alerted.clear(); paceSamples = new Map([['claude:5h', [{ at: Date.now() - 18e5, pct: 68, resetsAt: R }]]]); checkAlerts()`);
+  assert.ok(!run("notices.some(n => n.key === 'pace:claude:5h')"), 'a slow pace that lasts until the reset is not');
   })().catch(e => { console.error(e); process.exit(1); });
 }
 

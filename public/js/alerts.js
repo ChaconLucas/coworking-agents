@@ -36,8 +36,26 @@ function checkAlerts() {
         const key = `lim:${id}:${win}:${step}:${w.resetsAt}`;
         if (w.usedPercent >= step && !alerted.has(key)) {
           alerted.add(key);
+          if (typeof pushNotice === 'function') { const label = `${(AGENT[id] || {}).label || id} · ${win === '5h' ? T.usage.fiveHour : T.usage.week}`; pushNotice(`lim:${id}:${win}`, step >= 95 ? 'warn' : 'ok', `${A.limit(Math.round(w.usedPercent))} · ${label}`, `${T.usage.resets} ${untilText(w.resetsAt)}. ${A.limitTip}`, {}); }
           if (!firstAlertPass) { const label = `${(AGENT[id] || {}).label || id} · ${win === '5h' ? T.usage.fiveHour : T.usage.week}`; toast(`<b>${esc(A.limit(Math.round(w.usedPercent)))}</b>${esc(label)} · ${esc(T.usage.resets)} ${esc(untilText(w.resetsAt))}`, step >= 95 ? 'bad' : 'warn'); notifyOS(A.limit(Math.round(w.usedPercent)), `${label} · ${T.usage.resets} ${untilText(w.resetsAt)}`); }
         }
+      }
+    }
+  }
+  // pace: at the rate of the last ~hour, will the window run out before it resets? said once per window
+  for (const [id, l] of Object.entries(L)) {
+    for (const [win, w] of [['5h', l && l.primary], ['week', l && l.secondary]]) {
+      if (!w || !w.resetsAt) continue;
+      const k = id + ':' + win, list = (paceSamples.get(k) || []).filter(x => x.resetsAt === w.resetsAt && data.now - x.at < 36e5);
+      if (!list.length || list[list.length - 1].pct !== w.usedPercent) list.push({ at: data.now, pct: w.usedPercent, resetsAt: w.resetsAt });
+      paceSamples.set(k, list); try { store.set('pace', JSON.stringify([...paceSamples])); } catch {}
+      const first = list[0], hrs = (data.now - first.at) / 36e5, rate = hrs >= .25 ? (w.usedPercent - first.pct) / hrs : 0; // % per hour
+      if (rate <= 0 || w.usedPercent < 40 || w.usedPercent >= 100) continue;
+      const left = (100 - w.usedPercent) / rate * 36e5, key = `pace:${k}:${w.resetsAt}`;
+      if (data.now + left < w.resetsAt - 6e5 && !alerted.has(key) && !paceSaid.includes(key)) {
+        alerted.add(key); paceSaid = [...paceSaid.slice(-20), key]; try { store.set('paceSaid', JSON.stringify(paceSaid)); } catch {} const label = `${(AGENT[id] || {}).label || id} · ${win === '5h' ? T.usage.fiveHour : T.usage.week}`;
+        if (typeof pushNotice === 'function') pushNotice('pace:' + k, 'warn', A.pace(label, untilText(data.now + left)), A.paceWhy(Math.round(w.usedPercent), Math.round(rate), untilText(w.resetsAt)), {});
+        notifyOS(A.pace(label, untilText(data.now + left)), A.paceWhy(Math.round(w.usedPercent), Math.round(rate), untilText(w.resetsAt)));
       }
     }
   }
@@ -74,6 +92,8 @@ function checkAlerts() {
   }
   firstAlertPass = false;
 }
+let paceSaid = []; try { paceSaid = JSON.parse(store.get('paceSaid', '[]')) || []; } catch { paceSaid = []; }
+let paceSamples = new Map(); try { paceSamples = new Map(JSON.parse(store.get('pace', '[]'))); } catch { paceSamples = new Map(); }
 let firstAlertPass = true; // what's already true on load is noted, not announced
 
 async function compactAgent(id, btn) {
