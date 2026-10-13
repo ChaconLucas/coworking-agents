@@ -1,5 +1,10 @@
 'use strict';
 // ---------------- top bar ----------------
+const clashSaid = new Set();
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-clash-pause]'); if (!b || !confirm(T.clashPauseSure)) return;
+  b.disabled = true; await api('api/tasks', { op: 'cancel', id: b.dataset.clashPause }); if (typeof pollTasks === 'function') pollTasks();
+});
 function renderBar() {
   document.getElementById('host').textContent = prog.officeName || data.host || '';
   const c = { work: 0, need: 0, turn: 0, sleep: 0 };
@@ -38,8 +43,14 @@ function renderBar() {
   document.title = (c.need ? `(${c.need}) ` : '') + 'coworking-agents';
   const box = document.getElementById('clashes');
   const names = id => (data.people.find(p => p.id === id) || {}).name || id.slice(0, 6);
-  box.innerHTML = (data.fileClashes || []).map(cl => `<div>${T.fileClash(cl.who.map(names).map(esc).join(T.and), esc(cl.file), esc(cl.repo))}</div>`).join('') + data.clashes.map(cl => `<div>${T.clash(cl.who.map(names).map(esc).join(T.and), esc(cl.repo))}</div>`).join('');
+  // an office task in the clash can be paused (cancelled; Retry picks it up later in the same session)
+  const pausable = cl => cl.who.map(id => typeof taskOfPerson === 'function' && taskOfPerson(id)).filter(t => t && t.state === 'running');
+  box.innerHTML = (data.fileClashes || []).map(cl => `<div>${T.fileClash(cl.who.map(names).map(esc).join(T.and), esc(cl.file), esc(cl.repo))}${pausable(cl).map(t => ` <button class="btn small" data-clash-pause="${esc(t.id)}">⏸ ${esc(T.clashPause(t.title))}</button>`).join('')}</div>`).join('') + data.clashes.map(cl => `<div>${T.clash(cl.who.map(names).map(esc).join(T.and), esc(cl.repo))}</div>`).join('');
   box.hidden = !data.clashes.length && !(data.fileClashes || []).length;
+  for (const cl of data.fileClashes || []) { // one notice per file and pair
+    const key = 'fclash:' + cl.file + ':' + cl.who.slice().sort().join(',');
+    if (typeof pushNotice === 'function' && !clashSaid.has(key)) { clashSaid.add(key); pushNotice(key, 'warn', T.clashTitle(cl.file || cl.repo), T.clashWhy(cl.who.map(names).join(T.and)), {}); }
+  }
   const empty = document.getElementById('empty');
   empty.innerHTML = T.empty; empty.hidden = data.people.length > 0;
   for (const [id, on, label] of [['btn-notify', !!notifyOn, T.notify], ['btn-sound', soundOn, T.sound], ['btn-radio', radioOn, T.radio.label], ['btn-walk', playerOn, T.walk.label]]) {
