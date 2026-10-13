@@ -131,7 +131,9 @@ function renderOffice() {
     <h3>${esc(O.groups.mascot)}</h3><div class="opts">${MASCOTS.map(x => `<button class="opt ${x === m ? 'on' : ''}" data-opt="mascot" data-val="${x}">${esc(L.mascot[x])}</button>`).join('')}</div>
     ${row('plants', STYLE.plants)}
     ${row('station', STYLE.station)}
-    ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}`;
+    ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}
+    <h3>${esc(T.backup.title)}</h3><p class="note">${esc(T.backup.sub)}</p>
+    <p><button class="btn small" data-backup="export">⬇ ${esc(T.backup.export)}</button> <button class="btn small" data-backup="import">⬆ ${esc(T.backup.import)}</button><input type="file" accept="application/json,.json" data-backup-file hidden></p><p class="note" id="backup-msg"></p>`;
   const face = document.getElementById('you-face'); if (face) face.appendChild(youPortrait());
 }
 reportEl.addEventListener('click', e => {
@@ -157,3 +159,29 @@ function updatePreview() {
   pv.style.height = h + 'px'; pv.width = w; pv.height = h;
   const c = pv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(src, 0, 0, src.width, crop, 0, 0, pv.width, pv.height);
 }
+
+// moving to another computer: templates and queue settings, decor, outfits, achievements and progress in one JSON file
+const BACKUP_SETTINGS = ['maxParallel', 'maxAttempts', 'autoApply', 'autoMax', 'autoPerTask', 'autoReview', 'monthGoal'];
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-backup]'); if (!b) return;
+  if (b.dataset.backup === 'import') return document.querySelector('[data-backup-file]').click();
+  const st = (typeof taskData !== 'undefined' && taskData.settings) || {};
+  const out = { app: 'coworking-agents', kind: 'backup', version: 1, exportedAt: new Date().toISOString(), settings: Object.fromEntries(BACKUP_SETTINGS.filter(k => st[k] !== undefined).map(k => [k, st[k]])), templates: st.templates || [], progress: prog };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
+  a.download = `coworking-agents-backup-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  const m = document.getElementById('backup-msg'); if (m) m.textContent = '✓ ' + T.backup.exported;
+});
+document.addEventListener('change', async e => {
+  const f = e.target.closest('[data-backup-file]'); if (!f || !f.files[0]) return;
+  const m = document.getElementById('backup-msg'), say = t => { if (m) m.textContent = t; };
+  let j = null; try { j = JSON.parse(await f.files[0].text()); } catch {} f.value = '';
+  if (!j || j.app !== 'coworking-agents' || j.kind !== 'backup') return say('⚠ ' + T.backup.bad);
+  if (!confirm(T.backup.sure)) return;
+  const st = Object.fromEntries(BACKUP_SETTINGS.filter(k => j.settings && j.settings[k] !== undefined).map(k => [k, j.settings[k]]));
+  if (Object.keys(st).length) await api('api/tasks', { op: 'settings', ...st }); // the server validates every value
+  let n = 0; for (const t of Array.isArray(j.templates) ? j.templates.slice(0, 30) : []) if ((await api('api/tasks', { op: 'template', ...t })).ok) n++;
+  if (j.progress && typeof j.progress === 'object') { for (const [k, v] of Object.entries(j.progress)) if (k in prog || ['style', 'placed', 'officeName', 'theme', 'mascot', 'avatars', 'owned', 'record', 'levels', 'spent'].includes(k)) prog[k] = v; saveProgress(); }
+  if (typeof pollTasks === 'function') await pollTasks();
+  renderReport(); if (typeof applyAvatars === 'function') applyAvatars();
+  const m2 = document.getElementById('backup-msg'); if (m2) m2.textContent = '✓ ' + T.backup.imported(n);
+});
