@@ -60,6 +60,7 @@ function achFacts() {
     models: models.size,
     skills: Math.max(0, ...cred.map(c => (c.skills || []).length)), mcps: Math.max(0, ...cred.map(c => (c.mcps || []).length)),
     parallel: achCount('parallel'), aiKinds: achCount('aiKinds'), pets: achCount('pets'), zeroQueue: achCount('zeroQueue'),
+    cleanTasks: achCount('cleanTasks'), reviewOk: achCount('reviewOk'), underGoal: achCount('underGoal'),
     clashes: achCount('clashes'), team: achCount('team'), bigCtx: achCount('bigCtx'), files: achCount('files'), sessionTools: achCount('sessionTools'),
     fast: achCount('fast'), patience: achCount('patience'), compacts: achCount('compacts'), focusDone: achCount('focusDone'),
     replay: achCount('replay'), avatars: achCount('avatars'), lights: achCount('lights'), weatherDays: achCount('weatherDays'),
@@ -110,6 +111,9 @@ const ACH = [
   { id: 'writer', g: 'live', icon: '📄', fact: 'files', steps: [5, 15, 30, 60, 100] },
   { id: 'workaholic', g: 'live', icon: '⚙', fact: 'sessionTools', steps: [200, 500, 1000, 2000, 4000] },
   { id: 'bump', g: 'live', icon: '💥', fact: 'clashes', steps: [1, 5, 20, 50, 100] },
+  { id: 'cleanrun', g: 'live', icon: '🎯', fact: 'cleanTasks', steps: [10, 25, 50, 100, 250] },
+  { id: 'approved', g: 'live', icon: '🔎', fact: 'reviewOk', steps: [1, 5, 20, 50, 100] },
+  { id: 'thrifty', g: 'live', icon: '🐷', fact: 'underGoal', steps: [1, 4, 12, 26, 52] },
   { id: 'fast', g: 'live', icon: '🏃', fact: 'fast', steps: [1, 10, 50, 200, 500] },
   { id: 'patience', g: 'live', icon: '🗿', fact: 'patience', steps: [1, 5, 15, 40, 100] },
   { id: 'inbox', g: 'live', icon: '✓', fact: 'zeroQueue', steps: [1, 10, 50, 150, 500] },
@@ -203,6 +207,17 @@ function checkAchievements() {
   for (const p of live) if (p.repo) { achAdd('repos', p.repo.name); if (p.branch && p.branch !== 'HEAD') achAdd('branches', p.repo.name + ':' + p.branch); }
   { const clean = trees.size >= 3 && [...trees.values()].every(g => g.dirty === 0); if (clean && !achClean) achBump('cleanDesk'); achClean = clean; }
   for (const c of data.fileClashes || []) achAdd('clashes', c.file + '|' + c.who.slice().sort().join(','));
+  // office tasks: done on the first attempt, a review that said OK, and weeks spent under the month's cost goal
+  for (const t of (typeof taskData !== 'undefined' && taskData.tasks) || []) {
+    if (t.state === 'done' && t.attempts === 1) achAdd('cleanTasks', t.id);
+    if (t.review && /^\s*OK\b/i.test(t.review.text || '')) achAdd('reviewOk', t.id);
+  }
+  { const goal = Number(((typeof taskData !== 'undefined' && taskData.settings) || {}).monthGoal) || 0, days = (usageData && usageData.days) || {};
+    if (goal) {
+      const keys = Array.from({ length: 7 }, (_, i) => { const d = new Date(Date.now() - (i + 1) * 864e5); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+      const worked = keys.filter(k => days[k] && days[k].tools >= 10).length, spent = keys.reduce((n, k) => n + ((days[k] && days[k].usd) || 0), 0);
+      if (worked >= 3 && spent <= goal * 7 / 30) achAdd('underGoal', keys[keys.length - 1]); // one per finished 7-day window
+    } }
   const need = live.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
   if (achQueueWas >= 2 && need === 0) achBump('zeroQueue');
   achQueueWas = need;
