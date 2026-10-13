@@ -8,8 +8,8 @@ function run(argv) {
   const statusFile = argv[0], iconFile = argv[1];
   const pt = String(ObjC.unwrap($.NSLocale.preferredLanguages.firstObject) || '').startsWith('pt');
   const L = pt
-    ? { open: 'Abrir o escritório', hide: 'Esconder o ícone', closed: 'O escritório está fechado', need: 'Precisam de você', working: n => `${n} trabalhando`, needN: n => `${n} precisa${n > 1 ? 'm' : ''} de você`, nobody: 'Ninguém precisa de você agora' }
-    : { open: 'Open the office', hide: 'Hide the icon', closed: 'The office is closed', need: 'Need you', working: n => `${n} working`, needN: n => `${n} need${n > 1 ? '' : 's'} you`, nobody: 'Nobody needs you right now' };
+    ? { open: 'Abrir o escritório', hide: 'Esconder o ícone', closed: 'O escritório está fechado', need: 'Precisam de você', asks: 'Pedem permissão', workers: 'Trabalhando', today: 'Gasto hoje', working: n => `${n} trabalhando`, needN: n => `${n} precisa${n > 1 ? 'm' : ''} de você`, nobody: 'Ninguém precisa de você agora' }
+    : { open: 'Open the office', hide: 'Hide the icon', closed: 'The office is closed', need: 'Need you', asks: 'Asking permission', workers: 'Working', today: 'Spent today', working: n => `${n} working`, needN: n => `${n} need${n > 1 ? '' : 's'} you`, nobody: 'Nobody needs you right now' };
 
   const app = $.NSApplication.sharedApplication;
   app.setActivationPolicy($.NSApplicationActivationPolicyAccessory);
@@ -23,7 +23,7 @@ function run(argv) {
     name: 'CWMenuTarget',
     methods: {
       'tick:': { types: ['void', ['id']], implementation: function () { tick(); } },
-      'openAt:': { types: ['void', ['id']], implementation: function (sender) { const u = urls[sender.tag]; if (u) $.NSWorkspace.sharedWorkspace.openURL($.NSURL.URLWithString(u)); } },
+      'openAt:': { types: ['void', ['id']], implementation: function (sender) { const u = urls[sender.tag]; if (u && /^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(u)) $.NSWorkspace.sharedWorkspace.openURL($.NSURL.URLWithString(u)); } }, // only the local office
       'quit:': { types: ['void', ['id']], implementation: function () { app.terminate($()); } },
     },
   });
@@ -36,16 +36,26 @@ function run(argv) {
     const alive = s && Date.now() - s.at < 15000;
     if (!alive) { staleSince = staleSince || Date.now(); if (Date.now() - staleSince > 60000) app.terminate($()); }
     else staleSince = 0;
-    const key = alive ? JSON.stringify([s.work, s.need, s.list, s.url]) : 'closed';
+    const key = alive ? JSON.stringify([s.work, s.need, s.list, s.url, s.usd, s.limits, s.asks, s.workers]) : 'closed';
     if (key === last) return; last = key;
-    item.button.title = !alive ? ' –' : s.need ? ` ❗${s.need}  ●${s.work}` : ` ●${s.work}`;
+    const title = !alive ? ' –' : s.need ? ` ❗${s.need}  ●${s.work}` : ` ●${s.work}`;
+    if (alive && s.need) { // red when someone needs you
+      const attrs = $.NSMutableDictionary.alloc.init;
+      attrs.setObjectForKey($.NSColor.systemRedColor, $.NSForegroundColorAttributeName);
+      attrs.setObjectForKey($.NSFont.boldSystemFontOfSize(0), $.NSFontAttributeName);
+      item.button.attributedTitle = $.NSAttributedString.alloc.initWithStringAttributes(title, attrs);
+    } else item.button.title = title;
     const menu = $.NSMenu.alloc.init; urls = [];
     if (!alive) add(menu, L.closed);
     else {
       add(menu, `${L.working(s.work)} · ${L.needN(s.need)}`);
+      if (s.usd) add(menu, `${L.today}: US$ ${s.usd.toFixed(2)}`);
+      for (const l of s.limits || []) add(menu, `${l.label}: ${l.pct}%`);
       menu.addItem($.NSMenuItem.separatorItem);
       if (s.list.length) { add(menu, L.need); for (const p of s.list) { urls.push(p.url); add(menu, `❗ ${p.name}${p.title ? ' — ' + p.title : ''}`, 'openAt:', urls.length - 1); } }
       else add(menu, L.nobody);
+      if ((s.asks || []).length) { menu.addItem($.NSMenuItem.separatorItem); add(menu, L.asks); for (const a of s.asks) { urls.push(a.url); add(menu, `🔐 ${a.title} — ${a.tool}`, 'openAt:', urls.length - 1); } }
+      if ((s.workers || []).length) { menu.addItem($.NSMenuItem.separatorItem); add(menu, L.workers); for (const w of s.workers) add(menu, `● ${w.name} — ${w.doing}`); }
       menu.addItem($.NSMenuItem.separatorItem);
       urls.push(s.url); add(menu, L.open, 'openAt:', urls.length - 1);
     }

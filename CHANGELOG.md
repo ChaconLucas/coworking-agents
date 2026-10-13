@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Tray icon on Windows (PowerShell + Windows Forms: red dot, menu, balloons) and Linux (zenity icon and tooltip, or notify-send notices); on macOS a red count, today's spend, limits, who is working and tasks asking permission; system notifications when nobody has the office open, outside quiet hours
 - macOS menu bar icon (Personalise or `--menubar`): how many are working and who needs you; clicking one opens the office on that agent; it goes away when the office closes. No dependency: the system's own JavaScript for Automation reads a private status file
 - Office events: confetti when a task's tests pass, a PR is opened or a week ends under the cost goal; rain inside the office when tests or a task fail (calmer with reduced motion)
 - Office mood: *stuck* when many agents wait on you or sit silent — the room turns grey-blue and the radio slows; a warm tone when everything flows

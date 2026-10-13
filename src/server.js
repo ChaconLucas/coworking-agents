@@ -51,6 +51,12 @@ function privateUsage(u, privacy) {
   return strip(u);
 }
 
+// quiet hours (same rule as the page): a daily window that may cross midnight
+function quietAt(q, d = new Date()) {
+  if (!q || !q.on || !/^\d\d:\d\d$/.test(q.from || '') || !/^\d\d:\d\d$/.test(q.to || '')) return false;
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  return q.from <= q.to ? hm >= q.from && hm < q.to : hm >= q.from || hm < q.to;
+}
 // one at a time for the heavy ones (reading days of logs, calling gh, removing worktrees): a burst of requests cannot pile up
 const inFlight = new Set();
 async function once(key, fn) { if (inFlight.has(key)) return { ok: false, reason: 'busy' }; inFlight.add(key); try { return await fn(); } finally { inFlight.delete(key); } }
@@ -79,7 +85,16 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   const timer = setInterval(() => { if (clients.size) tick(); }, interval);
   let phoneInfo = null, phoneReason = phone ? 'starting' : 'off', visitNow = null, baseUrl = '';
   const mb = require('./menubar');
-  const mbTimer = setInterval(() => { if (mb.running()) try { mb.write(snapshot({ privacy })); } catch {} }, 2000); mbTimer.unref();
+  // what the tray icon gets besides the snapshot: today's spend, tasks asking permission, and whether it may notify
+  // (only when no office page is open, so nothing is announced twice, and never in the quiet hours set in Personalise)
+  const ptLang = /^pt/i.test(process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || '');
+  let usdToday = 0, usdAt = 0;
+  const mbExtra = () => {
+    if (Date.now() - usdAt > 60000) { usdAt = Date.now(); try { const u = usage(), d = new Date(), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); usdToday = (u.days && u.days[k] && u.days[k].usd) || 0; } catch {} }
+    const st = tasks.list({ privacy }), q = st.settings.quiet;
+    return { usd: usdToday, notify: clients.size === 0 && !quietAt(q), asks: st.tasks.filter(t => t.ask).map(t => ({ id: t.id, title: t.title, tool: t.ask.tool })), needsYou: ptLang ? 'precisa de você' : 'needs you', weekLabel: ptLang ? 'semana' : 'week' };
+  };
+  const mbTimer = setInterval(() => { if (mb.running()) try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }, 2000); mbTimer.unref();
 
   const server = http.createServer((req, res) => {
     try { handle(req, res); } catch { if (!res.headersSent) send(res, 500, 'text/plain', 'error'); else res.destroy(); }
@@ -289,13 +304,13 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
     // the phone link and its QR code, only to this machine (the phone server itself never serves this)
     if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')), visit: visitNow && visitNow.until > Date.now() ? { ...visitNow, qr: require('./qr').encode(visitNow.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : null } : { on: false, reason: phoneReason }));
-    if (url.pathname === '/api/menubar' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ supported: mb.supported() && !demo, on: mb.running() }));
+    if (url.pathname === '/api/menubar' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ supported: mb.supported() && !demo, on: mb.running(), how: mb.how(), platform: process.platform }));
     if (url.pathname === '/api/menubar' && req.method === 'POST') { // turn the macOS menu bar icon on or off (remembered for next time)
       const origin = req.headers.origin || '';
       if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
       let body = '';
       req.on('data', c => { body += c; if (body.length > 1e3) req.destroy(); });
-      req.on('end', () => { let m = {}; try { m = JSON.parse(body); } catch {} if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}'); const on = !!m.on; tasks.op({ op: 'settings', menubar: on }); const r = on ? mb.start({ base: baseUrl, token }) : (mb.stop(), { ok: true }); if (on) mb.write(snapshot({ privacy })); send(res, 200, 'application/json', JSON.stringify({ ...r, on: mb.running() })); });
+      req.on('end', () => { let m = {}; try { m = JSON.parse(body); } catch {} if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}'); const on = !!m.on; tasks.op({ op: 'settings', menubar: on }); const r = on ? mb.start({ base: baseUrl, token }) : (mb.stop(), { ok: true }); if (on) mb.write(snapshot({ privacy }), mbExtra()); send(res, 200, 'application/json', JSON.stringify({ ...r, on: mb.running() })); });
       return;
     }
     if (url.pathname === '/api/visit' && req.method === 'POST') { // start/stop a visit and send its picture: same guards as every POST, and only with the phone panel on
@@ -333,7 +348,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     server.once('error', reject);
     server.listen(port, host, async () => {
       const base = `http://${host === '0.0.0.0' ? 'localhost' : host}:${server.address().port}`; baseUrl = base;
-      if (!demo && (menubar || tasks.list().settings.menubar)) { mb.start({ base, token }); try { mb.write(snapshot({ privacy })); } catch {} }
+      if (!demo && (menubar || tasks.list().settings.menubar)) { mb.start({ base, token }); try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }
       if (phone) { // opt-in: a separate, restricted server on the LAN address (see src/phone.js)
         try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
         catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; }

@@ -195,14 +195,14 @@ document.addEventListener('change', async e => {
 document.addEventListener('change', e => {
   const k = e.target.closest('[data-soundkind]'), q = e.target.closest('[data-quiet]');
   if (k) { const off = { ...(store.get('soundOff', {}) || {}) }; off[k.dataset.soundkind] = !k.checked; store.set('soundOff', off); if (k.checked) playTune(k.dataset.soundkind); }
-  if (q) { const cur = { from: '22:00', to: '08:00', ...(store.get('quiet', null) || {}) }; cur[q.dataset.quiet] = q.type === 'checkbox' ? q.checked : q.value; store.set('quiet', cur); renderReport(); }
+  if (q) { const cur = { from: '22:00', to: '08:00', ...(store.get('quiet', null) || {}) }; cur[q.dataset.quiet] = q.type === 'checkbox' ? q.checked : q.value; store.set('quiet', cur); api('api/tasks', { op: 'settings', quiet: cur }); renderReport(); } // the tray icon follows it too
 });
 // the macOS menu bar icon switch: asks the server whether it can (macOS, not demo) and whether it is on
 function syncMenubar() {
-  fetch('api/menubar').then(r => r.json()).then(d => { const c = document.querySelector('[data-menubar]'), m = document.querySelector('[data-mb-msg]'); if (!c) return; c.disabled = !d.supported; c.checked = !!d.on; if (m) m.textContent = d.supported ? '' : T.menubar.notMac; }).catch(() => {});
+  fetch('api/menubar').then(r => r.json()).then(d => { const c = document.querySelector('[data-menubar]'), m = document.querySelector('[data-mb-msg]'); if (!c) return; c.disabled = !d.supported; c.checked = !!d.on; if (m) m.textContent = d.supported ? (d.how === 'notify' ? T.menubar.notifyOnly : '') : d.platform === 'linux' ? T.menubar.fail.linuxTools : T.menubar.notMac; }).catch(() => {});
 }
 document.addEventListener('change', async e => {
   const c = e.target.closest('[data-menubar]'); if (!c) return;
   c.disabled = true; const r = await fetch('api/menubar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: c.checked }) }).then(x => x.json()).catch(() => ({ ok: false }));
-  c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-mb-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.menubar.shown : '') : '⚠';
+  c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-mb-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.menubar.shown[r.kind] || T.menubar.shown.mac : '') : '⚠ ' + (T.menubar.fail[r.reason] || r.reason || '');
 });

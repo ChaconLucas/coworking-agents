@@ -359,6 +359,8 @@ sleepK.kill();
   const { status } = require('../src/menubar');
   const st = status({ people: [{ id: 'a&b=1', name: 'ada', title: 'docs', state: 'needs_you' }, { id: 'b', state: 'thinking' }, { id: 'c', state: 'idle' }, { id: 'd', state: 'thinking', leaving: true }] }, 'http://127.0.0.1:4777', 'tok');
   assert.deepStrictEqual([st.work, st.need, st.list[0].url], [1, 1, 'http://127.0.0.1:4777/?t=tok&focus=a%26b%3D1'], 'menu bar status');
+  const st2 = status({ people: [{ id: 'w', name: 'bob', state: 'thinking', doing: { tool: 'Bash', what: 'npm test' } }], limits: { claude: { primary: { usedPercent: 41.6 }, secondary: { usedPercent: 9 } } } }, 'http://127.0.0.1:1', 't', { usd: 3.5, notify: true, asks: [{ id: 'k1', title: 'Build', tool: 'Bash' }], weekLabel: 'semana' });
+  assert.deepStrictEqual([st2.usd, st2.notify, st2.limits.map(l => l.label + ' ' + l.pct), st2.asks[0].url, st2.workers[0].doing], [3.5, true, ['Claude 5h 42', 'Claude semana 9'], 'http://127.0.0.1:1/?t=t&task=k1', 'Bash npm test'], 'tray extras');
 }
 
 // hot files: counted per session, newest first among equals, nothing in private mode
@@ -810,6 +812,10 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.ok(!lastArgs().join(' ').includes('Use pnpm here.'), 'not in another repo');
   assert.deepStrictEqual(tasks.list({ privacy: true }).settings.repoNotes, {}, 'hidden in private mode');
   tasks.op({ op: 'repoNote', dir: proj, text: '' }); assert.ok(!tasks.list().settings.repoNotes[proj], 'empty removes it');
+
+  // quiet hours kept on the server too (for the tray icon), validated
+  tasks.op({ op: 'settings', quiet: { on: true, from: '23:00', to: '99:99' } });
+  assert.deepStrictEqual(tasks.list().settings.quiet, { on: true, from: '23:00', to: '08:00' }, 'quiet hours validated');
 
   // GitHub: issues become tasks; a PR review is read-only and carries the diff as data
   const gi = await tasks.ghIssues(proj);

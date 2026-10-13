@@ -725,6 +725,10 @@ function sendVisitFrame() {
 }
 setInterval(sendVisitFrame, 5000);
 api('api/phone').then(d => { if (d && d.visit) visitUntil = d.visit.until; }).catch(() => {});
+// ?task=<id> (from the tray icon): open that task, on its permission question
+{ const want = new URLSearchParams(location.search).get('task'); if (want) setTimeout(async () => { openReport('tasks'); await pollTasks(); taskSel = want; loadTask(want); }, 1200); }
+// the tray icon follows the quiet hours set in this browser
+setTimeout(() => { const q = store.get('quiet', null); if (q) api('api/tasks', { op: 'settings', quiet: q }); }, 2000);
 // ?focus=<id> (from the menu bar icon): open that agent's panel once it is in the office
 { const want = new URLSearchParams(location.search).get('focus'); if (want) { let tries = 0; const iv = setInterval(() => { tries++; if (data && data.people.some(p => p.id === want)) { clearInterval(iv); selected = want; renderOverlay(); renderPanel(); } else if (tries > 20) clearInterval(iv); }, 500); } }
 // TV mode: only the office and the counters, big, full screen; Esc or the corner button leaves
