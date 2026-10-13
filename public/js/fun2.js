@@ -42,8 +42,8 @@ function missionsHtml() {
 }
 
 // ---- your outfit: hats, shades and shirts from the shop, worn by your character ----
-const OUTFIT = { cap: 'hat', crown: 'hat', headphones: 'hat', party: 'hat', shades: 'face', shirt_gold: 'shirt', shirt_pink: 'shirt', shirt_black: 'shirt' };
-const SHIRTS = { shirt_gold: '#d9a441', shirt_pink: '#e8579a', shirt_black: '#2a2630' };
+const OUTFIT = { cap: 'hat', crown: 'hat', headphones: 'hat', party: 'hat', beanie: 'hat', bow: 'hat', wizard: 'hat', shades: 'face', glasses: 'face', mustache: 'face', shirt_gold: 'shirt', shirt_pink: 'shirt', shirt_black: 'shirt', shirt_green: 'shirt', shirt_blue: 'shirt' };
+const SHIRTS = { shirt_gold: '#d9a441', shirt_pink: '#e8579a', shirt_black: '#2a2630', shirt_green: '#3fa66b', shirt_blue: '#3b5dc9' };
 function wearing(slot) { const w = (prog.style || {})['wear_' + slot]; return w && owns(w) ? w : ''; }
 function youLook() {
   const lk = Art.look('you:' + (avatars.__you || 0)), sh = wearing('shirt');
@@ -55,6 +55,11 @@ function drawOutfit(x, y) { // over the standing sprite's head (top at y - 2)
   if (hat === 'crown') { r(x + 3, y - 4, 10, 4, '#ffd84d'); r(x + 3, y - 6, 2, 2, '#ffd84d'); r(x + 7, y - 7, 2, 3, '#ffd84d'); r(x + 11, y - 6, 2, 2, '#ffd84d'); r(x + 7, y - 3, 2, 1, '#e43b44'); }
   if (hat === 'headphones') { r(x + 1, y - 3, 14, 2, PAL.ink); r(x, y + 3, 3, 5, '#3b5dc9'); r(x + 13, y + 3, 3, 5, '#3b5dc9'); }
   if (hat === 'party') Art.drawHat('party', x, y - 2);
+  if (hat === 'beanie') { r(x + 2, y - 3, 12, 4, '#3b5dc9'); r(x + 2, y, 12, 1, '#26408f'); r(x + 4, y - 2, 1, 2, '#5b7ce0'); r(x + 8, y - 2, 1, 2, '#5b7ce0'); r(x + 7, y - 5, 2, 2, '#ffffff'); }
+  if (hat === 'bow') { r(x + 10, y - 2, 2, 3, '#e8579a'); r(x + 14, y - 2, 2, 3, '#e8579a'); r(x + 12, y - 1, 2, 2, '#b8336f'); }
+  if (hat === 'wizard') { r(x + 1, y - 1, 14, 2, '#5a3a9c'); r(x + 4, y - 4, 8, 3, '#6b45b8'); r(x + 6, y - 7, 5, 3, '#6b45b8'); r(x + 8, y - 9, 3, 2, '#6b45b8'); r(x + 7, y - 3, 1, 1, '#ffd84d'); r(x + 9, y - 6, 1, 1, '#ffd84d'); }
+  if (wearing('face') === 'glasses') { r(x + 3, y + 4, 4, 1, PAL.ink); r(x + 3, y + 6, 4, 1, PAL.ink); r(x + 3, y + 5, 1, 1, PAL.ink); r(x + 6, y + 5, 1, 1, PAL.ink); r(x + 9, y + 4, 4, 1, PAL.ink); r(x + 9, y + 6, 4, 1, PAL.ink); r(x + 9, y + 5, 1, 1, PAL.ink); r(x + 12, y + 5, 1, 1, PAL.ink); r(x + 7, y + 5, 2, 1, PAL.ink); }
+  if (wearing('face') === 'mustache') { r(x + 5, y + 8, 6, 1, '#5a3a22'); r(x + 4, y + 9, 2, 1, '#5a3a22'); r(x + 10, y + 9, 2, 1, '#5a3a22'); }
   if (wearing('face') === 'shades') { r(x + 3, y + 5, 10, 2, PAL.ink); r(x + 4, y + 5, 3, 1, '#3a4566'); r(x + 9, y + 5, 3, 1, '#3a4566'); }
 }
 function outfitHtml() {

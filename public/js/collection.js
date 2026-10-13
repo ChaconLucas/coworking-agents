@@ -100,6 +100,8 @@ const SHOP = [
   { id: 'bigtank', price: 900, icon: '🐠' },
   { id: 'cap', price: 150, icon: '🧢' }, { id: 'headphones', price: 300, icon: '🎧' }, { id: 'shades', price: 250, icon: '🕶' }, { id: 'party', price: 200, icon: '🥳' },
   { id: 'shirt_pink', price: 300, icon: '👕' }, { id: 'shirt_black', price: 300, icon: '👕' }, { id: 'shirt_gold', price: 400, icon: '👕' }, { id: 'crown', price: 1500, icon: '👑' },
+  { id: 'beanie', price: 200, icon: '🧶' }, { id: 'bow', price: 150, icon: '🎀' }, { id: 'wizard', price: 700, icon: '🧙' }, { id: 'glasses', price: 200, icon: '👓' }, { id: 'mustache', price: 150, icon: '🥸' },
+  { id: 'shirt_green', price: 300, icon: '👕' }, { id: 'shirt_blue', price: 300, icon: '👕' },
 ];
 const owns = id => prog.owned.includes(id);
 function buy(id) {
@@ -113,7 +115,7 @@ function renderShop() {
   const S2 = T.shop, body = reportEl.querySelector('.report-body'), c = coins();
   body.innerHTML = tabsHtml() + `<div class="wallet"><span class="coin"></span><b>${c.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en')}</b> ${esc(T.ach.coins)}<span class="note">${esc(S2.sub)}</span></div>
     <div class="shop">${SHOP.map(it => { const has = owns(it.id), can = c >= it.price; return `<div class="item ${has ? 'owned' : ''}"><span class="ach-ico">${it.icon}</span><div><b>${esc(S2.items[it.id].name)}</b><p>${esc(S2.items[it.id].desc)}</p>
-      ${has ? `<small class="ok">${esc(S2.owned)}</small> <button class="btn small" data-move-item>${esc(S2.move)}</button>` : `<button class="btn small" data-buy="${it.id}" ${can ? '' : 'disabled'}><span class="coin"></span> ${it.price}</button>`}</div></div>`; }).join('')}</div>
+      ${has && typeof OUTFIT !== 'undefined' && OUTFIT[it.id] ? `<small class="ok">${esc(S2.inWardrobe)}</small> <button class="btn small" data-tab="office">${esc(S2.wear)}</button>` : has ? `<small class="ok">${esc(S2.owned)}</small> <button class="btn small" data-move-item>${esc(S2.move)}</button>` : `<button class="btn small" data-buy="${it.id}" ${can ? '' : 'disabled'}><span class="coin"></span> ${it.price}</button>`}</div></div>`; }).join('')}</div>
     ${prog.owned.length ? `<p><button class="btn small" data-move-item>✥ ${esc(S2.decoTitle)}</button></p>` : ''}`;
 }
 reportEl.addEventListener('click', e => { if (e.target.closest('[data-share-card]')) return shareCard(); if (e.target.closest('[data-visit-photo]')) return visitPhoto(); const b = e.target.closest('[data-buy]'); if (b) buy(b.dataset.buy); if (e.target.closest('[data-move-item]')) setDecorating(true); });

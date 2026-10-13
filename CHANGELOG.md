@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Shop: beanie, bow, wizard hat, round glasses, mustache, green and blue shirts; bought outfits say *Wear* and open the wardrobe instead of *Move*
 - Phone panel (opt-in `--phone`): a small page on your Wi-Fi to see who needs you and answer permissions, replies and single-choice questions; its own restricted server and token, QR code in the terminal and in the office
 - Automatic review (opt-in): when a task finishes with changes, a read-only reviewer with the same AI reads the diff and its verdict shows on the original task
 - Task templates: save a request you repeat with its folder and settings; fill the form or create and run with one click
