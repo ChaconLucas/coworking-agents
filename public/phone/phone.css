@@ -42,9 +42,7 @@ h2 small { font-weight: 400; }
 .pill.work { background: #1f6f7a; } .pill.need { background: var(--bad); } .pill.idle { background: #3b5dc9; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 button { font: 700 11px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--accent); border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 3px; padding: 12px; min-height: 44px; }
-a.btn { display: inline-flex; align-items: center; text-decoration: none; font: 700 11px/1 var(--pix); letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--accent); border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--edge); border-radius: 3px; padding: 12px; min-height: 44px; }
-a.btn.ghost { background: var(--surface); color: var(--ink); }
-button:active, a.btn:active { transform: translate(2px, 2px); box-shadow: none; }
+button:active { transform: translate(2px, 2px); box-shadow: none; }
 button.ghost { background: var(--surface); color: var(--ink); }
 button.bad { background: var(--bad); }
 button:disabled { opacity: .5; }

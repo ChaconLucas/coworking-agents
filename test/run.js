@@ -721,41 +721,6 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'claude-vscode' }, 'sonnet', 'low')).reason, 'unsupported', 'VS Code and the app are not typed into');
   assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'cli' }, 'sonnet; rm -rf ~', 'low')).reason, 'text', 'only a model name and a known effort are typed');
 
-  // push: RFC 8291 encryption (the RFC's own example), a VAPID token this key signed, only known push services, gone phones forgotten
-  const push = require('../src/push'); push._reset();
-  const u64 = x => Buffer.from(x, 'base64url');
-  assert.strictEqual(push.encrypt('When I grow up, I want to be a watermelon', { p256dh: 'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4', auth: 'BTBZMqHH6r4Tts7J_aSIgg' }, { asPrivate: u64('yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw'), salt: u64('DGv6ra1nlYgDCS1FRnbzlw') }).toString('base64url'),
-    'DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN', 'push: RFC 8291 example');
-  { const v = push.vapid('https://web.push.apple.com/x'), [tk, k] = v.slice(8).split(', k='), [hh, cc, ss] = tk.split('.'), kb = u64(k);
-    const pub = require('crypto').createPublicKey({ key: { kty: 'EC', crv: 'P-256', x: kb.subarray(1, 33).toString('base64url'), y: kb.subarray(33).toString('base64url') }, format: 'jwk' });
-    assert.ok(require('crypto').verify('sha256', Buffer.from(hh + '.' + cc), { key: pub, dsaEncoding: 'ieee-p1363' }, u64(ss)) && JSON.parse(u64(cc)).aud === 'https://web.push.apple.com', 'push: VAPID signed for that service');
-    assert.strictEqual((fs.statSync(path.join(H, '.config', 'coworking-agents', 'push.json')).mode & 0o777), 0o600, 'push: the key file is private'); }
-  const goodKeys = { p256dh: 'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4', auth: 'BTBZMqHH6r4Tts7J_aSIgg' };
-  for (const e of ['http://web.push.apple.com/x', 'https://evil.example/x', 'https://web.push.apple.com.evil.example/x', 'https://web.push.apple.com:8443/x', 'https://u:p@fcm.googleapis.com/x', 'https://127.0.0.1/x', 'file:///etc/passwd'])
-    assert.strictEqual(push.clean({ endpoint: e, keys: goodKeys }), null, 'push: no subscription to ' + e);
-  assert.strictEqual(push.clean({ endpoint: 'https://web.push.apple.com/x', keys: { ...goodKeys, auth: 'AAAA' } }), null, 'push: real keys only');
-  for (let i = 0; i < 7; i++) assert.ok(push.add({ endpoint: 'https://web.push.apple.com/s' + i, keys: goodKeys }).ok);
-  assert.strictEqual(push.count(), 5, 'push: five phones at most');
-  const pushed = []; push._transport(async (endpoint, headers, body) => { pushed.push({ endpoint, headers, body }); return endpoint.endsWith('s6') ? 410 : 201; });
-  const ps = await push.send({ title: 'T', body: 'B', url: 'http://192.168.0.2:1/?t=' + 'a'.repeat(32) });
-  assert.ok(ps.ok && ps.sent === 4 && push.count() === 4, 'push: a phone that turned notices off is forgotten');
-  assert.ok(pushed.every(x => x.headers['Content-Encoding'] === 'aes128gcm' && /^vapid t=.+, k=/.test(x.headers.Authorization) && !x.body.includes('"title"')), 'push: encrypted, signed');
-  assert.ok(push.link('http://192.168.0.2:1/?t=x').startsWith(push.PAGE + '#k='), 'push: key and way back in the fragment');
-  { const tk = [{ id: 't1', title: 'Build', state: 'running' }], pp = [{ id: 'a', name: 'Ana', state: 'working' }];
-    assert.deepStrictEqual(push.changes(pp, tk, {}).fresh, [], 'push: nothing for what was true at start');
-    const c = push.changes([{ ...pp[0], state: 'needs_you' }], [{ ...tk[0], state: 'done' }], { pt: true });
-    assert.deepStrictEqual([c.fresh.map(m => m.title), c.badge], [['Ana precisa de você', '✓ Build'], 1], 'push: someone needing you and a finished task');
-    assert.deepStrictEqual(push.changes([{ ...pp[0], state: 'needs_you' }], [{ ...tk[0], state: 'done' }], {}).fresh, [], 'push: once each');
-    const lim = pct => ({ claude: { primary: { usedPercent: pct } } }), at = pct => push.changes(pp, tk, { pt: true, limits: lim(pct) }).fresh.map(m => m.title);
-    assert.deepStrictEqual([at(70), at(83), at(85), at(96), at(10), at(81)], [[], ['⚠ Claude 5h: 83%'], [], ['⚠ Claude 5h: 96%'], [], ['⚠ Claude 5h: 81%']], 'push: a limit at 80% and 95%, again after it resets'); }
-  push.clear(); assert.strictEqual(push.count(), 0);
-  // the notices page on GitHub Pages: its copies match the app's, no outside address, and the tap opens only the local panel
-  { const { COPIES, out, root: pr } = require('../scripts/push-page');
-    for (const [to, from] of Object.entries(COPIES)) assert.ok(fs.readFileSync(path.join(out, to)).equals(fs.readFileSync(path.join(pr, from))), `docs/push/${to} is out of date: npm run push-page`);
-    for (const f of ['index.html', 'push.js', 'sw.js', 'push.css']) assert.ok(!/https?:\/\/(?!www\.w3\.org)/.test(fs.readFileSync(path.join(out, f), 'utf8').replace(/http:\\\/\\\//g, '')), 'docs/push/' + f + ': no outside address');
-    const LANRE = new Function(fs.readFileSync(path.join(out, 'sw.js'), 'utf8').match(/const LAN = (\/.+\/);/)[0] + ' return LAN;')();
-    assert.deepStrictEqual(['http://192.168.1.5:4799/?t=' + 'a'.repeat(32), 'https://evil.example/', 'javascript:alert(1)', 'http://192.168.1.5.evil.example/', 'http://8.8.8.8/'].map(x => LANRE.test(x)), [true, false, false, false, false], 'notices page: a tap opens only a local panel'); }
-
   // phone panel: only its LAN address, its own token, the tight POST rules, and nothing else of the office
   const { startPhone, lanIp } = require('../src/phone');
   if (lanIp()) {
@@ -763,8 +728,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     const tok = ph.url.split('t=')[1], base = 'http://' + ph.host, get = (u, h = {}) => fetch(base + u, { headers: h, redirect: 'manual' });
     assert.strictEqual((await get('/api/m')).status, 401, 'phone: no token, nothing');
     assert.strictEqual((await get('/api/m', { Cookie: 'cwp=' + 'b'.repeat(32) })).status, 401, 'phone: wrong token');
-    const login = await get('/?t=' + tok); assert.ok(login.status === 200 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')) && (await login.text()).includes('src="/go.js"'), 'phone: the link sets a strict cookie and moves on by itself');
-    assert.strictEqual((await get('/go.js')).status, 200, 'phone: the page that moves on needs no code');
+    const login = await get('/?t=' + tok); assert.ok(login.status === 302 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')), 'phone: the link sets a strict cookie');
     const ck = { Cookie: 'cwp=' + tok };
     assert.strictEqual((await get('/api/m', ck)).status, 200);
     assert.deepStrictEqual([(await get('/api/tasks', ck)).status, (await get('/index.html', ck)).status, (await get('/../src/server.js', ck)).status], [404, 404, 404], 'phone: nothing of the office');
@@ -779,12 +743,6 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.ok(cr.ok && cr.task.worktree && cr.task.from === 'phone', 'phone task created, in its own worktree');
     tasks.op({ op: 'cancel', id: cr.task.id }); await tasks._idle();
     const vw = await (await get('/api/m', ck)).json(); assert.ok(Array.isArray(vw.folders) && vw.folders.includes(known) && Array.isArray(vw.limits), 'phone view: folders and limits');
-    // notices: the link to turn them on, a subscription checked before it is kept, and off for every phone
-    assert.ok(vw.push && vw.push.n === 0 && vw.push.link.includes('&b=' + encodeURIComponent(base + '/?t=' + tok)), 'phone view: the notices link');
-    assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'push-add', sub: { endpoint: 'https://evil.example/x', keys: goodKeys } })).json()).reason, 'sub', 'phone: only a real push service');
-    assert.ok((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'push-add', sub: { endpoint: 'https://web.push.apple.com/p', keys: goodKeys } })).json()).ok && push.count() === 1, 'phone: subscription kept');
-    assert.ok((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'push-test', title: 't', text: 'x' })).json()).ok, 'phone: test notice sent');
-    assert.ok((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'push-off' })).json()).ok && push.count() === 0, 'phone: notices off');
     // home screen: the manifest and icons need no code; the code can be replaced, and the old one stops working
     assert.strictEqual((await get('/manifest.webmanifest')).status, 200, 'phone manifest is public (no data)');
     assert.strictEqual((await get('/icon-192.png')).status, 200);

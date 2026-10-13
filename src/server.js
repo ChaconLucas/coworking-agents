@@ -98,17 +98,6 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   // spend for the phone's Usage tab: today, this month and the month's goal (estimates from the logs)
   const phoneUsage = () => { if (demo) return { today: 12.4, month: 318.9, goal: 400 }; mbExtra(); let month = 0; try { const u = usage(), k = new Date().toISOString().slice(0, 7); for (const [d, v] of Object.entries(u.days || {})) if (d.startsWith(k)) month += v.usd || 0; } catch {} return { today: usdToday, month, goal: Number(tasks.list().settings.monthGoal) || 0 }; };
   const mbTimer = setInterval(() => { if (mb.running()) try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }, 2000); mbTimer.unref();
-  // push to the phone (opt-in, see src/push.js): what is new since the last look, never in the quiet hours;
-  // tapping a notice opens the phone panel (on the home Wi-Fi)
-  const push = require('./push');
-  const pushTimer = setInterval(() => {
-    if (demo || !push.count()) return;
-    try {
-      const st = tasks.list({ privacy }), sn = snapshot({ privacy }), c = push.changes(sn.people || [], st.tasks, { pt: ptLang, limits: sn.limits });
-      if (quietAt(st.settings.quiet)) return;
-      for (const m of c.fresh) push.send({ ...m, badge: c.badge, url: phoneInfo ? phoneInfo.url : '' }).catch(() => {});
-    } catch {}
-  }, 3000); pushTimer.unref();
 
   const server = http.createServer((req, res) => {
     try { handle(req, res); } catch { if (!res.headersSent) send(res, 500, 'text/plain', 'error'); else res.destroy(); }
@@ -392,7 +381,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
         try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken, extra: phoneUsage }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
         catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; }
       }
-      resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); clearInterval(mbTimer); clearInterval(pushTimer); mb.stop(); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });
+      resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); clearInterval(mbTimer); mb.stop(); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });
     });
   });
 }

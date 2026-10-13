@@ -27,7 +27,6 @@
     "demo": "node bin/coworking-agents.js --demo",
     "test": "node test/run.js",
     "screenshots": "bash scripts/screenshots.sh",
-    "push-page": "node scripts/push-page.js",
     "video": "node scripts/record-video.js"
   },
   "keywords": [
