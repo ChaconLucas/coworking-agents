@@ -160,7 +160,7 @@ function renderReport() {
   if (reportTab === 'queue') return renderQueue();
   if (reportTab === 'launch') return renderLaunch();
   if (reportTab === 'shop') return renderShop();
-  if (reportTab === 'office') { renderOffice(); return syncMenubar(); }
+  if (reportTab === 'office') { renderOffice(); syncAutostart(); return syncMenubar(); }
   const U = T.usage, u = usageData, body = reportEl.querySelector('.report-body'), L = (data && data.limits) || {};
   const tok = n => fmtK(Math.round(Number(n) || 0));
   const card = id => {

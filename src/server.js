@@ -13,7 +13,7 @@ const tasks = require('./tasks');
 const { versionInfo, maybeCheck } = require('./update');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png', '.ico': 'image/x-icon' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.png': 'image/png', '.ico': 'image/x-icon' };
 const MAX_CLIENTS = 16;
 const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
 const LOCAL_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
@@ -62,6 +62,7 @@ const inFlight = new Set();
 async function once(key, fn) { if (inFlight.has(key)) return { ok: false, reason: 'busy' }; inFlight.add(key); try { return await fn(); } finally { inFlight.delete(key); } }
 function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 1000, demo = false, token, phone = false, menubar = false } = {}) {
   tasks.startQueue({ demo });
+  const keepToken = !!token; // only the normal run keeps its token across restarts (not demo, not private)
   token = token || crypto.randomBytes(24).toString('hex');
   const snapshot = demo ? demoSnapshot : real;
   const clients = new Set();
@@ -115,11 +116,12 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       if (!sameSecret(url.searchParams.get('t'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
       // keep the other parameters (lang, hour, date…), drop only the token; always a same-origin path
       const rest = new URLSearchParams(url.searchParams); rest.delete('t');
-      res.writeHead(302, { 'Set-Cookie': `cw=${token}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' + (rest.toString() ? '?' + rest.toString() : '') });
+      // a token kept across restarts can live in a lasting cookie, so an installed app opens without the link again
+      res.writeHead(302, { 'Set-Cookie': `cw=${token}; HttpOnly; SameSite=Strict; Path=/${keepToken ? '; Max-Age=31536000' : ''}`, Location: '/' + (rest.toString() ? '?' + rest.toString() : '') });
       return res.end();
     }
     // icons are public: browsers fetch them without cookies and cache the 401 otherwise
-    const PUBLIC_ICONS = new Set(['/favicon.ico', '/favicon.png', '/favicon.svg', '/apple-touch-icon.png', '/logo.svg']);
+    const PUBLIC_ICONS = new Set(['/favicon.ico', '/favicon.png', '/favicon.svg', '/apple-touch-icon.png', '/logo.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']); // no data in any of them
     if (!PUBLIC_ICONS.has(url.pathname) && !sameSecret(cookie(req, 'cw'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
 
     if (url.pathname === '/events') {
@@ -304,6 +306,15 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
     // the phone link and its QR code, only to this machine (the phone server itself never serves this)
     if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')), visit: visitNow && visitNow.until > Date.now() ? { ...visitNow, qr: require('./qr').encode(visitNow.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : null } : { on: false, reason: phoneReason }));
+    if (url.pathname === '/api/autostart' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ on: require('./autostart').enabled(), platform: process.platform, demo }));
+    if (url.pathname === '/api/autostart' && req.method === 'POST') { // start with the computer (writes the system's own login entry; one click to undo)
+      const origin = req.headers.origin || '';
+      if (req.headers['x-coworking'] !== '1' || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403); return res.end(); }
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 1e3) req.destroy(); });
+      req.on('end', () => { let m = {}; try { m = JSON.parse(body); } catch {} if (demo) return send(res, 200, 'application/json', '{"ok":false,"reason":"demo"}'); try { const a = require('./autostart'), r = m.on ? a.enable(require('./update').installMode()) : a.disable(); send(res, 200, 'application/json', JSON.stringify({ ...r, on: a.enabled() })); } catch { send(res, 200, 'application/json', '{"ok":false,"reason":"write"}'); } });
+      return;
+    }
     if (url.pathname === '/api/menubar' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ supported: mb.supported() && !demo, on: mb.running(), how: mb.how(), platform: process.platform }));
     if (url.pathname === '/api/menubar' && req.method === 'POST') { // turn the macOS menu bar icon on or off (remembered for next time)
       const origin = req.headers.origin || '';

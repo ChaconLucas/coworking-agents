@@ -817,6 +817,16 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   tasks.op({ op: 'settings', quiet: { on: true, from: '23:00', to: '99:99' } });
   assert.deepStrictEqual(tasks.list().settings.quiet, { on: true, from: '23:00', to: '08:00' }, 'quiet hours validated');
 
+  // start with the computer: the login entry runs a program with arguments, quoted for each system, never a shell line
+  { const au = require('../src/autostart'), evil = ['/Apps/My "Node"/node', '/x/$(rm -rf ~)/bin.js', '--no-open'];
+    const mac = au.entry(evil, 'darwin', '/Users/u').content, lin = au.entry(evil, 'linux', '/home/u').content, win = au.entry(evil, 'win32', 'C:\\Users\\u').content;
+    assert.ok(mac.includes('<string>/Apps/My &quot;Node&quot;/node</string>') && !mac.includes('sh -c') && !mac.includes('-lc'), 'macOS: program and arguments, escaped, no shell');
+    assert.ok(lin.includes('Exec="/Apps/My \\"Node\\"/node" "/x/\\$(rm -rf ~)/bin.js"'), 'Linux: desktop-entry quoting keeps $( ) as text: ' + lin.split('\n')[4]);
+    assert.ok(win.includes('""/x/$(rm -rf ~)/bin.js""') && !win.includes('My "Node"'), 'Windows: quoted paths, stray quotes dropped');
+    assert.deepStrictEqual(au.command('source').slice(-2), ['--no-open', '--menubar']); assert.ok(au.command('npx').includes('coworking-agents@latest'));
+    const r = au.enable('source'); assert.ok(r.ok && au.enabled() && fs.readFileSync(r.file, 'utf8').includes('coworking-agents.js'), 'autostart on');
+    au.disable(); assert.ok(!au.enabled(), 'autostart off'); }
+
   // GitHub: issues become tasks; a PR review is read-only and carries the diff as data
   const gi = await tasks.ghIssues(proj);
   assert.deepStrictEqual(gi.issues.map(x => [x.number, x.url]), [[3, 'https://github.com/x/y/issues/3'], [4, '']], 'issues parsed, only numbers, only https links');

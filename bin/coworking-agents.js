@@ -17,6 +17,8 @@ if (flag('-h') || flag('--help')) {
   --port      port to listen on (default 4777, falls back to a free one)
   --no-open   don't open the browser
   --private   hide session titles, paths and file names (screen sharing)
+  --app       open in an app window (Chrome, Edge, Brave or Chromium) instead of a browser tab
+  autostart on|off  start hidden with the computer, with the tray icon
   --menubar   show a menu bar icon with who needs you (macOS; also a switch in Personalise)
   --phone     also serve a small phone panel on your Wi-Fi (own token, QR code in the terminal; trusted networks only)
   --demo [N]  show a fake office with every state and N agents (default 10)
@@ -27,6 +29,14 @@ if (flag('-h') || flag('--help')) {
 }
 
 if (args[0] === 'mcp') { require('../src/mcp').serve(); return; }
+// start with the computer: `coworking-agents autostart on | off | status`
+if (args[0] === 'autostart') {
+  const a = require('../src/autostart');
+  if (args[1] === 'on') { const r = a.enable(require('../src/update').installMode()); console.log(`On: the office starts hidden at login, with its tray icon.\n${r.file}\nUndo with: coworking-agents autostart off`); }
+  else if (args[1] === 'off') { a.disable(); console.log('Off: the office no longer starts with the computer.'); }
+  else console.log(a.enabled() ? 'Autostart is on.' : 'Autostart is off. Turn it on with: coworking-agents autostart on');
+  return;
+}
 
 if (flag('--json')) {
   const { snapshot } = require('../src/collect');
@@ -36,9 +46,21 @@ if (flag('--json')) {
 }
 
 function open(url) {
+  if (flag('--app') && openApp(url)) return;
   const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
   const a = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
   execFile(cmd, a, () => {});
+}
+// --app: an app window of Chrome, Edge, Brave or Chromium (no tabs, no address bar); the default browser otherwise
+function openApp(url) {
+  const fs = require('fs'), path = require('path'), { spawnSync, spawn } = require('child_process');
+  const pf = process.env.ProgramFiles || 'C:\\Program Files', pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', local = process.env.LOCALAPPDATA || '';
+  const candidates = process.platform === 'darwin' ? ['Google Chrome', 'Microsoft Edge', 'Brave Browser', 'Chromium'].map(n => `/Applications/${n}.app/Contents/MacOS/${n}`)
+    : process.platform === 'win32' ? [path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'), path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'), path.join(local, 'Google', 'Chrome', 'Application', 'chrome.exe'), path.join(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'), path.join(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe')]
+    : ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge', 'brave-browser'].map(n => { try { const r = spawnSync('which', [n], { encoding: 'utf8' }); return r.status === 0 ? r.stdout.trim() : ''; } catch { return ''; } });
+  const exe = candidates.find(c => c && fs.existsSync(c)); if (!exe) return false;
+  spawn(exe, ['--app=' + url], { detached: true, stdio: 'ignore' }).unref();
+  return true;
 }
 
 // The token link lives in a file only you can read (0600): a second run reopens the same

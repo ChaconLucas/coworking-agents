@@ -132,6 +132,10 @@ function renderOffice() {
     ${row('plants', STYLE.plants)}
     ${row('station', STYLE.station)}
     ${row('accent', Object.keys(STYLE.accent), v => STYLE.accent[v])}
+    <h3>📲 ${esc(T.appx.title)}</h3><p class="note">${esc(T.appx.sub)}</p>
+    <p><button class="btn small" data-appinstall ${matchMedia('(display-mode: standalone)').matches ? 'disabled' : ''}>📲 ${esc(matchMedia('(display-mode: standalone)').matches ? T.appx.installed : T.appx.install)}</button> <small class="note" data-app-msg></small></p>
+    <p><label class="tchk"><input type="checkbox" data-autostart disabled> ${esc(T.appx.autostart)}</label> <small class="note" data-as-msg></small></p>
+    <p class="note">${esc(T.appx.cli)} <code>npx coworking-agents --app</code></p>
     <h3>🖥 ${esc(T.menubar.title)}</h3><p class="note">${esc(T.menubar.sub)}</p><p data-mb-box><label class="tchk"><input type="checkbox" data-menubar disabled> ${esc(T.menubar.on)}</label> <small class="note" data-mb-msg></small></p>
     <h3>🔔 ${esc(T.quiet.title)}</h3>${(() => { const q = store.get('quiet', null) || {}, off = store.get('soundOff', {}) || {};
       return `<p class="note">${esc(T.quiet.sub)}</p><div class="opts">${SOUND_KINDS.map(k => `<label class="tchk"><input type="checkbox" data-soundkind="${k}" ${off[k] ? '' : 'checked'}> ${esc(T.quiet.kinds[k])}</label>`).join('')}</div>
@@ -205,4 +209,22 @@ document.addEventListener('change', async e => {
   const c = e.target.closest('[data-menubar]'); if (!c) return;
   c.disabled = true; const r = await fetch('api/menubar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: c.checked }) }).then(x => x.json()).catch(() => ({ ok: false }));
   c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-mb-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.menubar.shown[r.kind] || T.menubar.shown.mac : '') : '⚠ ' + (T.menubar.fail[r.reason] || r.reason || '');
+});
+// installing as an app: the browser's own prompt when it offers one, instructions otherwise
+let installPrompt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch {}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-appinstall]'); if (!b) return;
+  const m = document.querySelector('[data-app-msg]');
+  if (installPrompt) { installPrompt.prompt(); const r = await installPrompt.userChoice.catch(() => ({})); installPrompt = null; if (m) m.textContent = r && r.outcome === 'accepted' ? T.appx.done : ''; return; }
+  if (m) m.textContent = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? T.appx.safari : /Firefox/.test(navigator.userAgent) ? T.appx.firefox : T.appx.chrome;
+});
+function syncAutostart() {
+  fetch('api/autostart').then(r => r.json()).then(d => { const c = document.querySelector('[data-autostart]'); if (!c) return; c.disabled = !!d.demo; c.checked = !!d.on; }).catch(() => {});
+}
+document.addEventListener('change', async e => {
+  const c = e.target.closest('[data-autostart]'); if (!c) return;
+  c.disabled = true; const r = await fetch('api/autostart', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify({ on: c.checked }) }).then(x => x.json()).catch(() => ({ ok: false }));
+  c.disabled = false; c.checked = !!r.on; const m = document.querySelector('[data-as-msg]'); if (m) m.textContent = r.ok ? (r.on ? T.appx.asOn : T.appx.asOff) : '⚠';
 });

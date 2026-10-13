@@ -207,6 +207,14 @@ Tasks live in `~/.config/coworking-agents/tasks/`. In private mode names, folder
 
 The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *See why*, *Not now*), cost alerts and new versions, grouped so repeats don't pile up. It keeps working with the tab in the background and recovers what was already pending when you open the office. **Releases** shows the installed version, the newest on npm (or *unavailable*), when it checked, a clickable map of every release and the notes of the newer one, with the update command for how you installed it. The office admin appears behind the top-bar counter only when there's version news: he waves the sign until you've seen it, keeps holding it until you update, then celebrates.
 
+## As an app (optional)
+
+The office works in any browser. If you prefer an app:
+
+- **Install as an app** (Personalise, or Chrome/Edge's install icon): its own window, no tabs, an icon in the Dock or taskbar. Nothing is cached; it is the same live office.
+- **`npx coworking-agents --app`** opens it in an app window of Chrome, Edge, Brave or Chromium without installing anything.
+- **Start with the computer:** `npx coworking-agents autostart on` (or the switch in Personalise) starts it hidden at login with the tray icon; `autostart off` undoes it. It uses each system's own login entry (macOS LaunchAgent, Windows Startup folder, Linux XDG autostart) with the program and its arguments, never a shell line.
+
 ## More panels
 
 - **📦 Repositories:** who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity.
