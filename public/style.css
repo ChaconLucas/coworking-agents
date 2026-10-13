@@ -836,3 +836,7 @@ table.score th:first-child, table.score td:first-child { text-align: left; }
 .pask-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .pask-row select { min-width: 0; flex: 1 1 90px; }
 .pask .note { margin: 0; }
+.queue.notices li { grid-template-columns: minmax(0, 1fr) auto; }
+.queue.notices .q-side { display: flex; flex-wrap: wrap; justify-content: flex-end; max-width: 55%; }
+.queue.notices .q-side .btn { white-space: nowrap; }
+.queue.notices .q-what { -webkit-line-clamp: unset; display: block; overflow: visible; white-space: normal; }

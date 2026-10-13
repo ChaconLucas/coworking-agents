@@ -120,7 +120,7 @@ function stats(list) {
   const n = list.length, ok = list.filter(t => t.state === 'done' && (!t.tests || t.tests.code === 0)).length;
   return { n, success: n ? ok / n : 0, cost: n ? list.reduce((a, t) => a + (t.cost || 0), 0) / n : 0, attempts: n ? list.reduce((a, t) => a + (t.attempts || 0), 0) / n : 0 };
 }
-function recommend(desc = '', agent = 'claude', task = null) {
+function recommend(desc = '', agent = 'claude', task = null, live = null) {
   const why = [];
   const files = (String(desc).match(/[\w/-]+\.[a-z]{1,5}\b/gi) || []).length;
   let p = 'bal';
@@ -131,6 +131,9 @@ function recommend(desc = '', agent = 'claude', task = null) {
   // signals while the task runs: loops and repeated failures ask for more, a run far above the median for less
   if (task && task.warn && ['loop', 'retry'].includes(task.warn.why) && p !== 'deep' && !why.includes('attempts')) { p = ORDER[ORDER.indexOf(p) + 1]; why.push('signal-' + task.warn.why); }
   if (task && task.warn && task.warn.why === 'high' && p !== 'eco') { p = ORDER[ORDER.indexOf(p) - 1]; why.push('signal-high'); }
+  // a session opened outside, watched while it runs: stuck on one step asks for more, a nearly full context for a fresh start
+  if (live && Number(live.stuckMs) > 6e5 && p !== 'deep') { p = ORDER[ORDER.indexOf(p) + 1]; why.push('live-stuck'); }
+  if (live && Number(live.ctx) > .8) why.push('live-ctx');
   // history: similar finished tasks (2+ shared words); success = done with passing tests
   const w = words(desc), similar = tasks.filter(t => t !== task && ['done', 'failed'].includes(t.state) && [...words(t.desc)].filter(x => w.has(x)).length >= 2);
   const by = Object.fromEntries(ORDER.map(k => [k, stats(similar.filter(t => t.profile === k))]));
@@ -200,7 +203,7 @@ function op(m = {}) {
     if (m.autoPerTask !== undefined) settings.autoPerTask = Math.min(5, Math.max(0, Number(m.autoPerTask) || 0));
     save(); tick(); return { ok: true, settings };
   }
-  if (m.op === 'recommend') { const t = tasks.find(x => x.id === m.id); return { ok: true, rec: recommend(s(m.desc || (t && t.desc), 12000), m.agent || (t && t.agent), t) }; }
+  if (m.op === 'recommend') { const t = tasks.find(x => x.id === m.id); return { ok: true, rec: recommend(s(m.desc || (t && t.desc), 12000), m.agent || (t && t.agent), t, m.live && typeof m.live === 'object' ? m.live : null) }; }
   const t = tasks.find(x => x.id === m.id); if (!t) return { ok: false, reason: 'notask' };
   if (m.op === 'config') return setConfig(t, m);
   if (ALLOWED[m.op] && !ALLOWED[m.op].includes(t.state)) return { ok: false, reason: 'state' };

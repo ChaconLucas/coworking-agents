@@ -435,6 +435,8 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   tasks.op({ op: 'reply', id: t6.id, text: 'go on' }); await tasks._idle();
   assert.deepStrictEqual(lastArgs().slice(0, 3), ['exec', 'resume', 'T1'], 'Codex resumes its thread');
 
+  const lv = tasks.recommend('fix the typo in the readme', 'claude', null, { stuckMs: 9e5, ctx: .9 });
+  assert.ok(lv.profile === 'bal' && lv.why.includes('live-stuck') && lv.why.includes('live-ctx'), 'a stuck outside session is told to step up and start fresh');
   // a request sent from the office to a session opened outside continues that same conversation, never in a worktree
   const ext = 'b1c2d3e4-0000-4000-8000-123456789abc';
   const tx = tasks.op({ op: 'create', dir: proj, desc: 'from the office', agent: 'claude', resume: ext, worktree: true, model: 'haiku', effort: 'low' }).task;

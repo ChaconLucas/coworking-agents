@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sessions opened outside are watched while they run: when there is a real reason (stuck on one step, nearly full context, the kind of work) the office sends a notice with the recommended model and effort; Apply puts it in that agent's request box
 - Ask any Claude or Codex session from the office, even one opened in VS Code or the app: the request continues the same conversation with the model and effort you choose (the recommended ones come pre-picked)
 - Sessions opened outside show their real effort (Codex from its log, Claude from its settings)
 - Task detail shows current, pending and recommended config once, in the recommendation card

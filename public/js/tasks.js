@@ -18,6 +18,30 @@ function noticeTask(t) {
   pushNotice('task:' + t.id, t.state === 'failed' || t.reason === 'budget' ? 'warn' : 'ok', T.notices.task(t.title, what), '', { task: t.id });
   notifyOS(T.notices.task(t.title, what), t.agent);
 }
+// sessions opened outside are watched while they run: when the recommended setup moves away from what they use, a notice asks
+const tierOf = (agent, model, effort) => agent === 'claude' ? (/haiku/.test(model) ? 'eco' : /opus/.test(model) ? 'deep' : /sonnet/.test(model) ? 'bal' : '')
+  : ({ minimal: 'eco', low: 'eco', medium: 'bal', high: 'deep', xhigh: 'deep' })[effort] || '';
+const watchAt = new Map();
+function watchOutside() {
+  if (!data || data.privacy || taskData.privacy) return;
+  for (const p of data.people) {
+    if (!['claude', 'codex'].includes(p.agent) || ['idle', 'asleep'].includes(p.state) || taskOfPerson(p.id)) continue;
+    if (Date.now() - (watchAt.get(p.id) || 0) < 60000) continue; watchAt.set(p.id, Date.now());
+    const live = { stuckMs: p.doing ? p.doing.for : 0, ctx: p.ctxMax ? p.ctx / p.ctxMax : 0 };
+    api('api/tasks', { op: 'recommend', desc: [p.title, p.lastPrompt].filter(Boolean).join('\n'), agent: p.agent, live }).then(r => {
+      const rec = r && r.ok && r.rec; if (!rec) return;
+      recOf.set('p:' + p.id, { key: 'p:' + p.id + ':' + (p.title || '') + (p.lastPrompt || ''), rec });
+      const now = tierOf(p.agent, p.model, p.effort), ctx = rec.why.includes('live-ctx');
+      if (!ctx && (!now || now === rec.profile || !rec.why.some(w => w !== 'default'))) return; // a plain "regular task" is no reason to interrupt
+      const key = rec.profile + ':' + rec.why.join('+'); if (noticed['o' + p.id] === key) return;
+      noticed['o' + p.id] = key; try { store.set('taskNoticed', JSON.stringify(noticed)); } catch {}
+      const X = T.tasks, why = rec.why.map(w => X.recWhy[w] || w).join(' · ');
+      pushNotice('out:' + p.id, ORDER_UP(now, rec.profile) || ctx ? 'warn' : 'ok', X.outTitle(p.name, X.profiles[rec.profile]), `${why}. ${X.proposal(X.profiles[rec.profile], rec.model || X.cliDefault, rec.effort)} ${X.outHow}`, { agent: p.id, rec, ext: true });
+      notifyOS(X.outTitle(p.name, X.profiles[rec.profile]), p.agent);
+    });
+  }
+}
+const ORDER_UP = (a, b) => ['eco', 'bal', 'deep'].indexOf(b) > ['eco', 'bal', 'deep'].indexOf(a);
 function warnText(w) { const W = T.tasks.warn; return w.why === 'loop' ? W.loop(w.name) : typeof W[w.why] === 'function' ? W[w.why](w) : W[w.why] || ''; }
 async function pollTasks() {
   const d = await api('api/tasks'); if (!d || !Array.isArray(d.tasks)) return;
@@ -33,6 +57,7 @@ async function pollTasks() {
       }
     }
   }
+  watchOutside();
   if (!reportEl.hidden && reportTab === 'tasks') {
     const a = document.activeElement, typing = a && reportEl.contains(a) && /TEXTAREA|INPUT|SELECT/.test(a.tagName);
     if (!typing) { if (taskSel) loadTask(taskSel); else renderTasks(); }
@@ -283,6 +308,12 @@ reportEl.addEventListener('click', async e => {
   n.read = true;
   if (a === 'why') n.showWhy = true;
   if (a === 'dismiss') notices = notices.filter(x => x !== n);
+  if (a === 'apply' && n.ref.ext && n.ref.rec) { // outside session: the choice goes into its request box, used on the next request sent from here
+    askDraft.set(n.ref.agent, { ...(askDraft.get(n.ref.agent) || {}), model: n.ref.rec.model, effort: n.ref.rec.effort }); saveNotices();
+    closeReport(); selected = n.ref.agent; renderOverlay(); renderPanel();
+    const box = panelBody.querySelector('.pask'); if (box) { box.scrollIntoView({ block: 'center' }); box.querySelector('textarea').focus(); }
+    return;
+  }
   if (a === 'apply' && n.ref.task && n.ref.rec) { const w = n.ref.rec; await api('api/tasks', { op: 'config', id: n.ref.task, profile: w.profile, model: w.model, effort: w.effort, why: 'notice:' + w.why }); } // exactly what the notice proposed
   saveNotices();
   if (a === 'open' || a === 'apply') { if (n.ref.task) { reportTab = 'tasks'; await pollTasks(); return loadTask(n.ref.task); } if (n.ref.ver) { reportTab = 'version'; return renderReport(); } if (n.ref.agent) { closeReport(); return openTalk(n.ref.agent); } }
