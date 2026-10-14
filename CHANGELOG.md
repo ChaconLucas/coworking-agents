@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 — 2026-10-14
 - Tell me when… (☰ → ⏰, or the agent's panel): a notice when an agent finishes (once), when a limit passes a level you pick (again after it resets), or when any agent edits a file whose path has some text; in the office, the bell and as a system notification. Kept with your progress
 - Past conversations (☰ → 🗄): every Claude Code and Codex conversation on this computer from the last 60 days, open or closed, found by name, folder or what was said (last 30 days), and read as a chat with its helpers and a search inside it. Read only; off in private mode
 - A new release shows up in an office left open within about 10 minutes (it checked once an hour), and the releases board, the admin's sign and the notice follow as soon as the office knows
