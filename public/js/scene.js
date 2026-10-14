@@ -58,25 +58,35 @@ function drawUsageBoard(x, y, t) {
 const skyHour = () => styleHour(qs.get('hour') ? Number(qs.get('hour')) : new Date().getHours() + new Date().getMinutes() / 60);
 function drawWall(t, sky) {
   r(0, 0, W, TOP - 6, PAL.wall);
-  for (let x = 0; x < W; x += 24) r(x, 0, 1, TOP - 6, PAL.wallShade);
+  // wallpaper: a quiet dotted diamond pattern, then a chair rail with wood wainscot below the frames
+  for (let y = 8, k = 0; y < TOP - 16; y += 6, k++) for (let x = (k % 2) * 6; x < W; x += 12) r(x, y, 1, 1, PAL.wallShade);
   r(0, 0, W, 3, PAL.wallTrim); r(0, 3, W, 1, PAL.ink2);
+  r(0, TOP - 14, W, 2, PAL.wallTrim); r(0, TOP - 12, W, 1, PAL.wallShade); r(0, TOP - 11, W, 3, shade(PAL.wall, .93));
+  for (let x = 18; x < W; x += 36) r(x, TOP - 11, 1, 3, PAL.wallShade);
   r(0, TOP - 8, W, 2, PAL.wallShade); r(0, TOP - 6, W, 5, PAL.base); r(0, TOP - 6, W, 1, '#8f553f'); r(0, TOP - 1, W, 1, PAL.ink);
   windowBoxes = []; releaseBox = historyBox = costBox = noticesBox = null;
-  let extra = 0; // window slots after the agent of the month become the costs screen and the notice board
-  const nWin = Math.max(1, Math.floor((CX - 30) / 74));
-  // the third window slot becomes the dev corner of the wall: neon </> and two posters
+  // what hangs on the wall, chosen by how much wall there is (as many 74 px slots as fit), then spread evenly
+  // between the light switch and the whiteboard so the gaps match
+  const nWin = Math.max(1, Math.floor((CX - 30) / 74)), items = [];
+  let extra = 0; // slots after the agent of the month become the costs screen and the notice board
   for (let i = 0; i < nWin; i++) {
-    const wx = 16 + i * 74;
-    if (i === 1) drawUsageBoard(wx - 6, 7, t);
+    if (i === 1) items.push({ w: 112, draw: x => drawUsageBoard(x, 7, t) });
     else if (i === 2) continue; // covered by the usage screen
-    else if (i === 3 && nWin >= 5) { Art.drawNeon(wx + 9, 10, Date.now() - neonFlash < 400 ? (((Date.now() / 60) | 0) % 2 ? t : 120 * 47) : t, wallGlows); neonBox = { x: wx + 7, y: 8, w: 34, h: 18 }; Art.drawPoster(wx - 16, 14, 0); Art.drawPoster(wx + 46, 14, 2); releaseBox = { x: wx - 17, y: 13, w: 22, h: 28 }; historyBox = { x: wx + 45, y: 13, w: 22, h: 28 }; if (typeof drawReleaseBadge === 'function') drawReleaseBadge(wx - 16, 14, t); }
-    else if (i === 4 && nWin >= 7) drawTrophyShelf(wx - 8, 9, 64, t);
-    else if (i === 5) { if (nWin >= 7) drawAgentOfMonth(wx, 10, t, wallGlows); else Art.drawPoster(wx + 14, 12, 1); }
-    else if (i >= 6 && extra < 2 && typeof drawCostScreen === 'function') { if (extra++ === 0) { drawCostScreen(wx, 9, 48, 30, t); costBox = { x: wx - 1, y: 8, w: 50, h: 32 }; } else { drawNoticeCork(wx, 9, 48, 30, t); noticesBox = { x: wx - 1, y: 8, w: 50, h: 32 }; } }
-    else { Art.drawWindow(wx, 9, 48, 30, sky, t, i); drawSkyExtras(wx, 9, 48, 30, sky, t, i, skyHour()); drawWindowView(wx, 9, 48, 30, sky, i); drawSeasonWindow(wx, 9, 48, 30, t); drawWeather(wx, 9, 48, 30, t); drawGlassDrops(wx, 9, 48, 30, t); drawHolidayWindow(wx, 9, 48, 30, t, sky); windowBoxes.push({ x: wx, y: 9, w: 48, h: 30 }); }
+    else if (i === 3 && nWin >= 5) items.push({ w: 84, draw: x => { // the dev corner: two posters around the neon </>
+      Art.drawPoster(x, 14, 0); Art.drawPoster(x + 62, 14, 2); releaseBox = { x: x - 1, y: 13, w: 22, h: 28 }; historyBox = { x: x + 61, y: 13, w: 22, h: 28 };
+      Art.drawNeon(x + 25, 10, Date.now() - neonFlash < 400 ? (((Date.now() / 60) | 0) % 2 ? t : 120 * 47) : t, wallGlows); neonBox = { x: x + 23, y: 8, w: 34, h: 18 };
+      if (typeof drawReleaseBadge === 'function') drawReleaseBadge(x, 14, t);
+    } });
+    else if (i === 4 && nWin >= 7) items.push({ w: 64, draw: x => drawTrophyShelf(x, 9, 64, t) });
+    else if (i === 5) items.push(nWin >= 7 ? { w: 52, draw: x => drawAgentOfMonth(x, 10, t, wallGlows) } : { w: 22, draw: x => Art.drawPoster(x, 12, 1) });
+    else if (i >= 6 && extra < 2 && typeof drawCostScreen === 'function') items.push(extra++ === 0 ? { w: 48, draw: x => { drawCostScreen(x, 9, 48, 30, t); costBox = { x: x - 1, y: 8, w: 50, h: 32 }; } } : { w: 48, draw: x => { drawNoticeCork(x, 9, 48, 30, t); noticesBox = { x: x - 1, y: 8, w: 50, h: 32 }; } });
+    else items.push({ w: 48, draw: x => { Art.drawWindow(x, 9, 48, 30, sky, t, i); drawSkyExtras(x, 9, 48, 30, sky, t, i, skyHour()); drawWindowView(x, 9, 48, 30, sky, i); drawSeasonWindow(x, 9, 48, 30, t); drawWeather(x, 9, 48, 30, t); drawGlassDrops(x, 9, 48, 30, t); drawHolidayWindow(x, 9, 48, 30, t, sky); windowBoxes.push({ x, y: 9, w: 48, h: 30 }); } });
   }
-  // the ON AIR sign takes the gap between the last window and the whiteboard, when there is one
-  { const lastEnd = 16 + (nWin - 1) * 74 + 48, gap = RX - 14 - lastEnd; moodBox = null; if (gap >= 32) drawMoodSign(lastEnd + ((gap - 24) / 2 | 0), 16, t, wallGlows); }
+  moodBox = null;
+  const left = 18, right = RX - 24, sum = () => items.reduce((n, it) => n + it.w, 0);
+  if (right - left - sum() - 26 >= (items.length + 1) * 8) items.push({ w: 26, draw: x => drawMoodSign(x + 1, 16, t, wallGlows) }); // ON AIR, when there is room
+  const gap = items.length > 1 ? Math.min(40, Math.max(6, (right - left - sum()) / (items.length - 1))) : 0, start = left + Math.max(0, ((right - left) - sum() - gap * (items.length - 1)) / 2);
+  let x = start; for (const it of items) { it.draw(Math.round(x)); x += it.w + gap; }
   boardBox = { x: RX - 14, y: 8, w: 56, h: 30 };
   if (typeof drawTaskBoard === 'function') drawTaskBoard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, t); else Art.drawWhiteboard(boardBox.x, boardBox.y, boardBox.w, boardBox.h, counts(), t);
   Art.drawClock(RX + 58, 20);
@@ -94,8 +104,8 @@ function drawShafts(sky, nWin) {
   if (sky.phase === 'night') return;
   ctx.save();
   ctx.fillStyle = sky.phase === 'day' ? 'rgba(255,246,214,0.08)' : 'rgba(255,180,120,0.08)';
-  for (let i = 0; i < nWin; i++) {
-    const x = 16 + i * 74;
+  for (const b of windowBoxes) {
+    const x = b.x;
     ctx.beginPath(); ctx.moveTo(x, TOP); ctx.lineTo(x + 48, TOP); ctx.lineTo(x + 80, TOP + 80); ctx.lineTo(x + 32, TOP + 80); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
@@ -400,7 +410,7 @@ function drawScene(t, dt) {
   r(CX - 8, TOP, 16, H - TOP, '#6e2f3f'); r(CX - 6, TOP, 12, H - TOP, '#8e3e52');
   for (let y = TOP + 6; y < H; y += 10) { r(CX - 1, y, 2, 4, '#c96f84'); r(CX - 5, y + 5, 1, 1, '#c96f84'); r(CX + 4, y + 5, 1, 1, '#c96f84'); }
   for (let y = TOP + 70; y < H - 30; y += 150) Art.drawPlant(CX + 9, y, false);
-  if (sky.phase !== 'night') for (let i = 0; i < nWin; i++) lights.push({ x: 40 + i * 74, y: TOP + 20, r: 60 });
+  if (sky.phase !== 'night') for (const b of windowBoxes) lights.push({ x: b.x + 24, y: TOP + 20, r: 60 });
   const arrived = z => layout.filter(c => c.actor && c.actor.mode === z);
   const meet = arrived('meet').map(c => ({ spot: c.actor.spot, lk: look(c.p.id), label: c.p.name, lead: true }));
   const used = new Set(meet.map(m => m.spot));
