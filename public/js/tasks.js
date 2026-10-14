@@ -834,7 +834,7 @@ async function loadVersion() {
     if (adminPreview === 'party') adminCelebrateUntil = Date.now() + 864e5;
   }
   if (verData && verData.current) { if (!adminPreview) checkVersionNotice(); drawAdmin(); } if (!reportEl.hidden && reportTab === 'version') renderVersion(); }
-setTimeout(loadVersion, 1500); setInterval(loadVersion, 30 * 60000);
+setTimeout(loadVersion, 1500); setInterval(loadVersion, 10 * 60000);
 function checkVersionNotice() {
   const v = verData; if (!v.newer) return;
   const later = Number(store.get('verLater', 0)) || 0;

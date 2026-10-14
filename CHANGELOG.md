@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- A new release shows up in an office left open within about 10 minutes (it checked once an hour), and the releases board, the admin's sign and the notice follow as soon as the office knows
+
 ## 0.8.0 — 2026-10-14
 - The office wall: frames, screens and windows spread evenly between the light switch and the whiteboard (same gap between each), a quiet wallpaper pattern and a chair rail with wainscot instead of plain stripes; sunlight comes in only through real windows
 - Everyone in the office: click the agent count under the office name for every agent with its state and the helpers working for it; an agent opens its panel, a helper opens its conversation

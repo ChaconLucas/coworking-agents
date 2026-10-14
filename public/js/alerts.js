@@ -101,6 +101,7 @@ function checkAlerts() {
   if (up && up.latest && !alerted.has('upd:' + up.latest)) {
     alerted.add('upd:' + up.latest);
     toast(`<b>${esc(A.update(up.latest))}</b>${esc(A.updateHow)} <code>npx coworking-agents@latest</code>`, 'ok sticky');
+    if (typeof loadVersion === 'function') loadVersion(); // the releases board, the admin's sign and the notice follow at once
   }
   firstAlertPass = false;
 }

@@ -1,5 +1,5 @@
 'use strict';
-// "A newer version is out": asks the npm registry for the latest version, once at start, every hour and when the releases tab opens.
+// "A newer version is out": asks the npm registry for the latest version, once at start, every 10 minutes and when the releases tab opens.
 // Only the package name goes out (no data about you or your sessions). Off with --no-update-check
 // or COWORKING_NO_UPDATE_CHECK=1. Started by the CLI only, so tests and the demo never touch the network.
 
@@ -29,7 +29,7 @@ async function check() {
 
 function startChecks() {
   if (timer || process.env.COWORKING_NO_UPDATE_CHECK) return Promise.resolve(null);
-  timer = setInterval(check, 3600e3);
+  timer = setInterval(check, 600e3); // a new release shows up within minutes in an office left open
   timer.unref();
   return check();
 }
