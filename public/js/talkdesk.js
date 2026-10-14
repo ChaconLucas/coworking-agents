@@ -81,3 +81,26 @@ panelBody.addEventListener('input', e => {
   clearTimeout(deskTalkTimer);
   deskTalkTimer = setTimeout(() => { deskTalkQ = e.target.value.trim().slice(0, 100); const p = data && data.people.find(x => x.id === selected); if (p) deskLoadTalk(p, !deskTalkQ); }, 350);
 });
+
+// ---------------- everyone in the office ----------------
+// Opened from the count under the office name: every agent with its state, and the helpers working for it right now.
+// An agent opens its panel; a helper opens that agent's conversation on the helper.
+function renderCrew() {
+  const C = T.crew, body = reportEl.querySelector('.report-body'), live = data.people.filter(p => !p.leaving);
+  const order = { needs_you: 0, waiting: 0, idle: 2, asleep: 3 }, rank = p => order[p.state] ?? 1;
+  const rows = live.slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).map(p => `<li class="crew-row">
+    <button class="crew-agent" data-crew="${esc(p.id)}"><span class="crew-face" data-crew-face="${esc(p.id)}"></span><span class="crew-txt"><b>${esc(p.name)}</b><small>${esc(agentOf(p).label)}${p.repo ? ' · ' + esc(p.repo.name) : ''}${p.title ? ' · ' + esc(p.title) : ''}</small></span><span class="pill" style="background:${KIND_COLOR[p.state] || '#888'}">${esc(T.states[p.state] || p.state)}</span></button>
+    ${(p.subagents || []).length ? `<ul class="crew-subs">${p.subagents.map(a => `<li><button data-crew="${esc(p.id)}" data-crew-sub="${esc(a.id)}">🤖 <b>${esc(a.type)}</b> ${esc(a.description || '')}${a.doing ? `<small> · ${esc(a.doing)}</small>` : ''}</button></li>`).join('')}</ul>` : ''}</li>`).join('');
+  const n = live.reduce((k, p) => k + (p.subagents || []).length, 0);
+  body.innerHTML = tabsHtml() + `<h2>👥 ${esc(C.title)}</h2><p class="sub">${esc(C.sub(live.length, n))}</p><ul class="crew-list">${rows || `<li class="note">—</li>`}</ul><p class="note">${esc(C.note)}</p>`;
+  body.querySelectorAll('[data-crew-face]').forEach(el => { try { el.appendChild(Art.portrait(el.dataset.crewFace)); } catch {} });
+}
+reportEl.addEventListener('click', e => {
+  if (reportTab !== 'crew') return;
+  const b = e.target.closest('[data-crew]'); if (!b) return;
+  const id = b.dataset.crew, sub = b.dataset.crewSub || '';
+  closeReport();
+  if (sub) { deskSub = 'talk'; deskTalkFor = id; deskTalkSub = sub; deskTalk = null; deskTalkKey = ''; deskTalkDrawn = ''; } else deskSub = 'info';
+  showPerson(id);
+});
+document.addEventListener('click', e => { if (e.target.closest('#host .crew')) openReport('crew'); });

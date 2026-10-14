@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Everyone in the office: click the agent count under the office name for every agent with its state and the helpers working for it; an agent opens its panel, a helper opens its conversation
 - Top bar: under the office name, how many agents are in the office, with "+N 🤖" while helpers (subagents) work (hover for who); the bar keeps its size; the phone shows the same in its header and on each agent's card
 - Conversation (computer and phone): every agent's helpers (Claude subagents, Codex child threads) listed above the chat, with a dot on the ones still working; pick one to read its own conversation, from the request it got to its answer, with the same search
 - Conversation in the side panel: click an agent, then *Conversation* for the whole conversation as a chat, a search inside it, and a box to write to it when it finished its turn

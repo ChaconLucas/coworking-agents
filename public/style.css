@@ -968,3 +968,13 @@ body.tv .app-ask { display: none; }
 .phelpers button.on { border-color: var(--accent); color: var(--ink); }
 .stat.crew b.helpers { margin-left: 6px; color: #feae34; }
 #host .crew { white-space: nowrap; } #host .crew b { display: inline; font: inherit; color: #feae34; }
+/* everyone in the office */
+#host .crew { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.crew-list { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
+.crew-agent { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.crew-agent:hover, .crew-subs button:hover { border-color: var(--accent); }
+.crew-face { flex: none; width: 34px; height: 38px; overflow: hidden; } .crew-face canvas { width: 34px; height: 38px; image-rendering: pixelated; }
+.crew-txt { flex: 1; min-width: 0; } .crew-txt b { display: block; font: 700 12px/1.2 var(--pix); } .crew-txt small { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crew-subs { list-style: none; margin: 6px 0 0 44px; padding: 0; display: grid; gap: 5px; }
+.crew-subs button { width: 100%; text-align: left; padding: 6px 9px; border: 2px dashed var(--line); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; font-size: 12px; }
+.crew-subs small { color: var(--muted); }

@@ -173,6 +173,7 @@ function renderReport() {
   if (reportTab === 'today') return renderToday();
   if (reportTab === 'feed') return renderFeed();
   if (reportTab === 'timelapse') return renderTimelapse();
+  if (reportTab === 'crew') return renderCrew();
   if (reportTab === 'ach') return renderAchievements();
   if (reportTab === 'paper') return renderPaper();
   if (reportTab === 'queue') return renderQueue();
