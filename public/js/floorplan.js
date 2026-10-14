@@ -169,7 +169,7 @@ function fitScale() {
 function renderFloors() {
   let bar = document.getElementById('floors');
   if (!bar) { bar = document.createElement('nav'); bar.id = 'floors'; bar.className = 'floors'; document.getElementById('stage').before(bar); bar.addEventListener('click', e => { if (e.target.closest('[data-building]')) return setBuilding(!building); const b = e.target.closest('[data-floor]'); if (b) goFloor(+b.dataset.floor); }); }
-  if (floors.length < 2) { bar.hidden = true; if (building) setBuilding(false); return; }
+  if (floors.length < 2) { bar.hidden = true; if (building && !(typeof buildingByZoom !== 'undefined' && buildingByZoom)) setBuilding(false); return; }
   bar.hidden = false;
   // elevator panel: round lit buttons with the floor number, room names underneath
   bar.innerHTML = `<button class="lift-bld ${building ? 'on' : ''}" data-building="1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 1h10v14H3zM5 3v2h2V3zm4 0v2h2V3zM5 7v2h2V7zm4 0v2h2V7zm-2 4v4h2v-4z"/></svg><span>${esc(T.building)}</span></button><span class="lift-sep"></span>` + floors.map((f, i) => {

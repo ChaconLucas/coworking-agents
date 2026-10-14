@@ -4,11 +4,13 @@
 // slides with you; next to an agent a card shows what it is doing and what you asked last, with its buttons.
 let gatherOn = qs.get('gather') === '0' ? false : store.get('gather', true) !== false && store.get('player', true) !== false; // ?gather=0 for the README screenshots (the whole office)
 // zoom: − and + in the bar at the bottom (or the - and = keys, or pinch / ctrl + wheel); "fit" shows the whole office
-const ZOOMS = ['fit', 1, 1.5, 2, 2.5, 3, 4];
-let zoomI = ZOOMS.indexOf(store.get('zoom', 2)); if (zoomI < 0) zoomI = 4;
+// all the way out you leave the floor: the building with every floor (and the names of the areas just before it)
+const ZOOMS = ['building', 'fit', 1, 1.5, 2, 2.5, 3, 4];
+let zoomI = ZOOMS.indexOf(store.get('zoom', 2)); if (zoomI < 1) zoomI = zoomI === 0 ? 1 : 5;
+let buildingByZoom = false;
 // Normal mode zooms too, without a character: "width" is the whole floor across the page; closer, you drag or scroll to look
-const NZOOMS = ['fit', 'width', 1.25, 1.5, 2, 3, 4]; // fit: the whole floor in the window; width: across the page, as always
-let zoomN = NZOOMS.indexOf(store.get('zoomN', 'width')); if (zoomN < 0) zoomN = 1;
+const NZOOMS = ['building', 'fit', 'width', 1.25, 1.5, 2, 3, 4]; // fit: the whole floor in the window; width: across the page, as always
+let zoomN = NZOOMS.indexOf(store.get('zoomN', 'width')); if (zoomN < 1) zoomN = zoomN === 0 ? 1 : 2;
 const gatherActive = () => gatherOn && playerOn && !trophyView && !building && !!data;
 const placeView = () => !trophyView && !building && !!data;
 const camActive = () => gatherActive() || (!gatherOn && NZOOMS[zoomN] !== 'width' && placeView()); // the camera moves the floor under the window
@@ -21,6 +23,13 @@ function gatherZoom(w, h, s) {
   return Math.min((st.clientWidth || innerWidth) / (w * s), Math.max(240, innerHeight - top - 8) / (h * s));
 }
 function setZoom(step) {
+  { // to and from the building view, at the far end of the zoom
+    const list = gatherOn ? ZOOMS : NZOOMS, i0 = gatherOn ? zoomI : zoomN, i = Math.max(0, Math.min(list.length - 1, i0 + step));
+    if (list[i] === 'building' || (list[i0] === 'building' && building)) {
+      if (gatherOn) zoomI = i; else zoomN = i; store.set(gatherOn ? 'zoom' : 'zoomN', list[i] === 'building' ? 'fit' : list[i]);
+      buildingByZoom = list[i] === 'building'; setBuilding(buildingByZoom); if (!buildingByZoom) { lastLayoutKey = ''; renderAll(); } zoomBar(); return;
+    }
+  }
   if (!gatherOn) { // Normal mode: its own steps; the camera stays where you look (centred on the same spot)
     const i = Math.max(0, Math.min(NZOOMS.length - 1, zoomN + step)); if (i === zoomN) return;
     const st = document.getElementById('stage'), rc = st.getBoundingClientRect();
@@ -36,7 +45,7 @@ function setZoom(step) {
 const zoomEl = document.createElement('div'); zoomEl.className = 'menu-zoom'; zoomEl.hidden = true; // a row in ☰ → Settings, under Gather mode
 function zoomBar() {
   const G = T.gather, list = gatherOn ? ZOOMS : NZOOMS, i = gatherOn ? zoomI : zoomN, z = list[i]; zoomEl.hidden = false;
-  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' ? esc(G.fit) : z === 'width' ? '1×' : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button>${camManual && gatherOn ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
+  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' ? esc(G.fit) : z === 'width' ? '1×' : z === 'building' ? esc(G.building) : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button>${camManual && gatherOn ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
 }
 zoomEl.addEventListener('click', e => {
   e.stopPropagation();
@@ -137,10 +146,28 @@ nearEl.addEventListener('click', e => {
 // small zoom buttons on the left edge of the screen while in Gather mode (the same as the menu row)
 const zoomPad = document.createElement('div'); zoomPad.className = 'zoom-pad'; zoomPad.hidden = true; document.body.appendChild(zoomPad);
 function zoomPadDraw() {
-  const on = placeView(), G = T.gather; zoomPad.hidden = !on; if (!on) return;
+  if (building && !buildingByZoom && (gatherOn ? ZOOMS[zoomI] : NZOOMS[zoomN]) !== 'building') { /* the floor picker's building view */ }
+  if (!building && (gatherOn ? ZOOMS[zoomI] : NZOOMS[zoomN]) === 'building') { if (gatherOn) zoomI = 1; else zoomN = 1; buildingByZoom = false; } // left by picking a floor
+  areaLabels();
+  const on = !trophyView && !!data, G = T.gather; zoomPad.hidden = !on; if (!on) return;
   const list = gatherOn ? ZOOMS : NZOOMS, i = gatherOn ? zoomI : zoomN;
   const html = `<button data-zp="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button><button data-zp="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button>${camManual && gatherActive() ? `<button data-zp="me" title="${esc(G.backToMe)}">◎</button>` : ''}`;
   if (zoomPad.innerHTML !== html) zoomPad.innerHTML = html;
 }
 zoomPad.addEventListener('click', e => { const b = e.target.closest('[data-zp]'); if (!b) return; if (b.dataset.zp === 'me') { camManual = false; zoomBar(); } else setZoom(Number(b.dataset.zp)); zoomPadDraw(); });
 setInterval(zoomPadDraw, 400);
+
+// zoomed all the way out over the floor, the areas show their names
+const areaEl = document.createElement('div'); areaEl.className = 'area-labels'; overlay.appendChild(areaEl);
+let areaKey = '';
+function areaLabels() {
+  const z = gatherOn ? ZOOMS[zoomI] : NZOOMS[zoomN], show = !building && !trophyView && !!data && (z === 'fit' || S < 1.1);
+  const A = T.areas, P = T.places, list = !show ? [] : [
+    SIDE_L && [SIDE_L / 2, TOP + 40, P.park], SIDE_R && [RX + RW + (W - RX - RW) / 2, TOP + 70, P.cafe],
+    game && [game.x + game.w / 2, game.y + game.h / 2, A.game], ...places.map(p => [p.x + p.w / 2, p.y + p.h / 2, P[p.name]]),
+    garden && [garden.x + garden.w / 2, garden.y + 30, P.garden], wing && [RX + RW / 2, wing.copa + 34, A.lounge], wing && [RX + RW / 2, wing.ping + 34, A.ping],
+    wing && [RX + RW / 2, wing.meet + 50, A.meeting], wing && [RX + RW / 2, wing.nap + 44, A.rest], wing && [RX + RW / 2, wing.servers + 24, A.servers],
+  ].filter(Boolean);
+  const key = JSON.stringify([list, S]); if (key === areaKey) return; areaKey = key;
+  areaEl.innerHTML = list.map(([x, y, name]) => `<span style="left:${x * S}px;top:${y * S}px">${esc(name)}</span>`).join('');
+}

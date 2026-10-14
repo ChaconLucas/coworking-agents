@@ -1039,3 +1039,6 @@ body.gather main#stage { cursor: grab; } body.gather main#stage:active { cursor:
 .zoom-pad button:disabled { opacity: .35; cursor: default; }
 /* walking is part of Gather mode now (the switch is "Gather mode" in the menu) */
 #tools-menu #btn-walk { display: none; }
+/* area names over the floor when zoomed all the way out */
+.area-labels { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.area-labels span { position: absolute; transform: translate(-50%, -50%); font: 700 12px/1 var(--pix); text-transform: uppercase; letter-spacing: .06em; color: #fff; background: rgba(27,22,34,.82); border: 2px solid #0b0a0e; border-radius: 6px; padding: 5px 8px; white-space: nowrap; }

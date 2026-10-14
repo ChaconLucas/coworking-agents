@@ -7,7 +7,7 @@ buildingEl.addEventListener('click', e => { const c = e.target.closest('[data-fl
 const thumbs = [];
 
 function setBuilding(on) {
-  building = !!on && floors.length > 1;
+  building = !!on && (floors.length > 1 || (typeof buildingByZoom !== 'undefined' && buildingByZoom)); // one floor: only when you zoom all the way out
   buildingEl.hidden = !building;
   document.getElementById('stage').hidden = building;
   if (building) renderBuilding();
