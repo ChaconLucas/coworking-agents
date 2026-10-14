@@ -622,9 +622,25 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['tv', '📺'], ['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['watches', '⏰'], ['archive', '🗄'], ['timelapse', '🎞'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  // each panel gets a 16 px pixel icon in the same style as the menu's other buttons (rectangles x, y, w, h)
+  const R = rects => rects.map(([x, y, w, h]) => `M${x} ${y}h${w}v${h}h-${w}z`).join('');
+  const ICON = {
+    tasks: R([[5, 1, 6, 3], [3, 3, 10, 1], [3, 3, 1, 12], [12, 3, 1, 12], [3, 14, 10, 1], [5, 7, 6, 1], [5, 10, 6, 1]]),
+    usage: R([[7, 1, 2, 14], [4, 3, 8, 2], [4, 5, 2, 2], [4, 7, 8, 2], [10, 9, 2, 2], [4, 11, 8, 2]]),
+    notices: 'M7 1h2v1h2v1h1v5h1v2h1v2H2v-2h1V8h1V3h1V2h2zM6 13h4v1H9v1H7v-1H6z',
+    feed: R([[2, 3, 2, 2], [6, 3, 8, 2], [2, 7, 2, 2], [6, 7, 8, 2], [2, 11, 2, 2], [6, 11, 8, 2]]),
+    repos: R([[1, 2, 14, 3], [2, 5, 1, 9], [13, 5, 1, 9], [2, 13, 12, 1], [6, 7, 4, 1]]),
+    archive: R([[3, 1, 10, 1], [3, 1, 1, 14], [12, 1, 1, 14], [3, 14, 10, 1], [3, 7, 10, 1], [7, 4, 2, 1], [7, 10, 2, 1]]),
+    timelapse: R([[1, 3, 14, 1], [1, 12, 14, 1], [1, 3, 1, 10], [14, 3, 1, 10], [6, 6, 2, 4], [8, 7, 2, 2]]),
+    version: R([[7, 1, 2, 2], [6, 3, 4, 7], [4, 8, 2, 3], [10, 8, 2, 3], [7, 11, 2, 3]]),
+    broadcast: R([[2, 6, 2, 4], [4, 5, 2, 6], [6, 4, 2, 8], [8, 2, 2, 12], [11, 7, 3, 2]]),
+    watches: R([[2, 1, 3, 2], [11, 1, 3, 2], [4, 3, 8, 1], [3, 4, 1, 8], [12, 4, 1, 8], [4, 12, 8, 1], [7, 6, 1, 4], [8, 9, 2, 1], [3, 13, 2, 2], [11, 13, 2, 2]]),
+    phone: R([[4, 1, 8, 1], [4, 1, 1, 14], [11, 1, 1, 14], [4, 14, 8, 1], [6, 12, 4, 1]]),
+    tv: R([[5, 1, 1, 3], [10, 1, 1, 3], [1, 4, 14, 1], [1, 12, 14, 1], [1, 4, 1, 9], [14, 4, 1, 9], [6, 13, 4, 2]]),
+  };
+  if (menu) for (const tab of ['tv', 'phone', 'broadcast', 'repos', 'tasks', 'usage', 'watches', 'archive', 'timelapse', 'feed', 'notices', 'version']) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
-    b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
+    b.innerHTML = `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${ICON[tab]}"/></svg><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); if (tab === 'tv') return setTv(true); openReport(tab); });
   }
   // three groups instead of one long list: what you look at, what you do, how the office behaves
