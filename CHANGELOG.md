@@ -1,7 +1,8 @@
 # Changelog
 
 ## Unreleased
-- A bar at the bottom switches Gather and Normal mode. In Gather: zoom from *all* (the whole floor fits the window) to 3× (− and +, the - and = keys, or pinch / ctrl + wheel), and look around yourself by dragging the floor or scrolling; walking (or ◎) brings the camera back to you
+- ☰ → Settings → *Gather mode* (on) or the normal office; the zoom row under it goes from *all* (the whole floor fits the window) to 3× (also the - and = keys, or pinch / ctrl + wheel). Drag the floor or scroll to look around; walking (or ◎) brings the camera back to you
+- Gather mode's floor is wider and roomier: more space between rooms, a park along the left (a winding path, a pond with a duck, trees, benches, lamps) and a café terrace along the right (the counter, round umbrella tables); agents on a stroll sit there too
 - Walking: you collide by your feet (the bottom of your character, about 10 px wide), so walls stop you where they are drawn and you no longer get stuck on an invisible edge in the middle of the floor; the glass meeting room, the rest room and the server corner are walls too, entered by their doors
 - Gather mode (on by default while you walk; ☰ → Settings → Camera follows you): the office drawn twice as big and the view slides with you
 - Walk up to an agent and a card opens over it: what it is doing or asking, its title and what you asked last, with Open/Answer and Conversation

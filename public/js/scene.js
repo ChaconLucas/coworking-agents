@@ -406,6 +406,7 @@ function drawScene(t, dt) {
   drawHolidayWall(t, nWin);
   drawShopWall(t, wallGlows);
   drawShafts(sky, nWin);
+  if (typeof drawSideAreas === 'function') drawSideAreas(t); // Gather mode: the park on the left, the café on the right
   // corridor runner rug with plants along it
   r(CX - 8, TOP, 16, H - TOP, '#6e2f3f'); r(CX - 6, TOP, 12, H - TOP, '#8e3e52');
   for (let y = TOP + 6; y < H; y += 10) { r(CX - 1, y, 2, 4, '#c96f84'); r(CX - 5, y + 5, 1, 1, '#c96f84'); r(CX + 4, y + 5, 1, 1, '#c96f84'); }

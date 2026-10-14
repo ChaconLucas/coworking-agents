@@ -19,15 +19,13 @@ function setZoom(step) {
   zoomI = i; store.set('zoom', ZOOMS[i]); camX = camY = null; camManual = false; lastLayoutKey = ''; renderAll(); zoomBar();
 }
 // the bar at the bottom: Gather or Normal, and the zoom while in Gather
-const zoomEl = document.createElement('div'); zoomEl.className = 'zoom-bar'; zoomEl.hidden = true; document.body.appendChild(zoomEl);
+const zoomEl = document.createElement('div'); zoomEl.className = 'menu-zoom'; zoomEl.hidden = true; // a row in ☰ → Settings, under Gather mode
 function zoomBar() {
-  const G = T.gather; zoomEl.hidden = !(playerOn && !trophyView && !building && data);
-  const z = ZOOMS[zoomI];
-  zoomEl.innerHTML = `<span class="zb-modes"><button class="${gatherOn ? 'on' : ''}" data-gmode="1" title="${esc(G.tip)}">${esc(G.gather)}</button><button class="${gatherOn ? '' : 'on'}" data-gmode="0" title="${esc(G.normalTip)}">${esc(G.normal)}</button></span>`
-    + (gatherOn ? `<button data-zoom="-1" title="${esc(G.out)}" ${zoomI === 0 ? 'disabled' : ''}>−</button><span class="zb-z">${z === 'fit' ? esc(G.fit) : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${zoomI === ZOOMS.length - 1 ? 'disabled' : ''}>+</button>${camManual ? `<button class="zb-me" data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}` : '');
+  const G = T.gather, z = ZOOMS[zoomI]; zoomEl.hidden = !gatherOn;
+  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${zoomI === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' ? esc(G.fit) : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${zoomI === ZOOMS.length - 1 ? 'disabled' : ''}>+</button>${camManual ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
 }
 zoomEl.addEventListener('click', e => {
-  const m = e.target.closest('[data-gmode]'); if (m) return setGather(m.dataset.gmode === '1');
+  e.stopPropagation();
   if (e.target.closest('[data-zoom-me]')) { camManual = false; zoomBar(); return; }
   const b = e.target.closest('[data-zoom]'); if (b) setZoom(Number(b.dataset.zoom));
 });
@@ -68,7 +66,6 @@ function gatherFollow() {
     const st = document.getElementById('stage'), want = on ? Math.max(240, Math.round(innerHeight - (st.getBoundingClientRect().top + scrollY) - 8)) + 'px' : '';
     if (st.style.height !== want) st.style.height = want;
   }
-  if (zoomEl.hidden === !!(playerOn && !trophyView && !building && data)) zoomBar();
   if (!on) { if (camX !== null) { camX = camY = null; camManual = false; if (!officeEl.classList.contains('cam')) officeEl.style.transform = ''; } nearCardHide(); return; }
   if (officeEl.classList.contains('cam')) return; // an agent's panel has the camera
   if (me.moving && camManual) { camManual = false; zoomBar(); } // walking brings the camera back to you
@@ -86,8 +83,8 @@ const gatherBtn = document.createElement('button');
 gatherBtn.id = 'btn-gather'; gatherBtn.className = 'icon-btn';
 gatherBtn.innerHTML = `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 1h5v2H3v3H1zM10 1h5v5h-2V3h-3zM1 10h2v3h3v2H1zM13 10h2v5h-5v-2h3zM7 6h2v1h1v2H9v1H7V9H6V7h1z"/></svg><span class="ml"></span>`;
 gatherBtn.onclick = () => setGather(!gatherOn);
-{ const ref = document.getElementById('btn-autostart'); if (ref) ref.before(gatherBtn); else { const sec = document.querySelector('#tools-menu .menu-sec:last-child'); if (sec) sec.appendChild(gatherBtn); } }
-function labelGather() { gatherBtn.setAttribute('aria-pressed', gatherOn ? 'true' : 'false'); gatherBtn.querySelector('.ml').textContent = T.gather.label; gatherBtn.title = T.gather.tip; }
+{ const ref = document.getElementById('btn-autostart'); if (ref) ref.before(gatherBtn); else { const sec = document.querySelector('#tools-menu .menu-sec:last-child'); if (sec) sec.appendChild(gatherBtn); } gatherBtn.after(zoomEl); zoomBar(); }
+function labelGather() { gatherBtn.setAttribute('aria-pressed', gatherOn ? 'true' : 'false'); gatherBtn.querySelector('.ml').textContent = T.gather.label; gatherBtn.title = T.gather.tip; zoomBar(); }
 labelGather();
 
 // ---- walking up to someone: a card over them (who, what now, what you asked), Enter or the buttons act ----

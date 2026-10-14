@@ -143,3 +143,40 @@ function drawGarden(t) {
   for (const row of [y + 46, y + 112]) for (let bx = x + 40; bx <= x + w - 60; bx += 70) { r(bx - 2, row + 20, 40, 4, '#8a5a3c'); r(bx - 2, row + 24, 2, 5, '#5a3a28'); r(bx + 36, row + 24, 2, 5, '#5a3a28'); }
   const label = plain(T.places.garden), lw = label.length * 4 + 8; r(x + 6, y + h - 12, lw, 9, '#00000088'); pixText(x + 10, y + h - 10, label, '#f4ecd8');
 }
+
+// ---- Gather mode's open sides: a park along the left, a café terrace along the right (who strolls sits here too) ----
+function sideSeats() {
+  const out = [];
+  if (SIDE_L) for (let y = TOP + 70; y < H - 60; y += 110) out.push({ x: 40, y, zone: 'garden', pose: 'stand' }, { x: 120, y: y + 40, zone: 'garden', pose: 'stand' });
+  if (SIDE_R) { const x0 = RX + RW + 14; for (let y = TOP + 120; y < H - 60; y += 90) out.push({ x: x0 + 30, y, zone: 'garden', pose: 'sit' }, { x: x0 + 140, y: y + 20, zone: 'garden', pose: 'sit' }); }
+  return out;
+}
+function drawSideAreas(t) {
+  if (SIDE_L) { // the park: grass, a winding path, trees, a pond, benches and lamps
+    const w = SIDE_L - 4, y0 = TOP, h = H - TOP;
+    r(0, y0, w, h, '#4f8a3c'); for (let k = 0; k < Math.floor(w * h / 110); k++) { const hh = hash('pk' + k); r(hh % w, y0 + (hh >>> 10) % h, 1, 2, (hh >>> 4) % 3 ? '#5f9e48' : '#427a33'); }
+    for (let y = y0; y < H; y += 4) { const px = 90 + Math.round(Math.sin(y / 60) * 40); r(px, y, 22, 4, '#c9b48a'); r(px, y, 1, 4, '#a8956c'); r(px + 21, y, 1, 4, '#a8956c'); }
+    r(w, y0, 4, h, '#3b6a2e'); // the hedge along the building
+    const py = y0 + Math.floor(h * .55); r(18, py, 60, 34, '#3f8fd0'); r(16, py - 2, 64, 2, '#9aa3b0'); r(16, py + 34, 64, 2, '#9aa3b0'); for (let k = 0; k < 5; k++) { const hh = hash('pd' + k); if (((t / 300 + k) | 0) % 3) r(22 + hh % 50, py + 4 + (hh >>> 6) % 26, 6, 1, '#a9dcff'); } r(40, py + 14, 6, 4, '#ffd84d'); r(46, py + 13, 2, 2, '#ff8a3c'); // a duck
+    for (let y = y0 + 20; y < H - 30; y += 70) for (const tx of [8, w - 34]) { const hh = hash('pt' + y + tx), ox = hh % 10; r(tx + ox + 10, y + 18, 5, 14, '#6b4a33'); r(tx + ox, y, 26, 22, '#2f6b2a'); r(tx + ox + 4, y - 5, 18, 7, '#3a8a35'); r(tx + ox + 5, y + 4, 5, 4, '#4fa846'); }
+    for (let y = TOP + 70; y < H - 60; y += 110) { for (const [bx, by] of [[36, y + 20], [116, y + 60]]) { r(bx - 2, by, 40, 4, '#8a5a3c'); r(bx - 2, by + 4, 2, 5, '#5a3a28'); r(bx + 36, by + 4, 2, 5, '#5a3a28'); } r(70, y - 10, 2, 26, '#3a3a40'); r(67, y - 13, 8, 4, ((t / 1000) | 0) % 30 ? '#ffe9a0' : '#c9b48a'); }
+    const lab = plain(T.places.park), lw = lab.length * 4 + 8; r(6, H - 16, lw, 9, '#00000088'); pixText(10, H - 14, lab, '#f4ecd8');
+  }
+  if (SIDE_R) { // the café terrace: a deck, the counter with its board, tables with umbrellas, plants
+    const x0 = RX + RW + 10, w = W - x0, y0 = TOP, h = H - TOP;
+    for (let y = y0; y < H; y += 7) { r(x0, y, w, 7, (y / 7 | 0) % 2 ? '#a6754c' : '#b07f54'); r(x0, y + 6, w, 1, '#8a5e3c'); }
+    r(x0 - 4, y0, 4, h, '#5a3a28');
+    r(x0 + 16, y0 + 14, w - 32, 34, '#5a3a28'); r(x0 + 16, y0 + 12, w - 32, 4, '#8a6a4a'); r(x0 + 26, y0 + 18, 44, 22, '#1b1d2e'); pixText(x0 + 30, y0 + 22, plain(T.places.cafe), '#ffd84d'); r(x0 + 30, y0 + 31, 30, 1, '#5a5a6a'); r(x0 + 30, y0 + 35, 22, 1, '#5a5a6a');
+    r(x0 + w - 70, y0 + 20, 16, 20, '#c0cbdc'); if (((t / 500) | 0) % 2) r(x0 + w - 64, y0 + 14, 2, 6, '#ffffff66'); // the espresso machine steaming
+    // tables seen from above under round striped umbrellas, two chairs each (the strollers' seats sit next to them)
+    for (let y = TOP + 120; y < H - 60; y += 90) for (const [tx, ty] of [[x0 + 50, y], [x0 + 160, y + 20]]) {
+      const c = hash('um' + tx + ty) % 2 ? ['#e43b44', '#f4ecd8'] : ['#3b5dc9', '#f4ecd8'];
+      r(tx - 6, ty + 18, 8, 6, '#6b4a33'); r(tx + 30, ty + 18, 8, 6, '#6b4a33'); // chairs
+      r(tx + 2, ty + 10, 28, 12, '#e8e2d6'); r(tx + 2, ty + 20, 28, 2, '#b8b0a0'); // the table
+      ctx.fillStyle = '#00000022'; ctx.fillRect(tx - 2, ty + 2, 40, 8); // the umbrella's shadow
+      for (let k = 0; k < 6; k++) { const yy = ty - 16 + k * 3, half = [8, 14, 18, 18, 14, 8][k]; for (let x = -half; x < half; x += 4) r(tx + 16 + x, yy, 4, 3, ((x + 40) / 4 | 0) % 2 ? c[0] : c[1]); }
+      r(tx + 15, ty - 18, 2, 2, '#c0cbdc');
+    }
+    for (let y = TOP + 70; y < H; y += 120) { r(W - 22, y + 10, 14, 12, '#c96f4a'); for (let k = 0; k < 4; k++) r(W - 20 + k * 3, y - 2 + k, 2, 14 - k, '#3a8f46'); }
+  }
+}

@@ -10,7 +10,7 @@ let ctx = mainCtx; // switched to the thumbnail canvas while drawing another flo
 Art.setCtx(ctx);
 const overlay = document.getElementById('overlay');
 let S = 3, W = 480, H = 300, CX = 320, RX = 330;
-let game = null, places = [], garden = null, data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
+let SIDE_L = 0, SIDE_R = 0, ROWGAP = 14, COLGAP = 8, game = null, places = [], garden = null, data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
 
 function rawRoomKey(p) {
   if (p.repo && p.repo.name) return p.repo.name;
@@ -58,7 +58,7 @@ function planFloors(people, leftW) {
       shelf = { rooms: [], used: 0 };
       cur.shelves.push(shelf);
     }
-    shelf.rooms.push(room); shelf.used += room.w + 8;
+    shelf.rooms.push(room); shelf.used += room.w + COLGAP;
   }
   if (cur.shelves.length || !out.length) out.push(cur);
   return out;
@@ -74,9 +74,12 @@ function relayout() {
   // with several rooms, shrink the scale so two fit side by side; with just one, keep it big
   const groups = new Set((data ? data.people : []).map(roomKey)).size;
   const s0 = Math.max(1.6, Math.min(3, availW / (groups > 1 ? 840 : 520)));
-  W = Math.max(480, Math.min(920, Math.floor(availW / s0)));
-  CX = W - RW - 14; RX = CX + 10;
-  const leftW = CX - 12;
+  // Gather mode: a wider, roomier floor with open areas on both sides (a park on the left, a café on the right)
+  const g = typeof gatherActive === 'function' && gatherActive();
+  SIDE_L = g ? 210 : 0; SIDE_R = g ? 230 : 0; ROWGAP = g ? 34 : SHELF_GAP; COLGAP = g ? 26 : 8;
+  W = Math.max(g ? 900 : 480, Math.min(g ? 1100 : 920, Math.floor(availW / s0))) + SIDE_L + SIDE_R;
+  CX = W - RW - 14 - SIDE_R; RX = CX + 10;
+  const leftW = CX - 12 - SIDE_L;
   floors = planFloors(data ? data.people : [], leftW);
   if (floor >= floors.length) floor = floors.length - 1;
   // every floor (the building view draws the others as thumbnails)
@@ -113,7 +116,7 @@ function buildFloor(i) {
   const rs = [], ds = [];
   let y = TOP + 4;
   for (const shelf of floors[i].shelves) {
-    let x = 8, shelfH = 0;
+    let x = 8 + SIDE_L, shelfH = 0;
     for (const room of shelf.rooms) {
       const h = ROOM_HEAD + room.rows * CELL_H + 4;
       const R = { ...room, x, y, h, doorX: x + Math.round(room.w / 2) - 9 };
@@ -122,21 +125,21 @@ function buildFloor(i) {
         ds.push({ p: R.people[k] || null, room: R, x: dx, y: dy, chair: { x: dx + CELL_W / 2 - 8, y: dy + 38 }, aisle: dy + 72 });
       }
       rs.push(R);
-      x += room.w + 8; shelfH = Math.max(shelfH, h);
+      x += room.w + COLGAP; shelfH = Math.max(shelfH, h);
     }
-    y += shelfH + SHELF_GAP;
+    y += shelfH + ROWGAP;
   }
   // the game room fills the width under the team rooms, door on its right wall to the corridor
-  const GH = 128, gy = y + 4, gw = CX - 20;
-  const game = { x: 8, y: gy, w: gw, h: GH, doorY: gy + GH / 2,
-    doors: [{ side: 'right', x: 8 + gw, y: gy + GH / 2 }, { side: 'top', x: 8 + Math.round(gw * .2), y: gy }, { side: 'top', x: 8 + Math.round(gw * .62), y: gy }, { side: 'bottom', x: 8 + Math.round(gw * .75), y: gy + GH }] };
-  y += GH + SHELF_GAP + 4;
+  const L0 = 8 + SIDE_L, GH = 128, gy = y + 4, gw = CX - 20 - SIDE_L;
+  const game = { x: L0, y: gy, w: gw, h: GH, doorY: gy + GH / 2,
+    doors: [{ side: 'right', x: L0 + gw, y: gy + GH / 2 }, { side: 'top', x: L0 + Math.round(gw * .2), y: gy }, { side: 'top', x: L0 + Math.round(gw * .62), y: gy }, { side: 'bottom', x: L0 + Math.round(gw * .75), y: gy + GH }] };
+  y += GH + ROWGAP + 4;
   // under the game room: the library, the lab and the waiting room, side by side, doors on their top wall to the hallway
-  const PH = 170, pw = Math.floor((CX - 20 - 16) / 3), py = y + 6;
-  const places = ['library', 'lab', 'waiting'].map((name, k) => { const x = 8 + k * (pw + 8); return { name, x, y: py, w: pw, h: PH, doors: [{ side: 'top', x: x + Math.round(pw / 2), y: py }] }; });
-  y += PH + SHELF_GAP + 10;
+  const PH = 170, pw = Math.floor((gw - COLGAP * 2) / 3), py = y + 6;
+  const places = ['library', 'lab', 'waiting'].map((name, k) => { const x = L0 + k * (pw + COLGAP); return { name, x, y: py, w: pw, h: PH, doors: [{ side: 'top', x: x + Math.round(pw / 2), y: py }] }; });
+  y += PH + ROWGAP + 10;
   // the garden: open to the hallway, at the bottom of the floor; agents whose turn ended sometimes stroll out here
-  const garden = { x: 8, y: y, w: CX - 20, h: 160 };
+  const garden = { x: L0, y: y, w: gw, h: 160 };
   y += garden.h + 8;
   const occupied = ds.filter(d => d.p);
   const lay = occupied.map(d => Object.assign({}, d));

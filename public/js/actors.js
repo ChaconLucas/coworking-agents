@@ -7,8 +7,8 @@ const ROOM_GO_MS = 20000, ROOM_BACK_MS = 8000;
 // seats in the library and the lab: two rows facing the tables or benches (the rooms draw their furniture to match)
 // benches in the garden, two rows
 function gardenSeats() {
-  if (!garden) return [];
-  const out = []; for (const row of [garden.y + 46, garden.y + 112]) for (let x = garden.x + 40; x <= garden.x + garden.w - 60; x += 70) out.push({ x, y: row, zone: 'garden', pose: 'stand' }, { x: x + 18, y: row, zone: 'garden', pose: 'stand' });
+  const out = typeof sideSeats === 'function' ? sideSeats() : [];
+  if (!garden) return out; for (const row of [garden.y + 46, garden.y + 112]) for (let x = garden.x + 40; x <= garden.x + garden.w - 60; x += 70) out.push({ x, y: row, zone: 'garden', pose: 'stand' }, { x: x + 18, y: row, zone: 'garden', pose: 'stand' });
   return out;
 }
 function placeSeats(name) {
@@ -68,6 +68,7 @@ const SPEED = 52;
 
 // every spot knows its way out to the vertical corridor (CX); the path is: exit, corridor, enter
 function exitPath(pt, cell) {
+  if ((SIDE_L && pt.x < SIDE_L) || (SIDE_R && pt.x > RX + RW + 6)) return [{ x: pt.x, y: H - 10 }]; // the park and the café: by the open lane along the bottom
   const P = places.find(P => pt.x >= P.x && pt.x <= P.x + P.w && pt.y >= P.y && pt.y <= P.y + P.h);
   if (P) { const d = P.doors[0]; return [{ x: pt.x, y: P.y + 14 }, { x: d.x - 8, y: P.y + 14 }, { x: d.x - 8, y: P.y - 8 }]; } // out through the room's top door
   if (garden && pt.y >= garden.y && pt.x < CX) return [{ x: pt.x, y: garden.y - 6 }]; // the garden is open to the hallway above it
