@@ -6,7 +6,9 @@ document.addEventListener('click', async e => {
   b.disabled = true; await api('api/tasks', { op: 'cancel', id: b.dataset.clashPause }); if (typeof pollTasks === 'function') pollTasks();
 });
 function renderBar() {
-  document.getElementById('host').textContent = prog.officeName || data.host || '';
+  // under the office name: how many agents, and "+N 🤖" while helpers (subagents) work (hover for who); the bar keeps its size
+  const live = data.people.filter(p => !p.leaving), subs = live.flatMap(p => (p.subagents || []).map(a => `${p.name} → ${a.type}${a.description ? ': ' + a.description : ''}`));
+  document.getElementById('host').innerHTML = `${esc(prog.officeName || data.host || '')} · <span class="crew" title="${esc(live.map(p => p.name).join(', ') + '\n\n' + (subs.join('\n') || T.crew.none))}">${live.length} ${esc(T.crew.agents(live.length))}${subs.length ? ` <b>+${subs.length} 🤖</b>` : ''}</span>`;
   const c = { work: 0, need: 0, turn: 0, sleep: 0 };
   for (const p of data.people) {
     if (p.leaving) continue;
@@ -17,11 +19,7 @@ function renderBar() {
   }
   // stat tiles: the "needs you" one turns red and pulses when it isn't zero
   const tile = (n, label, color, cls = '') => `<span class="stat ${cls}" style="--c:${color}"><i></i><b>${n}</b><small>${esc(label)}</small></span>`;
-  // who is in the office: the agents, and the helpers (subagents) they have working right now
-  const live = data.people.filter(p => !p.leaving), subs = live.flatMap(p => (p.subagents || []).map(a => `${p.name} → ${a.type}${a.description ? ': ' + a.description : ''}`));
   document.getElementById('counts').innerHTML = [
-    // one compact tile: the agents, and "+N 🤖" only while helpers are working (hover for who)
-    `<span class="stat crew" style="--c:var(--muted)" title="${esc(live.map(p => p.name).join(', ') + '\n\n' + (subs.join('\n') || T.crew.none))}"><i></i><b>${live.length}</b><small>${esc(T.crew.agents(live.length))}</small>${subs.length ? `<b class="helpers">+${subs.length}</b><small>🤖</small>` : ''}</span>`,
     tile(c.work, T.working, KIND_COLOR.terminal),
     tile(c.need, T.needYou, KIND_COLOR.needs_you, c.need ? 'need' : 'zero'),
     tile(c.turn, T.yourTurn, KIND_COLOR.idle, c.turn ? '' : 'zero'),
