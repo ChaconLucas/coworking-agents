@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.1 — 2026-10-14
 - ☰ → Settings → *Open with the computer*: the start-at-login switch right in the menu, with its green dot (it also stays in Personalise)
 - The browser tab shows the new app icon (the agent at its desk) instead of the old face; the menu bar keeps the small face, which reads best at that size
 - Phone: always the same address (the computer's name and port 4778, whatever port the office got), so the home-screen icon added once keeps working
