@@ -9,6 +9,7 @@ const { execFileSync, spawn } = require('child_process');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coworking-test-'));
 const claude = path.join(root, '.claude');
 process.env.CLAUDE_CONFIG_DIR = claude;
+process.env.COWORKING_TEST = '1'; // nothing here may touch the real login item or a running office
 fs.mkdirSync(path.join(claude, 'sessions'), { recursive: true });
 fs.mkdirSync(path.join(claude, 'projects', 'p'), { recursive: true });
 

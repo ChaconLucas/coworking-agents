@@ -59,7 +59,8 @@ function enable(mode) {
 }
 function disable() {
   const e = entry(command('npx'));
-  if (process.platform === 'darwin') try { execFileSync('launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { stdio: 'ignore' }); } catch {}
+  // stop the running one too (the tests skip this: the label is the real one, and they must never stop your office)
+  if (process.platform === 'darwin' && !process.env.COWORKING_TEST) try { execFileSync('launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { stdio: 'ignore' }); } catch {}
   try { fs.unlinkSync(e.file); } catch {}
   return { ok: true };
 }
