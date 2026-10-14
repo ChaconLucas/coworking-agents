@@ -258,7 +258,7 @@ It is a separate server that only answers on your LAN address, with its own toke
 ## Walk around (Gather-style)
 
 
-The camera follows you (☰ → Settings → *Camera follows you* turns it off): the office is drawn bigger and the view slides as you walk. Walk up to an agent and a card opens over it with what it is doing or asking and what you asked last, with buttons to open it, answer or read the conversation. At the bottom of the floor there is a garden where agents whose turn ended take a stroll.
+The bar at the bottom switches **Gather** and **Normal** mode. In Gather the camera follows you: zoom from *all* (the whole floor) to 3× with − and + (or the - and = keys, or a pinch), and drag the floor or scroll to look around; walking or ◎ brings the camera back to you. Normal is the whole office across the page, as before. Walk up to an agent and a card opens over it with what it is doing or asking and what you asked last, with buttons to open it, answer or read the conversation. At the bottom of the floor there is a garden where agents whose turn ended take a stroll.
 You're in the office too, with a **YOU** tag. **WASD** or the arrow keys walk (hold **Shift** to run), a click on the floor walks you there through the doors, and walls stop you. Near an agent, a prop or a door, **Enter** talks, opens or enters. Turn it off in the ☰ menu.
 
 ## The game room and the trophy room

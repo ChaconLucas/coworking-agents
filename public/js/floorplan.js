@@ -155,7 +155,7 @@ function fitScale() {
   // the trophy room is its own screen with a fixed size
   const w = trophyView ? TROPHY_W : W, h = trophyView ? TROPHY_H : H;
   S = Math.max(1.5, Math.floor(Math.min(availW / w, 4) * 4) / 4);
-  if (typeof gatherZoom === 'function') S = Math.min(6, S * gatherZoom()); // Gather mode: drawn bigger, the camera follows you
+  if (typeof gatherZoom === 'function') S = Math.min(6, S * gatherZoom(w, h, S)); // Gather mode: drawn bigger, the camera follows you
   cv.width = w; cv.height = h;
   cv.style.width = w * S + 'px'; cv.style.height = h * S + 'px';
   ctx.imageSmoothingEnabled = false;

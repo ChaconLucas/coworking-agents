@@ -1010,7 +1010,7 @@ body.tv .app-ask { display: none; }
 }
 
 /* Gather mode: the stage is the window, the office slides under it with you */
-body.gather main#stage { display: block; height: calc(100vh - 16px); overflow: hidden; padding: 0; position: relative; }
+body.gather main#stage { display: block; overflow: hidden; padding: 0; position: relative; } /* height set in gather.js */
 body.gather #office { margin: 0; border-radius: 0; box-shadow: none; overflow: visible; width: max-content; }
 body.gather #office:not(.cam) { transition: none; }
 /* the card over the agent you walked up to */
@@ -1030,3 +1030,9 @@ body.gather #office:not(.cam) { transition: none; }
 .zoom-bar button:hover:not(:disabled) { background: rgba(255,255,255,.08); }
 .zoom-bar button:disabled { opacity: .35; cursor: default; }
 .zoom-bar span { min-width: 34px; text-align: center; font: 700 10px/1 var(--pix); color: #b9a88a; }
+.zoom-bar .zb-modes { display: flex; gap: 2px; margin-right: 4px; padding-right: 6px; border-right: 2px dashed #332f37; }
+.zoom-bar .zb-modes button { width: auto; padding: 0 10px; font: 700 10px/1 var(--pix); text-transform: uppercase; letter-spacing: .04em; color: #b9a88a; }
+.zoom-bar .zb-modes button.on { background: var(--accent); color: #fff; }
+.zoom-bar .zb-z { min-width: 40px; }
+.zoom-bar .zb-me { font-size: 15px; color: #feae34; }
+body.gather main#stage { cursor: grab; } body.gather main#stage:active { cursor: grabbing; }
