@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Three new rooms in the elevator: the library (who is reading files or browsing the web, at reading tables), the lab (who is running commands, tests or builds, at benches with their output on screen) and the meeting room (an agent and the helpers it called, around the table). The agents stay at their desks; a room shows who is doing that right now
+- Walk inside every room, like in the office (arrows/WASD, Shift to run, or a click): Enter next to someone opens them, and the elevator door in the corner takes you back. The rooftop, the trophy room and the server room too
+
 ## 0.9.1 — 2026-10-14
 - ☰ → Settings → *Open with the computer*: the start-at-login switch right in the menu, with its green dot (it also stays in Personalise)
 - The browser tab shows the new app icon (the agent at its desk) instead of the old face; the menu bar keeps the small face, which reads best at that size

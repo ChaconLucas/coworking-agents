@@ -275,6 +275,8 @@ Click the elevator (or press Enter next to it) to ride between floors, up to the
 
 ![The server room](docs/servers.png)
 
+
+**More rooms:** the **library** (who is reading files or browsing), the **lab** (who is running commands, tests or builds) and the **meeting room** (an agent with the helpers it called). The agents stay at their desks; each room shows who is doing that right now. You walk inside every room like in the office (arrows or WASD, Shift to run, or a click); Enter next to someone opens them, and the elevator door in the corner takes you back.
 ## Achievements, coins and the shop
 
 - **86 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.

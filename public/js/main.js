@@ -24,10 +24,10 @@ function loop(t) {
   if (document.hidden) return; // tab not visible: draw nothing (browsers also slow rAF, this makes it zero) // schedule first: an error in one frame must not stop the animation
   if (data && spots) {
     const f = (t / 70) | 0; // ~14 frames per second, a pixel-art pace
-    if (f !== lastFrame || (playerOn && (me.moving || me.path.length || keysDown.size))) {
+    if (f !== lastFrame || (playerOn && (me.moving || me.path.length || keysDown.size || (trophyView && (vme.moving || vme.path.length))))) {
       const dt = lastT ? Math.min(.25, (t - lastT) / 1000) : 0;
       lastT = t; lastFrame = f;
-      if (trophyView) (viewName === 'terrace' ? drawTerrace : viewName === 'servers' ? drawServers : drawTrophyRoom)(t); else if (building) { if (f % 3 === 0) drawThumbs(t, dt * 3); } else drawScene(t, dt);
+      if (trophyView) { roomUpdate(dt); ({ terrace: drawTerrace, servers: drawServers, library: drawLibrary, lab: drawLab, meeting: drawMeetingRoom }[viewName] || drawTrophyRoom)(t); } else if (building) { if (f % 3 === 0) drawThumbs(t, dt * 3); } else drawScene(t, dt);
     }
   }
 }

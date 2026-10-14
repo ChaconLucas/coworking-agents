@@ -71,7 +71,7 @@ function drawTerrace(t) {
   });
   if (!relaxing.length) { r(Wt / 2 - 66, Ht - 40, 132, 14, '#00000055'); pixText(Wt / 2 - 58, Ht - 36, lang === 'pt' ? 'NINGUEM DE FOLGA' : 'NOBODY ON BREAK', '#f4ecd8'); }
   if (!day) { ctx.fillStyle = 'rgba(10,12,40,.25)'; ctx.fillRect(0, HZ, Wt, Ht - HZ); } // evening light on the deck
-  viewHits = hits;
+  viewHits = hits; if (typeof drawRoomWalker === 'function') drawRoomWalker(t);
 }
 
 // ---- the server room: two rows of glass racks, a NOC wall with live numbers, cold aisle, cable trays ----
@@ -118,7 +118,7 @@ function drawServers(t) {
   r(14, 160, 8, 18, '#e43b44'); r(15, 156, 6, 4, '#2a2a30'); r(16, 164, 4, 6, '#ffffff');
   for (let x = 0; x < Wt; x += 16) r(x, Ht - 6, 8, 6, '#ffd84d'), r(x + 8, Ht - 6, 8, 6, '#1b1622');
   if (!people.length) pixText(Wt / 2 - 30, 200, 'NO SESSIONS', '#c0cbdc');
-  viewHits = hits;
+  viewHits = hits; if (typeof drawRoomWalker === 'function') drawRoomWalker(t);
 }
 
 // ---- the elevator panel: floors, the terrace, the server room, the trophy room ----
@@ -132,6 +132,9 @@ function openElevator() {
     ${btn('data-go="trophy"', E.trophy, viewName === 'trophy')}
     ${floors.map((f, i) => btn(`data-go-floor="${i}"`, floors.length > 1 ? E.floor(i + 1) : E.office, !trophyView && floor === i)).reverse().join('')}
     ${btn('data-go="servers"', E.servers, viewName === 'servers')}
+    ${btn('data-go="library"', E.library, viewName === 'library')}
+    ${btn('data-go="lab"', E.lab, viewName === 'lab')}
+    ${btn('data-go="meeting"', E.meeting, viewName === 'meeting')}
   </div></div></div>`;
   liftEl.hidden = false; achBump('lifts');
 }

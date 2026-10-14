@@ -264,7 +264,7 @@ function drawTrophyRoom(t) {
   r(cx - 50, Ht - 34, 100, 15, PAL.ink); r(cx - 49, Ht - 33, 98, 13, '#d9a441'); r(cx - 49, Ht - 33, 98, 1, '#ffd84d'); pixText(cx - 23, Ht - 29, 'HALL OF FAME', '#3b2418');
   const got = st.reduce((x, a) => x + a.tier, 0), all = st.reduce((x, a) => x + a.max, 0);
   pixText(cx - 70, Ht - 12, `${got}/${all}`, '#8a6420'); { const l2 = `${legends.length} LEGEND`; pixText(cx + 70 - l2.length * 4, Ht - 12, l2, '#a3283a'); }
-  trophyHits = hits;
+  trophyHits = hits; if (typeof drawRoomWalker === 'function') drawRoomWalker(t);
 }
 // clicking a trophy: a card with the trophy large, its tier and how far the next one is
 const trophyCard = document.createElement('div');
