@@ -20,8 +20,8 @@ function renderBar() {
   // who is in the office: the agents, and the helpers (subagents) they have working right now
   const live = data.people.filter(p => !p.leaving), subs = live.flatMap(p => (p.subagents || []).map(a => `${p.name} → ${a.type}${a.description ? ': ' + a.description : ''}`));
   document.getElementById('counts').innerHTML = [
-    `<span class="stat crew" style="--c:var(--muted)" title="${esc(live.map(p => p.name).join(', '))}"><i></i><b>${live.length}</b><small>${esc(T.crew.agents(live.length))}</small></span>`,
-    `<span class="stat crew ${subs.length ? '' : 'zero'}" style="--c:${KIND_COLOR.delegate || '#a46dff'}" title="${esc(subs.join('\n') || T.crew.none)}"><i></i><b>${subs.length}</b><small>${esc(T.crew.helpers(subs.length))}</small></span>`,
+    // one compact tile: the agents, and "+N 🤖" only while helpers are working (hover for who)
+    `<span class="stat crew" style="--c:var(--muted)" title="${esc(live.map(p => p.name).join(', ') + '\n\n' + (subs.join('\n') || T.crew.none))}"><i></i><b>${live.length}</b><small>${esc(T.crew.agents(live.length))}</small>${subs.length ? `<b class="helpers">+${subs.length}</b><small>🤖</small>` : ''}</span>`,
     tile(c.work, T.working, KIND_COLOR.terminal),
     tile(c.need, T.needYou, KIND_COLOR.needs_you, c.need ? 'need' : 'zero'),
     tile(c.turn, T.yourTurn, KIND_COLOR.idle, c.turn ? '' : 'zero'),
