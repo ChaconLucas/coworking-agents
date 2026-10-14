@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Phone: always the same address (the computer's name and port 4778, whatever port the office got), so the home-screen icon added once keeps working
 - Phone: turn it on from the office (☰ → 📱 → *Turn the phone on*) and it stays on, starting with the office every time with the same QR (the app and autostart included); *Turn the phone off* ends it. `--phone` still works
 - ☰ menu: two columns on a wide window and it scrolls instead of running off the screen
 

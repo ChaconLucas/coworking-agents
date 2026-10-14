@@ -413,11 +413,13 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     });
   }
 
-  // opt-in: a separate, restricted server on the LAN address (see src/phone.js); its code is kept like the office's
+  // opt-in: a separate, restricted server on the LAN address (see src/phone.js); its code is kept like the office's, and its
+  // port is always the same (not the office's + 1), so a home-screen icon keeps working whatever port the office got
+  const PHONE_PORT = Number(process.env.COWORKING_PHONE_PORT) || 4778;
   async function startPhoneNow() {
     if (phoneInfo) return { ok: true };
     try {
-      const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken, extra: phoneUsage });
+      const r = await require('./phone').startPhone({ port: port ? PHONE_PORT : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken, extra: phoneUsage });
       if (r.ok) { phoneInfo = r; phoneReason = ''; const t = r.url.split('t=')[1]; if (keepToken && onPhoneToken && t !== phoneToken) { phoneToken = t; onPhoneToken(t); } } else phoneReason = r.reason;
       return r.ok ? { ok: true } : { ok: false, reason: r.reason };
     } catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; return { ok: false, reason: phoneReason }; }
