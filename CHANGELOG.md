@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 — 2026-10-14
 - Far out, the agents' tags shrink to a small name and the area names are small, see-through and on the areas' top edges, so nothing covers the rooms or runs into each other; the café keeps its tables by the counter and has a taco truck, a bike rack and a flower bed further down
 - Zooming all the way out: at *all* every area shows its name (park, café, game room, library, lab, waiting room, garden, kitchen, ping-pong, meeting room, rest room, servers); one more step out leaves the floor for the building view with every floor (also with a single floor); + goes back in
 - Normal mode zoom in finer steps and out as well: *all* (the whole floor in the window), 1× (across the page, as always), 1.25×, 1.5×, 2×, 3×, 4×
