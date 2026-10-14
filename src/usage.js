@@ -157,4 +157,7 @@ function usage() {
   return { scanning: state.scanning, scannedAt: state.scannedAt, byAgent: state.result, days: state.days || null, month: state.month || null, heat: state.heat || null };
 }
 
-module.exports = { usage, refresh, scanFile };
+// the AI-written titles the last scan found, per conversation log (the archive's names; empty until a scan ran)
+function titles() { const out = new Map(); for (const [f, v] of Object.entries(loadCache())) if (v && v.res && v.res.title) out.set(f, v.res.title); return out; }
+
+module.exports = { usage, refresh, scanFile, titles };

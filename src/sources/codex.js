@@ -216,4 +216,4 @@ function children(threadId, since) {
   return out;
 }
 
-module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today, limits, children };
+module.exports = { id: 'codex', label: 'Codex', sessions, credentials, today, limits, children, titles };

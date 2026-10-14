@@ -227,6 +227,7 @@ The office works in any browser. If you prefer an app:
 - **💬 Conversation** (click an agent): the whole conversation as a chat, a search inside it, and a box to write to it once it finished its turn. Its helpers (subagents) are listed above the chat; pick one to read its own conversation. Only what you wrote and what it answered; off in private mode.
 - **▦ Task board** (Tasks → Board): queued, running, waiting on you and done; drag a card to retry, conclude or cancel it.
 - **When you spend** (Costs and limits): a weekday × hour map of output tokens over the last 28 days, and under each limit when it would run out at the pace of the last hour.
+- **🗄 Past conversations:** every Claude Code and Codex conversation from the last 60 days, open or closed, found by name, folder or what was said, and read as a chat with its helpers. Read only.
 - **🎞 Day timelapse:** a picture of the office every 5 minutes (no names), turned into a ~20 s GIF in your browser. The pictures stay in this browser for 3 days.
 - **📺 TV mode** (or `?tv=1`): full screen, only the office and big counters; Esc leaves.
 - **Waiting on you today** in the daily report: measured time the agents waited on your answers and tasks stood blocked on you.

@@ -753,6 +753,9 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.deepStrictEqual(hs.map(h => [h.id, h.type, h.what]), [['abc123def', 'Explore', 'Map call sites']], 'chat: the helpers (subagents) of a conversation');
     assert.deepStrictEqual((await conversation('claude', cid, { sub: 'abc123def' })).items.map(m => m.text), ['map the call sites', 'found 3'], 'chat: a helper\'s own conversation');
     for (const bad of ['../abc123def', 'abc123def/../../x', 'nope00000']) assert.strictEqual((await conversation('claude', cid, { sub: bad })).reason, 'nofile', 'chat: a helper by id only: ' + bad);
+    const { archive } = require('../src/said'), arc = archive({});
+    assert.ok(arc.items.some(x => x.id === cid && x.title === 'hello there' && x.agent === 'claude') && !arc.items.some(x => x.id === 'abc123def'), 'archive: conversations by their first request, helpers stay inside their conversation');
+    assert.deepStrictEqual(archive({ q: 'HELLO' }).items.map(x => x.id), [cid], 'archive: found by name');
     fs.writeFileSync(path.join(day, 'rollout-2026-01-01T00-00-00-thread-1234abcd.jsonl'), [ev('event_msg', { type: 'user_message', message: 'run it' }, now - 2000), ev('event_msg', { type: 'agent_message', message: 'ran it' }, now - 1000)].map(line).join(''));
     assert.deepStrictEqual((await conversation('codex', 'thread-1234abcd')).items.map(m => m.text), ['run it', 'ran it'], 'chat: Codex too'); }
 

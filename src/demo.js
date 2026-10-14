@@ -107,6 +107,16 @@ function demoHeat() {
   const grid = Array.from({ length: 7 }, (_, d) => Array.from({ length: 24 }, (_, h) => { const work = d > 0 && d < 6 && h >= 9 && h <= 19, k = work ? (h >= 14 && h <= 16 ? 1 : 0.55) * (d === 2 ? 1.2 : 1) : (h >= 10 && h <= 17 && (d === 0 || d === 6) ? 0.12 : h >= 20 && h <= 23 ? 0.18 : 0); return { out: Math.round(k * 9e5), usd: k * 6.5 }; }));
   return { days: 28, grid };
 }
+// a few closed conversations for the archive in --demo
+function demoArchive(q) {
+  const n = Date.now(), items = [
+    { agent: 'claude', id: 'demo-a1', title: 'Fix the login redirect loop', first: 'Users get sent back to /login after signing in', cwd: '~/code/web-app', at: n - 3 * 36e5, size: 182000 },
+    { agent: 'codex', id: 'demo-a2', title: 'Add cursor pagination to /orders', first: '', cwd: '~/code/api', at: n - 26 * 36e5, size: 96000 },
+    { agent: 'claude', id: 'demo-a3', title: 'Write the release notes for 2.4', first: '', cwd: '~/code/docs', at: n - 3 * 864e5, size: 41000 },
+    { agent: 'claude', id: 'demo-a4', title: 'Explain how the checkout flow works', first: '', cwd: '~/code/web-app', at: n - 6 * 864e5, size: 230000 },
+  ], k = String(q || '').toLowerCase().trim(), list = k ? items.filter(x => (x.title + ' ' + x.cwd).toLowerCase().includes(k)) : items;
+  return { ok: true, items: list, total: items.length, days: 60, hits: k.length >= 3 ? [{ agent: 'claude', id: 'demo-a1', role: 'assistant', at: n - 3 * 36e5, snippet: `…the ${k} happens because the session cookie…` }] : undefined };
+}
 // a short conversation for the chat view in --demo
 function demoTalk(q) {
   const n = Date.now(), items = [
@@ -137,4 +147,4 @@ function demoHot() {
   return [['src/checkout/payment.ts', 'shop', 9, ['claude', 'codex']], ['src/api/orders.ts', 'api', 7, ['claude']], ['package.json', 'web-app', 6, ['claude', 'codex']], ['src/auth/session.ts', 'api', 4, ['codex']], ['README.md', 'docs', 3, ['claude']], ['migrations/0042_orders.sql', 'api', 2, ['claude']]]
     .map(([rel, repo, sessions, agents], i) => ({ rel, repo, sessions, agents, last: n - i * 36e5 }));
 }
-module.exports = { demoHot, demoSnapshot, demoReport, demoUsage, demoTasks, demoTalk };
+module.exports = { demoHot, demoSnapshot, demoReport, demoUsage, demoTasks, demoTalk, demoArchive };

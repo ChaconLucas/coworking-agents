@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Past conversations (☰ → 🗄): every Claude Code and Codex conversation on this computer from the last 60 days, open or closed, found by name, folder or what was said (last 30 days), and read as a chat with its helpers and a search inside it. Read only; off in private mode
 - A new release shows up in an office left open within about 10 minutes (it checked once an hour), and the releases board, the admin's sign and the notice follow as soon as the office knows
 
 ## 0.8.0 — 2026-10-14

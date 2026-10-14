@@ -117,4 +117,38 @@ async function conversation(agent, id, { q = '', limit = 200, sub = '' } = {}) {
   return { ok: true, items: list.slice(-limit), total: c.items.length, found: list.length, cut: c.cut, helpers: sub ? undefined : helpers(agent, id) };
 }
 
-module.exports = { search, said, conversation, readable, helpers };
+// ---- the archive: every conversation on disk, open or closed ----
+// Name (the AI's title, Codex's thread name or the first request), folder and when it last moved; read from the
+// first 64 KB of each log and remembered per file size, so listing hundreds stays quick.
+const heads = new Map();
+function head(f) {
+  const hit = heads.get(f.file); if (hit && hit.size === f.size) return hit;
+  const h = { size: f.size, cwd: '', first: '' };
+  try { const fd = fs.openSync(f.file, 'r'), buf = Buffer.alloc(65536), n = fs.readSync(fd, buf, 0, buf.length, 0); fs.closeSync(fd);
+    for (const line of buf.subarray(0, n).toString('utf8').split('\n')) { let j; try { j = JSON.parse(line); } catch { continue; }
+      if (!h.cwd) h.cwd = String(j.cwd || (j.payload && j.payload.cwd) || '');
+      if (!h.first) { const x = said(f.agent, j); if (x && x.role === 'user') h.first = readable(x.text).replace(/\s+/g, ' ').slice(0, 160); }
+      if (h.cwd && h.first) break; } } catch {}
+  heads.set(f.file, h); if (heads.size > 5000) heads.delete(heads.keys().next().value);
+  return h;
+}
+function archive({ q = '', days = 60, limit = 80 } = {}) {
+  const t = require('./usage').titles(), names = require('./sources/codex').titles(), k = String(q || '').toLowerCase().trim().slice(0, 100), home = s => String(s || '').replace(/^\/Users\/[^/]+|^\/home\/[^/]+/, '~');
+  const since = Date.now() - days * 864e5, all = [];
+  const walk = (dir, agent, depth) => { let list = []; try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of list) { const full = path.join(dir, e.name); if (e.isDirectory() && depth < 4 && e.name !== 'subagents') walk(full, agent, depth + 1); else if (e.isFile() && e.name.endsWith('.jsonl')) { try { const st = fs.statSync(full); if (st.mtimeMs >= since) all.push({ file: full, agent, mtime: st.mtimeMs, size: st.size }); } catch {} } } };
+  walk(CLAUDE(), 'claude', 0); walk(CODEX(), 'codex', 0);
+  all.sort((a, b) => b.mtime - a.mtime);
+  const out = [];
+  for (const f of all.slice(0, 3000)) {
+    const id = path.basename(f.file, '.jsonl').replace(/^rollout-[\d-]+T[\d-]+-/, ''), h = head(f);
+    const title = (f.agent === 'claude' ? t.get(f.file) : names.get(id)) || h.first || '';
+    if (!h.first && !title) continue; // nothing anyone wrote in it (a probe or an empty start): nothing to read
+    if (k && !(title + ' ' + h.first + ' ' + h.cwd).toLowerCase().includes(k)) continue;
+    out.push({ agent: f.agent, id, title: title.slice(0, 160), first: h.first === title ? '' : h.first, cwd: home(h.cwd), at: Math.round(f.mtime), size: f.size });
+    if (out.length >= limit) break;
+  }
+  return { ok: true, items: out, total: all.length, days };
+}
+
+module.exports = { search, said, conversation, readable, helpers, archive };

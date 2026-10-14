@@ -172,6 +172,21 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return;
     }
     if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : { ...privateUsage(usage(), privacy), pace: pace.forecast() }));
+    if (url.pathname === '/api/archive' && req.method === 'GET') { // every conversation on disk, open or closed, by name, folder or what was said (off in private mode)
+      if (privacy) return send(res, 200, 'application/json', '{"ok":false,"reason":"private"}');
+      if (demo) return send(res, 200, 'application/json', JSON.stringify(require('./demo').demoArchive(url.searchParams.get('q') || '')));
+      const q = url.searchParams.get('q') || '', said = require('./said'), list = said.archive({ q });
+      if (q.trim().length < 3) return send(res, 200, 'application/json', JSON.stringify(list));
+      once('said', () => said.search(q, { days: 30, limit: 30 })).then(hits => send(res, 200, 'application/json', JSON.stringify({ ...list, hits: Array.isArray(hits) ? hits : [] })), () => send(res, 200, 'application/json', JSON.stringify(list)));
+      return;
+    }
+    if (url.pathname === '/api/archive-talk' && req.method === 'GET') { // one conversation from the archive, by its id only
+      if (privacy) return send(res, 200, 'application/json', '{"ok":false,"reason":"private"}');
+      if (demo) return send(res, 200, 'application/json', JSON.stringify(require('./demo').demoTalk(url.searchParams.get('q') || '')));
+      const agent = url.searchParams.get('agent') === 'codex' ? 'codex' : 'claude';
+      require('./said').conversation(agent, String(url.searchParams.get('id') || ''), { q: url.searchParams.get('q') || '', sub: url.searchParams.get('sub') || '', limit: 400 }).then(r => send(res, 200, 'application/json', JSON.stringify(r)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
+      return;
+    }
     if (url.pathname === '/api/talk' && req.method === 'GET') { // one live agent's whole conversation, or what matches a search in it (off in private mode)
       if (privacy) return send(res, 200, 'application/json', '{"ok":false,"reason":"private"}');
       if (demo) return send(res, 200, 'application/json', JSON.stringify(require('./demo').demoTalk(url.searchParams.get('q') || '')));

@@ -978,3 +978,17 @@ body.tv .app-ask { display: none; }
 .crew-subs { list-style: none; margin: 6px 0 0 44px; padding: 0; display: grid; gap: 5px; }
 .crew-subs button { width: 100%; text-align: left; padding: 6px 9px; border: 2px dashed var(--line); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; font-size: 12px; }
 .crew-subs small { color: var(--muted); }
+/* the conversation archive */
+.arc-list { list-style: none; padding: 0; margin: 6px 0 14px; display: grid; gap: 6px; }
+.arc-row { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.arc-row:hover { border-color: var(--accent); }
+.arc-row .ailogo { flex: none; margin-top: 2px; }
+.arc-txt { flex: 1; min-width: 0; } .arc-txt b { display: block; font-size: 13px; overflow-wrap: anywhere; } .arc-txt small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.arc-txt .arc-first { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arc-txt span { font-size: 13px; } .arc-txt mark, .arc-chat mark { background: var(--warn); color: #120f16; border-radius: 2px; }
+.arc-chat .bubble { max-width: 80%; margin: 0 0 10px; padding: 9px 11px; border: 2px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, var(--ink)); }
+.arc-chat .bubble.me { margin-left: auto; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.arc-chat .bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.45; }
+.arc-chat .bubble code { font: 12px/1.4 ui-monospace, Menlo, monospace; background: var(--bg); border-radius: 3px; padding: 0 3px; }
+.arc-chat .bubble small { display: block; margin-top: 5px; font: 400 9px/1.2 var(--pix); text-transform: uppercase; color: var(--muted); }
+.arc-chat .bubble.me small { text-align: right; }
