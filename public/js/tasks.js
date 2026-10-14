@@ -647,7 +647,14 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
   if (menu) {
     const groups = [['see', ['[data-menu-tab=tasks]', '[data-menu-tab=usage]', '[data-menu-tab=notices]', '[data-menu-tab=feed]', '[data-menu-tab=repos]', '[data-menu-tab=archive]', '[data-menu-tab=timelapse]', '[data-menu-tab=version]']],
       ['do', ['#btn-launch', '[data-menu-tab=broadcast]', '[data-menu-tab=watches]', '[data-menu-tab=phone]', '[data-menu-tab=tv]', '#btn-search', '#btn-replay', '#btn-photo', '#btn-deco']],
-      ['prefs', ['#btn-notify', '#btn-sound', '#btn-focus', '#btn-walk', '#btn-radio', '#btn-lang', '#btn-office']]];
+      ['prefs', ['#btn-notify', '#btn-sound', '#btn-focus', '#btn-walk', '#btn-radio', '#btn-autostart', '#btn-lang', '#btn-office']]];
+    // start with the computer, right in the menu (it also stays in Personalise): a switch with the same green dot
+    const as = document.createElement('button'); as.id = 'btn-autostart'; as.className = 'icon-btn'; as.setAttribute('aria-pressed', 'false');
+    as.innerHTML = `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${R([[7, 1, 2, 6], [4, 3, 2, 1], [10, 3, 2, 1], [3, 4, 1, 1], [12, 4, 1, 1], [2, 5, 1, 6], [13, 5, 1, 6], [3, 11, 1, 1], [12, 11, 1, 1], [4, 12, 2, 1], [10, 12, 2, 1], [6, 13, 4, 1]])}"/></svg><span class="ml"></span>`;
+    menu.appendChild(as);
+    const syncAs = () => fetch('api/autostart').then(r => r.json()).then(d => { as.setAttribute('aria-pressed', d.on ? 'true' : 'false'); as.disabled = !!d.demo; }).catch(() => {});
+    as.addEventListener('click', async () => { const on = as.getAttribute('aria-pressed') !== 'true'; as.disabled = true; const r = await api('api/autostart', { on }); as.disabled = false; as.setAttribute('aria-pressed', r.on ? 'true' : 'false'); toast(`<b>${esc(T.menuGroups.autostart)}</b>${esc(r.ok ? (r.on ? T.appx.asOn : T.appx.asOff) : '⚠')}`, r.ok ? 'ok' : 'warn'); if (typeof syncAutostart === 'function') syncAutostart(); });
+    syncAs(); document.getElementById('btn-menu').addEventListener('click', syncAs);
     const secs = groups.map(([k, sels]) => { const sec = document.createElement('div'); sec.className = 'menu-sec'; sec.innerHTML = `<div class="menu-h" data-menu-group="${k}"></div>`; for (const q of sels) { const el = menu.querySelector(':scope > ' + q); if (el) sec.appendChild(el); } return sec; });
     for (const el of [...menu.querySelectorAll(':scope > .icon-btn')]) secs[1].appendChild(el); // anything not listed still shows
     secs.forEach(sec => menu.appendChild(sec));
@@ -825,7 +832,7 @@ function setTv(on) {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tv')) setTv(false); });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('tv')) setTv(false); });
 if (new URLSearchParams(location.search).get('tv') === '1') setTimeout(() => setTv(true), 500);
-function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); document.querySelectorAll('[data-menu-group]').forEach(h => { h.textContent = T.menuGroups[h.dataset.menuGroup]; }); }
+function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); document.querySelectorAll('[data-menu-group]').forEach(h => { h.textContent = T.menuGroups[h.dataset.menuGroup]; }); const as = document.querySelector('#btn-autostart .ml'); if (as) { as.textContent = T.menuGroups.autostart; as.parentNode.title = T.appx.autostart; } }
 setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);
 
 // ---- the recommendation card: current, recommended and pending config, the reason, Apply; refreshed as the task moves ----
