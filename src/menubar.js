@@ -11,7 +11,7 @@ const { spawn, spawnSync } = require('child_process');
 
 const DIR = () => path.join(os.homedir(), '.config', 'coworking-agents');
 const FILE = () => path.join(DIR(), 'menubar.json');
-const ICON = path.join(__dirname, '..', 'public', 'favicon.png');
+const ICON = path.join(__dirname, '..', 'public', 'tray.png'); // the small face reads best at menu bar size
 let child = null, kind = null, base = '', token = '', lastBody = '', lastTip = '', seen = null, notes = [];
 
 const has = cmd => { try { return spawnSync('which', [cmd], { stdio: 'ignore' }).status === 0; } catch { return false; } };

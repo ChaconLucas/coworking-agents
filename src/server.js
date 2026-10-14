@@ -126,7 +126,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       return res.end();
     }
     // icons are public: browsers fetch them without cookies and cache the 401 otherwise
-    const PUBLIC_ICONS = new Set(['/favicon.ico', '/favicon.png', '/favicon.svg', '/apple-touch-icon.png', '/logo.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']); // no data in any of them
+    const PUBLIC_ICONS = new Set(['/favicon.ico', '/favicon.png', '/apple-touch-icon.png', '/logo.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']); // no data in any of them
     if (!PUBLIC_ICONS.has(url.pathname) && !sameSecret(cookie(req, 'cw'), token)) return send(res, 401, 'text/html; charset=utf-8', LOCKED);
 
     if (url.pathname === '/events') {
