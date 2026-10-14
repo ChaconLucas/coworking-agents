@@ -9,8 +9,15 @@ const path = require('path');
 
 const FILE = () => path.join(os.homedir(), '.config', 'coworking-agents', 'progress.json');
 const MAX = 128 * 1024;
-const KEYS = { record: 'object', levels: 'object', avatars: 'object', owned: 'array', placed: 'object', spent: 'number', officeName: 'string', theme: 'string', mascot: 'string', super: 'number', style: 'object' };
+const KEYS = { record: 'object', levels: 'object', avatars: 'object', owned: 'array', placed: 'object', spent: 'number', officeName: 'string', theme: 'string', mascot: 'string', super: 'number', style: 'object', watches: 'array' };
 
+// "tell me when…" rules: a few known kinds with short fields only (the page decides when they fire)
+function cleanWatches(list) {
+  const str = (x, n) => String(x == null ? '' : x).slice(0, n), num = x => (Number.isFinite(Number(x)) ? Number(x) : 0);
+  return list.filter(w => w && typeof w === 'object' && ['done', 'limit', 'file'].includes(w.kind)).slice(0, 50).map(w => ({
+    id: str(w.id, 20), kind: w.kind, at: num(w.at), agent: str(w.agent, 80), name: str(w.name, 60), ai: str(w.ai, 20), win: w.win === 'week' ? 'week' : '5h',
+    pct: Math.max(5, Math.min(100, num(w.pct) || 80)), text: str(w.text, 120), last: num(w.last), worked: !!w.worked, seen: !!w.seen, over: !!w.over }));
+}
 // keep only known keys of the right type; strings are short, objects are flat-ish and bounded by MAX
 function clean(input) {
   const out = {};
@@ -19,7 +26,7 @@ function clean(input) {
     const v = input[k];
     if (v === undefined || v === null) continue;
     if (type === 'array' ? Array.isArray(v) : type === 'object' ? typeof v === 'object' && !Array.isArray(v) : typeof v === type) {
-      out[k] = type === 'string' ? v.slice(0, 40) : type === 'number' ? (Number.isFinite(v) ? v : 0) : type === 'array' ? v.filter(x => typeof x === 'string').slice(0, 200).map(x => x.slice(0, 40)) : v;
+      out[k] = k === 'watches' ? cleanWatches(v) : type === 'string' ? v.slice(0, 40) : type === 'number' ? (Number.isFinite(v) ? v : 0) : type === 'array' ? v.filter(x => typeof x === 'string').slice(0, 200).map(x => x.slice(0, 40)) : v;
     }
   }
   return out;

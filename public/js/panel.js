@@ -127,7 +127,7 @@ function renderPanel() {
     ${tools.length ? `<h3>${P.tools}</h3><ul class="bars">${tools.map(([k, n]) => `<li><code>${esc(k)}</code><span class="tbar"><i style="width:${(n / toolMax * 100).toFixed(1)}%"></i></span><span class="t">${Number(n) || 0}</span></li>`).join('')}</ul>` : ''}
     <h3 id="certs-h">${P.certs}</h3>${certs.length ? `<div class="certs">${certs.map(c => `<div class="cert" style="--c:${certColor(c)}"><small>${T.kinds[c.kind]}</small>${esc(c.name)}${c.kind === 'badge' ? `<br><span class="note">${esc(c.desc)}</span>` : ` <span class="note">${Number(c.n) || 0}×</span>`}</div>`).join('')}</div>` : `<p class="note">${P.noCerts}</p>`}
     <p class="note" style="margin-top:18px">${P.session}: <code>${esc(p.id)}</code></p>`;
-  if (typeof deskTabsHtml === 'function') panelBody.querySelector('header.ph').insertAdjacentHTML('afterend', deskTabsHtml());
+  if (typeof deskTabsHtml === 'function') panelBody.querySelector('header.ph').insertAdjacentHTML('afterend', deskTabsHtml() + (typeof watchBtnHtml === 'function' ? watchBtnHtml(p) : ''));
   const face = Art.portrait(p.id, p.state === 'needs_you' ? 'open' : null);
   const fb = panelBody.querySelector('.ph-face');
   fb.appendChild(face);

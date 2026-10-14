@@ -175,6 +175,7 @@ function renderReport() {
   if (reportTab === 'timelapse') return renderTimelapse();
   if (reportTab === 'crew') return renderCrew();
   if (reportTab === 'archive') return renderArchive();
+  if (reportTab === 'watches') return renderWatches();
   if (reportTab === 'ach') return renderAchievements();
   if (reportTab === 'paper') return renderPaper();
   if (reportTab === 'queue') return renderQueue();

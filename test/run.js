@@ -376,6 +376,13 @@ sleepK.kill();
   assert.deepStrictEqual(hotFiles({ privacy: true }), [], 'hot files: nothing in private mode');
 }
 
+// "tell me when…" rules kept in progress.json: known kinds and short fields only
+{
+  const { clean } = require('../src/progress');
+  const w = clean({ watches: [{ kind: 'file', text: 'x'.repeat(500), id: 'a', evil: 1 }, { kind: 'rm -rf' }, 'nope', { kind: 'limit', pct: 999, win: 'month' }] }).watches;
+  assert.deepStrictEqual([w.length, w[0].text.length, 'evil' in w[0], w[1].pct, w[1].win], [2, 120, false, 100, '5h'], 'watches: cleaned before they are kept');
+}
+
 // the timelapse's GIF encoder: LZW codes checked by hand on a 4×2 picture, and a whole file with its frames and loop
 {
   const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'timelapse.js'), 'utf8'), fn = name => src.slice(src.indexOf('function ' + name), src.indexOf('\n}\n', src.indexOf('function ' + name)) + 2);

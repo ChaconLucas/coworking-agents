@@ -622,7 +622,7 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['tv', '📺'], ['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['archive', '🗄'], ['timelapse', '🎞'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  if (menu) for (const [tab, icon] of [['tv', '📺'], ['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['watches', '⏰'], ['archive', '🗄'], ['timelapse', '🎞'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); if (tab === 'tv') return setTv(true); openReport(tab); });
