@@ -7,15 +7,16 @@ let gatherOn = qs.get('gather') === '0' ? false : store.get('gather', true) !== 
 const ZOOMS = ['fit', 1, 1.5, 2, 2.5, 3, 4];
 let zoomI = ZOOMS.indexOf(store.get('zoom', 2)); if (zoomI < 0) zoomI = 4;
 // Normal mode zooms too, without a character: "width" is the whole floor across the page; closer, you drag or scroll to look
-const NZOOMS = ['width', 1.5, 2, 3, 4];
-let zoomN = Math.max(0, NZOOMS.indexOf(store.get('zoomN', 'width')));
+const NZOOMS = ['fit', 'width', 1.25, 1.5, 2, 3, 4]; // fit: the whole floor in the window; width: across the page, as always
+let zoomN = NZOOMS.indexOf(store.get('zoomN', 'width')); if (zoomN < 0) zoomN = 1;
 const gatherActive = () => gatherOn && playerOn && !trophyView && !building && !!data;
 const placeView = () => !trophyView && !building && !!data;
-const camActive = () => gatherActive() || (!gatherOn && zoomN > 0 && placeView()); // the camera moves the floor under the window
+const camActive = () => gatherActive() || (!gatherOn && NZOOMS[zoomN] !== 'width' && placeView()); // the camera moves the floor under the window
 // how much bigger than the page-wide scale: "fit" makes the whole floor fit the window
 function gatherZoom(w, h, s) {
-  if (!gatherActive()) return !gatherOn && placeView() ? (zoomN ? NZOOMS[zoomN] : 1) : 1;
-  const z = ZOOMS[zoomI]; if (z !== 'fit') return z;
+  const z = gatherActive() ? ZOOMS[zoomI] : !gatherOn && placeView() ? NZOOMS[zoomN] : 1;
+  if (z === 'width') return 1;
+  if (z !== 'fit') return z;
   const st = document.getElementById('stage'), top = st.getBoundingClientRect().top + scrollY;
   return Math.min((st.clientWidth || innerWidth) / (w * s), Math.max(240, innerHeight - top - 8) / (h * s));
 }
@@ -35,7 +36,7 @@ function setZoom(step) {
 const zoomEl = document.createElement('div'); zoomEl.className = 'menu-zoom'; zoomEl.hidden = true; // a row in ☰ → Settings, under Gather mode
 function zoomBar() {
   const G = T.gather, list = gatherOn ? ZOOMS : NZOOMS, i = gatherOn ? zoomI : zoomN, z = list[i]; zoomEl.hidden = false;
-  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' || z === 'width' ? esc(G.fit) : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button>${camManual && gatherOn ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
+  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' ? esc(G.fit) : z === 'width' ? '1×' : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button>${camManual && gatherOn ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
 }
 zoomEl.addEventListener('click', e => {
   e.stopPropagation();

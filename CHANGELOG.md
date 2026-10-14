@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Normal mode zoom in finer steps and out as well: *all* (the whole floor in the window), 1× (across the page, as always), 1.25×, 1.5×, 2×, 3×, 4×
 - The wall runs only over the building now: above the park there is sky and a line of trees, above the café a striped awning, string lights and a pink CAFÉ sign; a long wall gets plant shelves and small framed pictures between its windows
 - Two modes in ☰ → Settings → *Gather mode*: Gather (your character walks and the camera follows; zoom with the small − + on the left edge, the zoom row in the menu, the - and = keys or a pinch, from *all* to 4×; drag or scroll to look around, walking or ◎ brings the camera back) and Normal (the whole floor across the window, no character; the same − + zoom in to look closer, then drag or scroll to look around)
 - A wider, roomier floor in both modes: more space between rooms, a park along the left (a winding path, a pond with a duck, trees, benches, lamps) and a café terrace along the right (the counter, round umbrella tables); agents on a stroll sit there too
