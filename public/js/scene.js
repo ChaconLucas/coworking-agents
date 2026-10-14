@@ -442,7 +442,7 @@ function drawScene(t, dt) {
     const lk = look(c.p.id);
     if (a.mode === 'walk') movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y, lk, t, true); if (a.carry) drawCarriedBox(a.x, a.y); } });
     else if (a.mode === 'nap') movers.push({ y: a.y, draw: () => Art.drawLying(a.x, a.y, lk, t) });
-    else if (a.spot && a.spot.pose === 'sit') movers.push({ y: a.y, draw: () => Art.drawFront(a.x, a.y, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', mug: true }) });
+    else if (a.spot && a.spot.pose === 'sit') movers.push({ y: a.y, draw: () => Art.drawFront(a.x, a.y, lk, t, { legs: Art.LEGS_SIT, legsKey: 'sit', mug: a.mode === 'lounge' }) });
     else movers.push({ y: a.y, draw: () => { Art.drawStanding(a.x, a.y + partyBounce(c.p.id, t), lk, t, false); if (a.mode === 'ping') drawPaddle(a, t); else if (a.mode === 'lounge') (isLunch() ? drawFoodInHand : drawMugInHand)(a, t); } });
   }
   movers.push({ y: cat.y, draw: () => drawMascot(cat.x, cat.y, cat.mode, t, cat.flip) });

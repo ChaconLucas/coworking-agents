@@ -1,7 +1,15 @@
 'use strict';
 // ---------------- where each person goes ----------------
-const ZONE_OF = { idle: 'lounge', asleep: 'nap', delegate: 'meet' };
+const ZONE_OF = { idle: 'lounge', asleep: 'nap', delegate: 'meet', read: 'library', web: 'library', terminal: 'lab', mcp: 'lab' };
 const DWELL_MS = 3500;
+// the library and the lab are a walk away: go only after a while doing that, come back only after a while doing something else
+const ROOM_GO_MS = 20000, ROOM_BACK_MS = 8000;
+// seats in the library and the lab: two rows facing the tables or benches (the rooms draw their furniture to match)
+function placeSeats(name) {
+  const P = places.find(x => x.name === name); if (!P) return [];
+  const out = []; for (const row of [P.y + 44, P.y + 104]) for (let x = P.x + 14; x <= P.x + P.w - 30; x += 34) out.push({ x, y: row, zone: name, pose: 'sit' });
+  return out;
+}
 const want = new Map();
 
 function plan(now) {
@@ -14,10 +22,12 @@ function plan(now) {
     let w = want.get(cell.p.id);
     if (!w) { w = { zone: z, since: 0, settled: z }; want.set(cell.p.id, w); }
     if (w.zone !== z) { w.zone = z; w.since = now; }
-    if (z === 'desk' || now - w.since >= DWELL_MS) w.settled = w.zone;
+    const roomy = x => x === 'library' || x === 'lab', wait = roomy(z) ? ROOM_GO_MS : roomy(w.settled) ? ROOM_BACK_MS : z === 'desk' ? 0 : DWELL_MS;
+    if (now - w.since >= wait) w.settled = w.zone;
+    if (roomy(w.settled) && !places.some(P => P.name === w.settled)) w.settled = 'desk';
     return w.settled;
   };
-  const byZone = { lounge: [], nap: [], meet: [], desk: [], leave: [] };
+  const byZone = { lounge: [], nap: [], meet: [], desk: [], leave: [], library: [], lab: [] };
   for (const c of layout) byZone[zoneFor(c)].push(c);
   const lounge = byZone.lounge, free = [];
   if (lounge.length >= 2) { assign.set(lounge[0].p.id, spots.ping[0]); assign.set(lounge[1].p.id, spots.ping[1]); free.push(...lounge.slice(2)); }
@@ -27,6 +37,7 @@ function plan(now) {
   rest.forEach((c, i) => assign.set(c.p.id, seats[i] || null));
   byZone.meet.forEach((c, i) => assign.set(c.p.id, spots.meetTop[i] || spots.meetBot[i - 3] || spots.meetStand[i - 6] || null));
   byZone.nap.forEach((c, i) => assign.set(c.p.id, spots.nap[i] || null));
+  for (const z of ['library', 'lab']) { const seats = placeSeats(z); byZone[z].forEach((c, i) => assign.set(c.p.id, seats[i] || null)); }
   byZone.leave.forEach(c => assign.set(c.p.id, { x: CX - 8, y: H + 30, zone: 'gone', pose: 'stand' }));
   return assign;
 }
@@ -47,6 +58,8 @@ const SPEED = 52;
 
 // every spot knows its way out to the vertical corridor (CX); the path is: exit, corridor, enter
 function exitPath(pt, cell) {
+  const P = places.find(P => pt.x >= P.x && pt.x <= P.x + P.w && pt.y >= P.y && pt.y <= P.y + P.h);
+  if (P) { const d = P.doors[0]; return [{ x: pt.x, y: P.y + 14 }, { x: d.x - 8, y: P.y + 14 }, { x: d.x - 8, y: P.y - 8 }]; } // out through the room's top door
   if (pt.x < CX && cell) {
     const R = cell.room;
     return [{ x: pt.x, y: cell.aisle }, { x: R.doorX + 9, y: cell.aisle }, { x: R.doorX + 9, y: R.y + R.h + 6 }];

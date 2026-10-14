@@ -88,19 +88,24 @@ function drawPlaceRooms(t, movers) {
     r(x, y, w, h, floorC[0]); for (let yy = y; yy < y + h; yy += 8) for (let xx = x + ((yy - y) / 8 % 2) * 8; xx < x + w; xx += 16) r(xx, yy, 8, 8, floorC[1]);
     r(x - 2, y - 2, w + 4, 3, PAL.ink); r(x - 2, y, 2, h + 2, PAL.ink); r(x + w, y, 2, h + 2, PAL.ink); r(x - 2, y + h, w + 4, 2, PAL.ink);
     r(d.x - 9, y - 2, 18, 3, floorC[1]); r(d.x - 9, y + 1, 18, 3, '#00000033'); // the open door
-    if (P.name === 'library') { // shelves along the back wall, two reading tables with green lamps
-      for (let i = 0; i < Math.floor((w - 12) / 34); i++) { const sx = x + 6 + i * 34; if (Math.abs(sx + 15 - d.x) < 22) continue; r(sx, y + 6, 30, 26, '#5a3a28'); for (let sh = 0; sh < 2; sh++) for (let k = 0; k < 6; k++) { const hh = hash(`pl${P.x}${i}${sh}${k}`); r(sx + 2 + k * 5, y + 8 + sh * 12 + (hh % 3), 4, 10 - (hh % 3), ['#a8434f', '#3b5dc9', '#63c74d', '#feae34', '#7a5cff', '#2ce8f5'][hh % 6]); } }
-      for (const tx of [x + w * .18, x + w * .58]) { r(tx, y + 70, w * .26, 12, '#6b4a33'); r(tx, y + 70, w * .26, 2, '#8a6a4a'); r(tx + w * .13 - 1, y + 62, 2, 8, '#c9a34a'); r(tx + w * .13 - 5, y + 59, 10, 4, '#2f8f4e'); }
-    } else if (P.name === 'lab') { // a CI screen on the back wall, two benches of monitors
-      r(x + w / 2 - 40, y + 6, 80, 24, PAL.ink); r(x + w / 2 - 38, y + 8, 76, 20, '#0c1410'); pixText(x + w / 2 - 34, y + 11, 'CI', '#62ff7a');
-      ['B', 'T', 'L'].forEach((c, i) => { const on = ((t / 600 + i) | 0) % 3 !== 2; r(x + w / 2 - 20 + i * 18, y + 18, 14, 7, on ? '#1f7a48' : '#1b2a22'); });
-      for (const by of [y + 58, y + 92]) { r(x + 10, by, w - 20, 8, '#e8ecf2'); r(x + 10, by, w - 20, 2, '#ffffff'); for (let k = 0; k < 3; k++) { const mx = x + 22 + k * (w - 44) / 3; r(mx, by - 10, 16, 10, PAL.ink); r(mx + 1, by - 9, 14, 8, '#0c1410'); r(mx + 3, by - 7, 4 + hash('lm' + k + by + ((t / 400) | 0)) % 9, 1, '#62ff7a'); } }
-    } else { // the waiting room: two phone booths with a red light, a bench
-      for (const bx of [x + 10, x + w - 34]) { r(bx, y + 8, 24, 44, '#3a2a4a'); r(bx + 2, y + 12, 20, 38, '#8fc7ff55'); r(bx + 8, y + 6, 8, 3, ((t / 400) | 0) % 2 ? '#ff4d57' : '#5a0f16'); }
-      r(x + w * .25, y + 88, w * .5, 6, '#6b4a33'); r(x + w * .25, y + 94, 3, 8, '#4a3324'); r(x + w * .75 - 3, y + 94, 3, 8, '#4a3324');
+    if (P.name === 'library') { // shelves along the back wall, two long reading tables with green lamps (seats in actors.js)
+      for (let i = 0; i < Math.floor((w - 12) / 34); i++) { const sx = x + 6 + i * 34; if (Math.abs(sx + 15 - d.x) < 22) continue; r(sx, y + 6, 30, 30, '#5a3a28'); for (let sh = 0; sh < 2; sh++) for (let k = 0; k < 6; k++) { const hh = hash(`pl${P.x}${i}${sh}${k}`); r(sx + 2 + k * 5, y + 9 + sh * 13 + (hh % 3), 4, 11 - (hh % 3), ['#a8434f', '#3b5dc9', '#63c74d', '#feae34', '#7a5cff', '#2ce8f5'][hh % 6]); } }
+      for (const ty of [y + 66, y + 126]) { r(x + 8, ty, w - 16, 12, PAL.ink); r(x + 9, ty + 1, w - 18, 10, '#6b4a33'); r(x + 9, ty + 1, w - 18, 2, '#8a6a4a'); for (let lx = x + 30; lx < x + w - 20; lx += 68) { r(lx, ty - 7, 2, 7, '#c9a34a'); r(lx - 4, ty - 10, 10, 4, '#2f8f4e'); } }
+    } else if (P.name === 'lab') { // a CI screen on the back wall, two benches of monitors (seats in actors.js)
+      r(x + w / 2 - 44, y + 6, 88, 28, PAL.ink); r(x + w / 2 - 42, y + 8, 84, 24, '#0c1410'); pixText(x + w / 2 - 38, y + 11, 'CI', '#62ff7a');
+      ['B', 'T', 'L', 'D'].forEach((c, i) => { const on = ((t / 600 + i) | 0) % 4 !== 3; r(x + w / 2 - 30 + i * 16, y + 22, 13, 7, on ? '#1f7a48' : '#1b2a22'); });
+      for (const by of [y + 66, y + 126]) { r(x + 8, by, w - 16, 10, PAL.ink); r(x + 9, by + 1, w - 18, 8, '#e8ecf2'); r(x + 9, by + 1, w - 18, 2, '#ffffff'); for (let mx = x + 15; mx <= x + w - 31; mx += 34) { r(mx, by - 9, 18, 9, PAL.ink); r(mx + 1, by - 8, 16, 7, '#0c1410'); r(mx + 3, by - 6, 3 + hash('lm' + mx + by + ((t / 400) | 0)) % 10, 1, '#62ff7a'); } }
+    } else { // the waiting room: phone booths with a red light, a bench
+      for (const bx of [x + 10, x + w - 34]) { r(bx, y + 10, 24, 50, '#3a2a4a'); r(bx + 2, y + 14, 20, 44, '#8fc7ff55'); r(bx + 8, y + 7, 8, 3, ((t / 400) | 0) % 2 ? '#ff4d57' : '#5a0f16'); }
+      r(x + w * .25, y + 112, w * .5, 6, '#6b4a33'); r(x + w * .25, y + 118, 3, 9, '#4a3324'); r(x + w * .75 - 3, y + 118, 3, 9, '#4a3324');
     }
     const label = plain(L[P.name]), lw = label.length * 4 + 8; r(x + 6, y + h - 12, lw, 9, '#00000088'); pixText(x + 10, y + h - 10, label, '#f4ecd8');
     // inside, you see who is doing this right now (the agents themselves stay at their desks)
+    if (P.name !== 'waiting') { // the library and the lab: the agents walk in themselves; an empty room says so
+      const inRoom = layout.filter(c => c.actor && c.actor.mode === P.name).length;
+      if (!inRoom) { const e = plain(L['no_' + P.name]), ew = e.length * 4 + 8; r(x + w / 2 - ew / 2, y + h / 2 - 5, ew, 10, '#00000066'); pixText(x + w / 2 - ew / 2 + 4, y + h / 2 - 3, e, '#f4ecd8'); }
+      continue;
+    }
     const here = playerOn && me.ready && me.x + 8 > x && me.x + 8 < x + w && me.y + 12 > y && me.y + 12 < y + h;
     const who = (data ? data.people : []).filter(p => !p.leaving && PLACE_STATES[P.name].includes(p.state));
     if (!here) { if (who.length) { const n = String(who.length); r(x + w - 18, y + h - 13, 14, 11, PAL.ink); r(x + w - 17, y + h - 12, 12, 9, P.name === 'waiting' ? '#e43b44' : '#1b1622'); pixText(x + w - 14 - (n.length - 1) * 2, y + h - 10, n, '#ffffff'); } continue; }

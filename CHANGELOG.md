@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- The agents walk: after about 20 s reading or browsing an agent gets up, walks to the library and sits at a reading table; after about 20 s running commands it goes to the lab; after about 8 s on something else it walks back to its desk. Bigger rooms. Who waits on you stays at the desk, waving (the waiting room shows them when you walk in)
+
 ## 0.10.0 — 2026-10-14
 - Fix: the test suite no longer stops a running office started at login (it turned the login item off through the real launchd label)
 - Three new rooms on the office floor, under the game room: the library, the lab and the waiting room. The agents stay at their desks; walk into a room (arrows/WASD or a click) and you see who is reading or browsing, running commands, or waiting on you right now. A number on the door says how many; Enter next to someone opens them (the waiting room opens the question)

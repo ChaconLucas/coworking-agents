@@ -276,7 +276,7 @@ Click the elevator (or press Enter next to it) to ride between floors, up to the
 ![The server room](docs/servers.png)
 
 
-**More rooms on the floor:** under the game room are the **library**, the **lab** and the **waiting room**. The agents stay at their desks; walk into a room and you see who is reading or browsing, running commands or tests, or waiting on you right now (a number on the door says how many). Enter next to someone opens them. You can also walk inside the rooftop, the trophy room and the server room.
+**More rooms on the floor:** under the game room are the **library**, the **lab** and the **waiting room**. An agent that keeps reading or browsing for a while gets up and walks to the library; one that keeps running commands goes to the lab; when it moves on to something else it walks back to its desk. Who waits on you stays at the desk, waving; walk into the waiting room to see them all (a number on its door says how many). Enter next to someone opens them. You can also walk inside the rooftop, the trophy room and the server room.
 ## Achievements, coins and the shop
 
 - **86 achievements**, each with five tiers from bronze to legend, measured from your history (hours, actions, streaks, nights, Friday evenings, weeks and months with work, tokens, cache, models, cost), the live office (parallel sessions, subagents, giant contexts, commits and pushes, repos and branches, quick answers, clean desks) and what you do in the office (walking, talking, the radio, the shop, customising). A few are secret.

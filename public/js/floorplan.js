@@ -132,7 +132,7 @@ function buildFloor(i) {
     doors: [{ side: 'right', x: 8 + gw, y: gy + GH / 2 }, { side: 'top', x: 8 + Math.round(gw * .2), y: gy }, { side: 'top', x: 8 + Math.round(gw * .62), y: gy }, { side: 'bottom', x: 8 + Math.round(gw * .75), y: gy + GH }] };
   y += GH + SHELF_GAP + 4;
   // under the game room: the library, the lab and the waiting room, side by side, doors on their top wall to the hallway
-  const PH = 118, pw = Math.floor((CX - 20 - 16) / 3), py = y + 6;
+  const PH = 170, pw = Math.floor((CX - 20 - 16) / 3), py = y + 6;
   const places = ['library', 'lab', 'waiting'].map((name, k) => { const x = 8 + k * (pw + 8); return { name, x, y: py, w: pw, h: PH, doors: [{ side: 'top', x: x + Math.round(pw / 2), y: py }] }; });
   y += PH + SHELF_GAP + 10;
   const occupied = ds.filter(d => d.p);
