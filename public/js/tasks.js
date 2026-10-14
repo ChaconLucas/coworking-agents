@@ -627,6 +627,15 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); if (tab === 'tv') return setTv(true); openReport(tab); });
   }
+  // three groups instead of one long list: what you look at, what you do, how the office behaves
+  if (menu) {
+    const groups = [['see', ['[data-menu-tab=tasks]', '[data-menu-tab=usage]', '[data-menu-tab=notices]', '[data-menu-tab=feed]', '[data-menu-tab=repos]', '[data-menu-tab=archive]', '[data-menu-tab=timelapse]', '[data-menu-tab=version]']],
+      ['do', ['#btn-launch', '[data-menu-tab=broadcast]', '[data-menu-tab=watches]', '[data-menu-tab=phone]', '[data-menu-tab=tv]', '#btn-search', '#btn-replay', '#btn-photo', '#btn-deco']],
+      ['prefs', ['#btn-notify', '#btn-sound', '#btn-focus', '#btn-walk', '#btn-radio', '#btn-lang', '#btn-office']]];
+    const secs = groups.map(([k, sels]) => { const sec = document.createElement('div'); sec.className = 'menu-sec'; sec.innerHTML = `<div class="menu-h" data-menu-group="${k}"></div>`; for (const q of sels) { const el = menu.querySelector(':scope > ' + q); if (el) sec.appendChild(el); } return sec; });
+    for (const el of [...menu.querySelectorAll(':scope > .icon-btn')]) secs[1].appendChild(el); // anything not listed still shows
+    secs.forEach(sec => menu.appendChild(sec));
+  }
 }
 // repositories at a glance: who is in each one now, what is not committed or pushed, task branches and PRs, today's activity
 // one message to several agents: typed into the ones waiting in a terminal, sent in the background to the others
@@ -800,7 +809,7 @@ function setTv(on) {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tv')) setTv(false); });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('tv')) setTv(false); });
 if (new URLSearchParams(location.search).get('tv') === '1') setTimeout(() => setTv(true), 500);
-function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); }
+function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); document.querySelectorAll('[data-menu-group]').forEach(h => { h.textContent = T.menuGroups[h.dataset.menuGroup]; }); }
 setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);
 
 // ---- the recommendation card: current, recommended and pending config, the reason, Apply; refreshed as the task moves ----

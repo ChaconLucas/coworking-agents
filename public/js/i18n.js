@@ -629,6 +629,9 @@ Object.assign(I18N.en, { watch: { title: 'Tell me when…', sub: 'Notices you ch
 // the phone panel turned on from the office
 Object.assign(I18N.pt, { phoneOn: { how: 'Veja os agentes, as tarefas e responda pelo celular, no mesmo Wi-Fi. Ao ligar aqui, ele volta a ligar sozinho toda vez que o escritório abrir.', on: 'Ligar o celular', off: 'Desligar o celular', cli: 'Ou abra o escritório com', kept: 'Fica ligado: abre junto com o escritório nas próximas vezes, com o mesmo QR.', fail: { nolan: 'não achei uma rede Wi-Fi neste computador', port: 'a porta do celular está ocupada', error: 'não deu para ligar', demo: 'modo demonstração' } } });
 Object.assign(I18N.en, { phoneOn: { how: 'See the agents and tasks and answer from your phone, on the same Wi-Fi. Turned on here, it comes back on by itself every time the office opens.', on: 'Turn the phone on', off: 'Turn the phone off', cli: 'Or start the office with', kept: 'It stays on: it opens with the office next time, with the same QR.', fail: { nolan: 'no Wi-Fi network found on this computer', port: 'the phone port is taken', error: 'could not turn it on', demo: 'demo mode' } } });
+// the ☰ menu's groups
+Object.assign(I18N.pt, { menuGroups: { see: 'Ver', do: 'Fazer', prefs: 'Ajustes' } });
+Object.assign(I18N.en, { menuGroups: { see: 'See', do: 'Do', prefs: 'Settings' } });
 let T = I18N[lang];
 // sound is on by default; alerts follow the browser permission (asked on open). Only the buttons turn them off.
 let soundOn = store.get('sound', true);
