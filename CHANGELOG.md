@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 — 2026-10-14
 - Fix: the test suite no longer stops a running office started at login (it turned the login item off through the real launchd label)
 - Three new rooms on the office floor, under the game room: the library, the lab and the waiting room. The agents stay at their desks; walk into a room (arrows/WASD or a click) and you see who is reading or browsing, running commands, or waiting on you right now. A number on the door says how many; Enter next to someone opens them (the waiting room opens the question)
 - Walk inside the rooftop, the trophy room and the server room too; the elevator door in the corner takes you back
