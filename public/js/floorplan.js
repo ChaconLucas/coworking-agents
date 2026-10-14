@@ -163,6 +163,7 @@ function fitScale() {
   ctx.imageSmoothingEnabled = false;
   // small scale: the badge shows name and state; the title goes in the tooltip
   document.getElementById('office').classList.toggle('compact', S < 2.25);
+  document.getElementById('office').classList.toggle('tiny', S < 1.3); // zoomed far out: names only, small, so they don't run into each other
 }
 
 // floor picker (only shown with more than one floor)

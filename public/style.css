@@ -1042,3 +1042,7 @@ body.gather main#stage { cursor: grab; } body.gather main#stage:active { cursor:
 /* area names over the floor when zoomed all the way out */
 .area-labels { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
 .area-labels span { position: absolute; transform: translate(-50%, -50%); font: 700 12px/1 var(--pix); text-transform: uppercase; letter-spacing: .06em; color: #fff; background: rgba(27,22,34,.82); border: 2px solid #0b0a0e; border-radius: 6px; padding: 5px 8px; white-space: nowrap; }
+/* zoomed far out: the agents' tags shrink to the name, the area names stay small and see-through */
+#office.tiny .tag .st, #office.tiny .tag .tt { display: none; }
+#office.tiny .tag .nm { font-size: 7px; padding: 2px 3px 2px 5px !important; box-shadow: inset 2px 0 0 var(--ag, transparent); }
+.area-labels span { font-size: 9px !important; padding: 3px 6px !important; border-width: 1px !important; background: rgba(27,22,34,.62) !important; letter-spacing: .05em; }

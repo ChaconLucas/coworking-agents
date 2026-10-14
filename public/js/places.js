@@ -148,7 +148,7 @@ function drawGarden(t) {
 function sideSeats() {
   const out = [];
   if (SIDE_L) for (let y = TOP + 70; y < H - 60; y += 110) out.push({ x: 40, y, zone: 'garden', pose: 'stand' }, { x: 120, y: y + 40, zone: 'garden', pose: 'stand' });
-  if (SIDE_R) { const x0 = RX + RW + 14; for (let y = TOP + 120; y < H - 60; y += 90) out.push({ x: x0 + 30, y, zone: 'garden', pose: 'sit' }, { x: x0 + 140, y: y + 20, zone: 'garden', pose: 'sit' }); }
+  if (SIDE_R) { const x0 = RX + RW + 14; for (let y = TOP + 120; y < Math.min(H - 60, TOP + 420); y += 90) out.push({ x: x0 + 30, y, zone: 'garden', pose: 'sit' }, { x: x0 + 140, y: y + 20, zone: 'garden', pose: 'sit' }); }
   return out;
 }
 function drawSideAreas(t) {
@@ -169,7 +169,7 @@ function drawSideAreas(t) {
     r(x0 + 16, y0 + 14, w - 32, 34, '#5a3a28'); r(x0 + 16, y0 + 12, w - 32, 4, '#8a6a4a'); r(x0 + 26, y0 + 18, 44, 22, '#1b1d2e'); pixText(x0 + 30, y0 + 22, plain(T.places.cafe), '#ffd84d'); r(x0 + 30, y0 + 31, 30, 1, '#5a5a6a'); r(x0 + 30, y0 + 35, 22, 1, '#5a5a6a');
     r(x0 + w - 70, y0 + 20, 16, 20, '#c0cbdc'); if (((t / 500) | 0) % 2) r(x0 + w - 64, y0 + 14, 2, 6, '#ffffff66'); // the espresso machine steaming
     // tables seen from above under round striped umbrellas, two chairs each (the strollers' seats sit next to them)
-    for (let y = TOP + 120; y < H - 60; y += 90) for (const [tx, ty] of [[x0 + 50, y], [x0 + 160, y + 20]]) {
+    for (let y = TOP + 120; y < Math.min(H - 60, TOP + 420); y += 90) for (const [tx, ty] of [[x0 + 50, y], [x0 + 160, y + 20]]) {
       const c = hash('um' + tx + ty) % 2 ? ['#e43b44', '#f4ecd8'] : ['#3b5dc9', '#f4ecd8'];
       r(tx - 6, ty + 18, 8, 6, '#6b4a33'); r(tx + 30, ty + 18, 8, 6, '#6b4a33'); // chairs
       r(tx + 2, ty + 10, 28, 12, '#e8e2d6'); r(tx + 2, ty + 20, 28, 2, '#b8b0a0'); // the table
@@ -178,5 +178,10 @@ function drawSideAreas(t) {
       r(tx + 15, ty - 18, 2, 2, '#c0cbdc');
     }
     for (let y = TOP + 70; y < H; y += 120) { r(W - 22, y + 10, 14, 12, '#c96f4a'); for (let k = 0; k < 4; k++) r(W - 20 + k * 3, y - 2 + k, 2, 14 - k, '#3a8f46'); }
+    if (H > TOP + 470) { // further down: a food truck with its hatch open, a bike rack and a flower bed
+      const fy = TOP + 450; r(x0 + 30, fy, 120, 50, '#f4ecd8'); r(x0 + 30, fy, 120, 6, '#e43b44'); r(x0 + 44, fy + 14, 60, 18, '#1b1d2e'); r(x0 + 44, fy + 12, 60, 3, '#feae34'); pixText(x0 + 48, fy + 20, 'TACOS', '#feae34'); r(x0 + 40, fy + 50, 14, 8, PAL.ink); r(x0 + 120, fy + 50, 14, 8, PAL.ink);
+      if (H > TOP + 560) { const by = TOP + 540; for (let k = 0; k < 5; k++) { r(x0 + 30 + k * 18, by, 2, 16, '#9aa3b0'); r(x0 + 30 + k * 18, by, 12, 2, '#9aa3b0'); } r(x0 + 32, by + 8, 14, 6, '#3b5dc9'); r(x0 + 68, by + 8, 14, 6, '#63c74d'); }
+      if (H > TOP + 620) { const gy = TOP + 600; r(x0 + 20, gy, w - 50, 26, '#6b4a33'); for (let k = 0; k < (w - 60) / 8; k++) r(x0 + 24 + k * 8, gy + 4 + (k % 2) * 3, 5, 5, ['#ff6ec7', '#ffd84d', '#ff4d57', '#ffffff', '#7a5cff'][k % 5]); }
+    }
   }
 }

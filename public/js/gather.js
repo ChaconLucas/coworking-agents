@@ -163,10 +163,10 @@ let areaKey = '';
 function areaLabels() {
   const z = gatherOn ? ZOOMS[zoomI] : NZOOMS[zoomN], show = !building && !trophyView && !!data && (z === 'fit' || S < 1.1);
   const A = T.areas, P = T.places, list = !show ? [] : [
-    SIDE_L && [SIDE_L / 2, TOP + 40, P.park], SIDE_R && [RX + RW + (W - RX - RW) / 2, TOP + 70, P.cafe],
-    game && [game.x + game.w / 2, game.y + game.h / 2, A.game], ...places.map(p => [p.x + p.w / 2, p.y + p.h / 2, P[p.name]]),
-    garden && [garden.x + garden.w / 2, garden.y + 30, P.garden], wing && [RX + RW / 2, wing.copa + 34, A.lounge], wing && [RX + RW / 2, wing.ping + 34, A.ping],
-    wing && [RX + RW / 2, wing.meet + 50, A.meeting], wing && [RX + RW / 2, wing.nap + 44, A.rest], wing && [RX + RW / 2, wing.servers + 24, A.servers],
+    SIDE_L && [SIDE_L / 2, TOP + 16, P.park], SIDE_R && [RX + RW + (W - RX - RW) / 2, TOP + 60, P.cafe],
+    game && [game.x + game.w / 2, game.y + 14, A.game], ...places.map(p => [p.x + p.w / 2, p.y + 14, P[p.name]]), // near the top edge, so the room shows
+    garden && [garden.x + garden.w / 2, garden.y + 14, P.garden], wing && [RX + RW / 2, wing.copa + 8, A.lounge], wing && [RX + RW / 2, wing.ping + 6, A.ping],
+    wing && [RX + RW / 2, wing.meet + 8, A.meeting], wing && [RX + RW / 2, wing.servers + 4, A.servers], // the rest room has its own sign
   ].filter(Boolean);
   const key = JSON.stringify([list, S]); if (key === areaKey) return; areaKey = key;
   areaEl.innerHTML = list.map(([x, y, name]) => `<span style="left:${x * S}px;top:${y * S}px">${esc(name)}</span>`).join('');
