@@ -765,7 +765,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     const vw = await (await get('/api/m', ck)).json(); assert.ok(Array.isArray(vw.folders) && vw.folders.includes(known) && Array.isArray(vw.limits), 'phone view: folders and limits');
     // live view, one agent in full, writing to it and a task's changes: all behind the same code and POST rules
     { const sr = await fetch(base + '/api/stream', { headers: ck }), rd = sr.body.getReader(), first = new TextDecoder().decode((await rd.read()).value); rd.cancel();
-      assert.ok(sr.headers.get('content-type') === 'text/event-stream' && /^data: \{.*"people"/.test(first), 'phone stream: the view pushed'); }
+      assert.ok(sr.headers.get('content-type') === 'text/event-stream' && /^retry: 1000\ndata: \{.*"people"/.test(first), 'phone stream: the view pushed'); }
     assert.strictEqual((await get('/api/stream')).status, 401, 'phone stream: no code, nothing');
     assert.strictEqual(await (await get('/api/agent?id=nobody', ck)).json(), null, 'phone agent: unknown id');
     assert.strictEqual((await get('/api/agent?id=x')).status, 401, 'phone agent: no code, nothing');

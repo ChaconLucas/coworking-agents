@@ -3,7 +3,7 @@
 const P = T.phone, X = T.tasks;
 const app = document.getElementById('app'), statusEl = document.getElementById('status'), tabsEl = document.getElementById('tabs');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {}, sub = 'info', talk = null, talkQ = '', talkTimer = 0;
+let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {}, sub = 'info', talk = null, talkQ = '', talkTimer = 0, es = null;
 try { tab = localStorage.getItem('cw.phone.tab') || 'now'; } catch {}
 const post = body => fetch('api/m', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
 const usd = n => 'US$ ' + (Number(n) || 0).toFixed(2);
@@ -131,7 +131,7 @@ function usageTab() {
 }
 function render() {
   const n = d.people.filter(p => p.state === 'needs_you' || p.state === 'waiting').length + d.tasks.filter(t => t.ask).length;
-  statusEl.textContent = P.status(d.people.filter(working).length, n) + (Date.now() - streamAt < 20000 ? ' · ● ' + P.live : '');
+  statusEl.textContent = P.status(d.people.filter(working).length, n) + (Date.now() - streamAt < 8000 ? ' · ● ' + P.live : '');
   tabsEl.innerHTML = [['now', '●', P.tabNow, n], ['tasks', '☰', P.tabTasks, d.tasks.filter(t => ['blocked', 'failed'].includes(t.state)).length], ['office', '▦', P.tabOffice, 0], ['usage', '$', P.tabUsage, 0]]
     .map(([k, icon, label, badge]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span class="ic">${icon}</span>${esc(label)}${badge ? `<i>${badge}</i>` : ''}</button>`).join('');
   app.innerHTML = detail ? agentView() : tab === 'tasks' ? tasksTab() : tab === 'office' ? officeTab() : tab === 'usage' ? usageTab() : nowTab();
@@ -162,10 +162,12 @@ async function loadDetail() {
 // live: the office pushes every change; the 3-second poll only runs while the stream is down
 function stream() {
   if (!window.EventSource) return;
-  const es = new EventSource('api/stream');
-  es.onmessage = e => { streamAt = Date.now(); try { apply(JSON.parse(e.data)); } catch {} };
+  if (es) es.close();
+  es = new EventSource('api/stream');
+  es.onmessage = e => { streamAt = Date.now(); try { apply(JSON.parse(e.data)); } catch {} if (detail && sub === 'talk' && !talkQ) loadTalk(); };
+  es.addEventListener('ping', () => { streamAt = Date.now(); });
+  es.onerror = () => { if (es.readyState === 2) setTimeout(stream, 2000); }; // closed for good: open a new one
 }
-app.addEventListener('input', e => { if (!e.target.matches('[data-talkq]')) return; clearTimeout(talkTimer); talkTimer = setTimeout(() => { talkQ = e.target.value.trim().slice(0, 100); loadTalk(); }, 350); });
 document.addEventListener('focusout', () => setTimeout(() => { if (pending && !typing()) apply(pending, true); }, 0));
 tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; detail = null; dd = null; talk = null; talkQ = ''; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
 app.addEventListener('click', async e => {
@@ -193,8 +195,9 @@ app.addEventListener('click', async e => {
   if (op === 'create' && r.ok) { const det = app.querySelector('details.new'); if (det) det.open = false; setTimeout(() => load(true), 600); return; }
   setTimeout(load, 800);
 });
-load(true); stream(); setInterval(() => { if (Date.now() - streamAt > 20000) load(); if (detail && sub === 'talk') { if (!talkQ) loadTalk(); } else if (detail && !typing()) loadDetail(); }, 3000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+load(true); stream(); setInterval(() => { if (Date.now() - streamAt > 8000) load(); if (detail && sub === 'talk') { if (!talkQ) loadTalk(); } else if (detail && !typing()) loadDetail(); }, 3000);
+// back to the app: iOS may have cut the live link while it was in the background, so open a new one and catch up at once
+document.addEventListener('visibilitychange', () => { if (document.hidden) return; stream(); load(true); if (detail && sub === 'talk') loadTalk(); else if (detail) loadDetail(); });
 // tap the logo: how this page is running (full-screen app or inside Safari), screen heights and the notch / home-bar insets
 document.querySelector('.brand').addEventListener('click', () => {
   const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom);left:0;width:1px;visibility:hidden'; document.body.appendChild(probe);

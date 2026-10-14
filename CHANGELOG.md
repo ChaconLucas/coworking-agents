@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Phone app updates faster: the live link pings every 5 s (a quiet office no longer looks offline and falls back to polling), reopens at once when the app comes back from the background, and new messages reach the open conversation with each change
 - Phone app: an agent's whole conversation as a chat (its own tab next to the summary), with a search inside it that also reaches older messages, and the message box at the bottom. Only what you wrote and what it answered; no tool output, reminders or command echoes; off in private mode
 - Phone home-screen icon opens with its code: the code link is the page itself (no redirect) and the manifest has no fixed start, so the icon keeps the link it was added from (iOS gives a home-screen app its own cookies)
 - Phone app keeps working when the Wi-Fi hands the computer a new address: the link uses the computer's own .local name (Bonjour), and the phone server moves to the new address by itself (same port and code). The address link stays shown for phones that don't resolve the name

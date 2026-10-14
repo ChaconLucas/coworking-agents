@@ -81,7 +81,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
   let ip = lanIp();
   if (!ip) return Promise.resolve({ ok: false, reason: 'nolan' });
   let token = /^[0-9a-f]{32}$/.test(kept || '') ? kept : crypto.randomBytes(16).toString('hex'); // kept across restarts so the home-screen icon keeps working
-  // live view: one timer for every open phone, sending only when something changed (and a ping so proxies keep it open)
+  // live view: one timer for every open phone, sending only when something changed (and a ping every 5s so the phone knows it is alive)
   const streams = new Set(); let streamTimer = null, lastView = '', lastPing = 0, usageAt = 0, usageNow = null;
   const usageCached = () => { if (!extra) return null; if (Date.now() - usageAt > 30000) { usageAt = Date.now(); try { usageNow = extra(); } catch {} } return usageNow; };
   const viewJson = () => JSON.stringify(view({ snapshot, tasks, privacy, extra: usageCached }));
@@ -93,7 +93,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
       let body; try { body = viewJson(); } catch { return; }
       const key = body.replace(/"now":\d+,/, '');
       if (key !== lastView) { lastView = key; lastPing = Date.now(); for (const r of streams) if (!r.write(`data: ${body}\n\n`)) { streams.delete(r); r.destroy(); } }
-      else if (Date.now() - lastPing > 15000) { lastPing = Date.now(); for (const r of streams) r.write(': ping\n\n'); }
+      else if (Date.now() - lastPing > 5000) { lastPing = Date.now(); for (const r of streams) r.write('event: ping\ndata: 1\n\n'); } // the phone sees the link is alive
     }, 1000);
     streamTimer.unref();
   }
@@ -133,7 +133,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         if (url.pathname === '/api/stream' && req.method === 'GET') { // the view pushed on every change, like the office's own stream
           if (streams.size >= 4) { res.writeHead(503); return res.end(); }
           phoneSeen = Date.now(); res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' });
-          const first = viewJson(); res.write(`data: ${first}\n\n`); streams.add(res); req.on('close', () => streams.delete(res)); startStream(); return;
+          const first = viewJson(); res.write(`retry: 1000\ndata: ${first}\n\n`); streams.add(res); req.on('close', () => streams.delete(res)); startStream(); return;
         }
         if (url.pathname === '/api/agent' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(agent(snapshot({ privacy }), String(url.searchParams.get('id') || ''), privacy))); }
         if (url.pathname === '/api/talk' && req.method === 'GET') { // one live agent's whole conversation, or what matches a search in it (off in private mode)
