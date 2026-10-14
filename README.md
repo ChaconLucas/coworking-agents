@@ -236,7 +236,7 @@ The office works in any browser. If you prefer an app:
 
 ## Phone panel (opt-in)
 
-`npx coworking-agents --phone` also serves a small app for your phone on the same Wi-Fi, in the office's pixel look, updated live as things change. Scan the QR code printed in the terminal or shown in ☰ → 📱 Phone, then add it to the home screen.
+Turn the phone on in ☰ → 📱 Phone (it stays on and starts with the office every time), or start with `npx coworking-agents --phone`: a small app for your phone on the same Wi-Fi, in the office's pixel look, updated live as things change. Scan the QR code printed in the terminal or shown in ☰ → 📱 Phone, then add it to the home screen.
 
 - **Now:** who needs you and every agent with what it is doing.
 - **Tap an agent** to see it in full: what it asks or does right now, your last request, its last answer, what it did, the files it touched, its helpers, model, context and cost. The **Conversation** tab shows the whole conversation as a chat, with a search inside it (only what you wrote and what it answered, never tool output). When it finished its turn you can **write to it**; the text is typed into its terminal, like the office does (not into the Claude app or VS Code).

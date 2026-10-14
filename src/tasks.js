@@ -202,6 +202,7 @@ function op(m = {}) {
     if (m.autoReview !== undefined) settings.autoReview = !!m.autoReview;
     if (m.monthGoal !== undefined) settings.monthGoal = Math.max(0, Math.min(1e6, Number(m.monthGoal) || 0));
     if (m.menubar !== undefined) settings.menubar = !!m.menubar;
+    if (m.phone !== undefined) settings.phone = !!m.phone;
     if (['app', 'browser', ''].includes(m.appChoice)) settings.appChoice = m.appChoice;
     if (m.quiet && typeof m.quiet === 'object') settings.quiet = { on: !!m.quiet.on, from: /^([01]\d|2[0-3]):[0-5]\d$/.test(m.quiet.from) ? m.quiet.from : '22:00', to: /^([01]\d|2[0-3]):[0-5]\d$/.test(m.quiet.to) ? m.quiet.to : '08:00' };
     if (m.dayBudget !== undefined) settings.dayBudget = Math.max(0, Math.min(1e5, Number(m.dayBudget) || 0));

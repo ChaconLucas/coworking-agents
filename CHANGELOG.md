@@ -1,9 +1,13 @@
 # Changelog
 
+## Unreleased
+- Phone: turn it on from the office (☰ → 📱 → *Turn the phone on*) and it stays on, starting with the office every time with the same QR (the app and autostart included); *Turn the phone off* ends it. `--phone` still works
+- ☰ menu: two columns on a wide window and it scrolls instead of running off the screen
+- A new release shows up in an office left open within about 10 minutes
+
 ## 0.9.0 — 2026-10-14
 - Tell me when… (☰ → ⏰, or the agent's panel): a notice when an agent finishes (once), when a limit passes a level you pick (again after it resets), or when any agent edits a file whose path has some text; in the office, the bell and as a system notification. Kept with your progress
 - Past conversations (☰ → 🗄): every Claude Code and Codex conversation on this computer from the last 60 days, open or closed, found by name, folder or what was said (last 30 days), and read as a chat with its helpers and a search inside it. Read only; off in private mode
-- A new release shows up in an office left open within about 10 minutes (it checked once an hour), and the releases board, the admin's sign and the notice follow as soon as the office knows
 
 ## 0.8.0 — 2026-10-14
 - The office wall: frames, screens and windows spread evenly between the light switch and the whiteboard (same gap between each), a quiet wallpaper pattern and a chair rail with wainscot instead of plain stripes; sunlight comes in only through real windows

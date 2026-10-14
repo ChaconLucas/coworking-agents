@@ -117,7 +117,7 @@ async function reuse() {
     } catch {}
   }
   console.log(`coworking-agents → ${hq.url}${privacy ? '  (private mode)' : ''}\nCtrl+C to close.`);
-  if (phone) {
+  if (phone || hq.phone) { // --phone, or the phone turned on in the office (remembered)
     if (hq.phone) console.log(`\nPhone (same Wi-Fi, trusted networks only — the LAN link is not encrypted) → ${hq.phone.url}\n${require('../src/qr').toTerminal(require('../src/qr').encode(hq.phone.url))}\n`);
     else console.log(`\nPhone panel not started: ${hq.phoneReason === 'nolan' ? 'no local network address found' : hq.phoneReason}`);
   }
