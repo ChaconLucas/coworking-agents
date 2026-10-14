@@ -57,17 +57,21 @@ function drawUsageBoard(x, y, t) {
 // hour of the sky (?hour= overrides it for screenshots), with minutes
 const skyHour = () => styleHour(qs.get('hour') ? Number(qs.get('hour')) : new Date().getHours() + new Date().getMinutes() / 60);
 function drawWall(t, sky) {
-  r(0, 0, W, TOP - 6, PAL.wall);
+  // the building's wall runs from the park to the café; over the open sides there is sky (see drawOutdoorTops)
+  const b0 = Math.max(0, SIDE_L - 4), b1 = Math.min(W, RX + RW + 10), bw = b1 - b0;
+  drawOutdoorTops(t, sky, b0, b1);
+  r(b0, 0, bw, TOP - 6, PAL.wall);
   // wallpaper: a quiet dotted diamond pattern, then a chair rail with wood wainscot below the frames
-  for (let y = 8, k = 0; y < TOP - 16; y += 6, k++) for (let x = (k % 2) * 6; x < W; x += 12) r(x, y, 1, 1, PAL.wallShade);
-  r(0, 0, W, 3, PAL.wallTrim); r(0, 3, W, 1, PAL.ink2);
-  r(0, TOP - 14, W, 2, PAL.wallTrim); r(0, TOP - 12, W, 1, PAL.wallShade); r(0, TOP - 11, W, 3, shade(PAL.wall, .93));
-  for (let x = 18; x < W; x += 36) r(x, TOP - 11, 1, 3, PAL.wallShade);
-  r(0, TOP - 8, W, 2, PAL.wallShade); r(0, TOP - 6, W, 5, PAL.base); r(0, TOP - 6, W, 1, '#8f553f'); r(0, TOP - 1, W, 1, PAL.ink);
+  for (let y = 8, k = 0; y < TOP - 16; y += 6, k++) for (let x = b0 + (k % 2) * 6; x < b1; x += 12) r(x, y, 1, 1, PAL.wallShade);
+  r(b0, 0, bw, 3, PAL.wallTrim); r(b0, 3, bw, 1, PAL.ink2);
+  r(b0, TOP - 14, bw, 2, PAL.wallTrim); r(b0, TOP - 12, bw, 1, PAL.wallShade); r(b0, TOP - 11, bw, 3, shade(PAL.wall, .93));
+  for (let x = b0 + 18; x < b1; x += 36) r(x, TOP - 11, 1, 3, PAL.wallShade);
+  r(b0, TOP - 8, bw, 2, PAL.wallShade); r(b0, TOP - 6, bw, 5, PAL.base); r(b0, TOP - 6, bw, 1, '#8f553f'); r(b0, TOP - 1, bw, 1, PAL.ink);
+  if (SIDE_L) r(b0, 0, 4, TOP, PAL.ink2); if (SIDE_R) r(b1 - 4, 0, 4, TOP, PAL.ink2); // the building's corners
   windowBoxes = []; releaseBox = historyBox = costBox = noticesBox = null;
   // what hangs on the wall, chosen by how much wall there is (as many 74 px slots as fit), then spread evenly
   // between the light switch and the whiteboard so the gaps match
-  const nWin = Math.max(1, Math.floor((CX - 30) / 74)), items = [];
+  const nWin = Math.max(1, Math.floor((CX - 30 - SIDE_L) / 74)), items = [];
   let extra = 0; // slots after the agent of the month become the costs screen and the notice board
   for (let i = 0; i < nWin; i++) {
     if (i === 1) items.push({ w: 112, draw: x => drawUsageBoard(x, 7, t) });
@@ -80,10 +84,12 @@ function drawWall(t, sky) {
     else if (i === 4 && nWin >= 7) items.push({ w: 64, draw: x => drawTrophyShelf(x, 9, 64, t) });
     else if (i === 5) items.push(nWin >= 7 ? { w: 52, draw: x => drawAgentOfMonth(x, 10, t, wallGlows) } : { w: 22, draw: x => Art.drawPoster(x, 12, 1) });
     else if (i >= 6 && extra < 2 && typeof drawCostScreen === 'function') items.push(extra++ === 0 ? { w: 48, draw: x => { drawCostScreen(x, 9, 48, 30, t); costBox = { x: x - 1, y: 8, w: 50, h: 32 }; } } : { w: 48, draw: x => { drawNoticeCork(x, 9, 48, 30, t); noticesBox = { x: x - 1, y: 8, w: 50, h: 32 }; } });
+    else if (i >= 6 && i % 3 === 1) items.push({ w: 40, draw: x => drawPlantShelf(x, 14, t, i) }); // a long wall breathes: plants and frames between the windows
+    else if (i >= 6 && i % 3 === 2) items.push({ w: 26, draw: x => drawWallFrame(x, 12, i) });
     else items.push({ w: 48, draw: x => { Art.drawWindow(x, 9, 48, 30, sky, t, i); drawSkyExtras(x, 9, 48, 30, sky, t, i, skyHour()); drawWindowView(x, 9, 48, 30, sky, i); drawSeasonWindow(x, 9, 48, 30, t); drawWeather(x, 9, 48, 30, t); drawGlassDrops(x, 9, 48, 30, t); drawHolidayWindow(x, 9, 48, 30, t, sky); windowBoxes.push({ x, y: 9, w: 48, h: 30 }); } });
   }
   moodBox = null;
-  const left = 18, right = RX - 24, sum = () => items.reduce((n, it) => n + it.w, 0);
+  const left = SIDE_L + 18, right = RX - 24, sum = () => items.reduce((n, it) => n + it.w, 0);
   if (right - left - sum() - 26 >= (items.length + 1) * 8) items.push({ w: 26, draw: x => drawMoodSign(x + 1, 16, t, wallGlows) }); // ON AIR, when there is room
   const gap = items.length > 1 ? Math.min(40, Math.max(6, (right - left - sum()) / (items.length - 1))) : 0, start = left + Math.max(0, ((right - left) - sum() - gap * (items.length - 1)) / 2);
   let x = start; for (const it of items) { it.draw(Math.round(x)); x += it.w + gap; }
@@ -93,12 +99,34 @@ function drawWall(t, sky) {
   hallBox = { x: RX + 74, y: 7, w: 72, h: 32 };
   Art.drawCork(hallBox.x, hallBox.y, hallBox.w, hallBox.h, data ? Object.values(data.credentials || {}).flatMap(c => c.topSkills || []).sort((a, b) => b.count - a.count) : []);
   // light switch on the wall, by the door: click it to turn the ceiling lights on/off
-  switchBox = { x: 4, y: 20, w: 8, h: 12 };
-  r(4, 20, 8, 12, PAL.ink); r(5, 21, 6, 10, '#f4ecd8'); r(5, 21, 6, 1, '#ffffff');
-  r(7, 22, 2, 8, '#c0cbdc'); r(7, lightsOn ? 22 : 26, 2, 4, lightsOn ? '#63c74d' : '#8b9bb4');
+  const sx = SIDE_L + 4; switchBox = { x: sx, y: 20, w: 8, h: 12 };
+  r(sx, 20, 8, 12, PAL.ink); r(sx + 1, 21, 6, 10, '#f4ecd8'); r(sx + 1, 21, 6, 1, '#ffffff');
+  r(sx + 3, 22, 2, 8, '#c0cbdc'); r(sx + 3, lightsOn ? 22 : 26, 2, 4, lightsOn ? '#63c74d' : '#8b9bb4');
   return nWin;
 }
 let switchBox = null;
+// a wall shelf with potted plants, and a small framed picture: what fills a long wall between the windows
+function drawPlantShelf(x, y, t, k) {
+  r(x, y + 20, 40, 3, '#6b4a33'); r(x, y + 23, 40, 1, PAL.ink); r(x + 3, y + 24, 2, 4, '#4a3324'); r(x + 35, y + 24, 2, 4, '#4a3324');
+  const greens = ['#3a8f46', '#2f6b2a', '#4fa846'];
+  for (let j = 0; j < 3; j++) { const px = x + 4 + j * 12, h = 6 + hash('ps' + k + j) % 8; r(px, y + 14, 8, 6, ['#c96f4a', '#e8e2d6', '#3b5dc9'][(k + j) % 3]); for (let l = 0; l < 3; l++) r(px + 1 + l * 2 + (l === 1 ? 0 : 0), y + 14 - h + l * 2, 2, h - l * 2, greens[(j + l) % 3]); }
+}
+function drawWallFrame(x, y, k) {
+  r(x, y, 26, 22, PAL.ink); r(x + 1, y + 1, 24, 20, '#c9a34a'); r(x + 3, y + 3, 20, 16, ['#7fb3e6', '#f4c0d0', '#a8d08d'][k % 3]);
+  const kind = k % 3; if (kind === 0) { r(x + 3, y + 13, 20, 6, '#3a8f46'); r(x + 14, y + 6, 4, 4, '#ffd84d'); } else if (kind === 1) { r(x + 8, y + 8, 10, 8, '#b55088'); r(x + 10, y + 6, 6, 2, '#b55088'); } else { r(x + 5, y + 12, 6, 7, '#5a3a28'); r(x + 13, y + 9, 8, 10, '#6b4a33'); }
+}
+// over the park and the café there is no wall: sky, a line of trees on the left, the café's striped awning on the right
+function drawOutdoorTops(t, sky, b0, b1) {
+  const st = typeof skyStops === 'function' ? skyStops(sky.phase) : ['#3a9ad9', '#7fc8f0', '#bfe6ff'];
+  const band = (x, w) => { for (let y = 0; y < TOP; y++) { const k = y / TOP; r(x, y, w, 1, k < .5 ? st[0] : k < .85 ? st[1] : st[2]); } };
+  if (b0 > 0) { band(0, b0); for (let x = -6; x < b0; x += 22) { const h = 16 + hash('tl' + x) % 14; r(x, TOP - h, 24, h, '#2f6b2a'); r(x + 4, TOP - h - 5, 16, 6, '#3a8a35'); } if (sky.phase === 'night') for (let k = 0; k < 8; k++) { const hh = hash('st' + k); r(hh % b0, (hh >>> 8) % 20, 1, 1, '#ffffff'); } }
+  if (b1 < W) {
+    const w = W - b1; band(b1, w);
+    for (let x = b1; x < W; x += 12) { r(x, TOP - 20, 12, 10, ((x - b1) / 12 | 0) % 2 ? '#e43b44' : '#f4ecd8'); r(x, TOP - 10, 12, 3, ((x - b1) / 12 | 0) % 2 ? '#b8252e' : '#d8cfb8'); r(x + 5, TOP - 7, 2, 2, ((x - b1) / 12 | 0) % 2 ? '#b8252e' : '#d8cfb8'); } // the striped awning
+    for (let x = b1 + 4; x < W - 4; x += 10) { const yy = 10 + Math.round(Math.sin((x - b1) / 18) * 3); r(x, yy, 2, 2, ((t / 500 + x) | 0) % 5 ? '#ffe9a0' : '#feae34'); } // string lights
+    const lab = 'CAFE', lx = b1 + w / 2 - 16; r(lx - 3, 20, 38, 13, PAL.ink); r(lx - 2, 21, 36, 11, '#3a1d27'); pixText(lx + 2, 24, lab, ((t / 700) | 0) % 9 ? '#ff6ec7' : '#7a2e5a');
+  }
+}
 
 function drawShafts(sky, nWin) {
   if (sky.phase === 'night') return;
