@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 — 2026-10-14
 - The office wall: frames, screens and windows spread evenly between the light switch and the whiteboard (same gap between each), a quiet wallpaper pattern and a chair rail with wainscot instead of plain stripes; sunlight comes in only through real windows
 - Everyone in the office: click the agent count under the office name for every agent with its state and the helpers working for it; an agent opens its panel, a helper opens its conversation
 - Top bar: under the office name, how many agents are in the office, with "+N 🤖" while helpers (subagents) work (hover for who); the bar keeps its size; the phone shows the same in its header and on each agent's card
