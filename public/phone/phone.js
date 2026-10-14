@@ -3,7 +3,7 @@
 const P = T.phone, X = T.tasks;
 const app = document.getElementById('app'), statusEl = document.getElementById('status'), tabsEl = document.getElementById('tabs');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {};
+let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {}, sub = 'info', talk = null, talkQ = '', talkTimer = 0;
 try { tab = localStorage.getItem('cw.phone.tab') || 'now'; } catch {}
 const post = body => fetch('api/m', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
 const usd = n => 'US$ ' + (Number(n) || 0).toFixed(2);
@@ -63,6 +63,8 @@ function agentView() {
   const need = a.state === 'needs_you' || a.state === 'waiting', h = [back];
   h.push(`<div class="card${need ? ' need' : ''}"><div class="who"><span class="face" data-face="${esc(a.id)}"></span><div class="txt"><div class="line"><b>${esc(a.name)}</b>${pill(stateCls(a.state), T.states[a.state] || a.state)}</div>
     <small>${esc(a.agent)}${a.repo ? ' · ' + esc(a.repo) : ''}${a.branch ? ' · ' + esc(a.branch) : ''}${a.since ? ' · ' + esc(ago(Date.now() - a.since)) : ''}</small>${a.title ? `<p class="doing dim">${esc(a.title)}</p>` : ''}</div></div></div>`);
+  h.push(`<div class="subtabs"><button class="${sub === 'info' ? 'on' : ''}" data-sub="info">${esc(P.summaryTab)}</button>${d && d.privacy ? '' : `<button class="${sub === 'talk' ? 'on' : ''}" data-sub="talk">💬 ${esc(P.talkTab)}</button>`}</div>`);
+  if (sub === 'talk') return h.join('') + talkView(a);
   if (a.doing) {
     h.push(`<h2>${esc(need ? P.asking : P.doingNow)}</h2><div class="card${need ? ' need' : ''}"><b>${esc(a.doing.tool)}</b>${a.doing.ask || a.doing.what ? `<pre>${esc(a.doing.ask || a.doing.what)}</pre>` : ''}
       ${need ? (a.doing.options ? `<div class="row">${a.doing.options.map((o, i) => `<button class="ghost" data-op="answer" data-id="${esc(a.id)}" data-choice="${i + 1}">${i + 1}. ${esc(o)}</button>`).join('')}</div>` : `<p class="msg">${esc(P.openOffice)}</p>`) : ''}<p class="msg" data-msg="${esc(a.id)}"></p></div>`);
@@ -79,6 +81,38 @@ function agentView() {
     <div class="act"><span>${esc(P.cost)}</span><b>${esc(usd(a.usd))}</b></div><div class="act"><span>${esc(P.turns)}</span><b>${a.turns}</b></div>
     ${a.startedAt ? `<div class="act"><span>${esc(P.open)}</span><b>${esc(ago(Date.now() - a.startedAt))}</b></div>` : ''}${a.cwd ? `<div class="act"><span>${esc(P.folder)}</span><b>${esc(a.cwd)}</b></div>` : ''}</div>`);
   return h.join('');
+}
+// the whole conversation as a chat, with a search inside it; only the list is redrawn while you type the search
+const mark = (text, q) => {
+  const t = String(text || ''); if (!q) return esc(t);
+  const low = t.toLowerCase(), out = []; let i = 0, k;
+  while ((k = low.indexOf(q, i)) >= 0) { out.push(esc(t.slice(i, k)), '<mark>', esc(t.slice(k, k + q.length)), '</mark>'); i = k + q.length; }
+  out.push(esc(t.slice(i))); return out.join('');
+};
+// **bold** and `code` on already escaped text (the markers are plain characters, nothing else is interpreted)
+const md = h => h.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/`([^`\n]+)`/g, '<code>$1</code>');
+const clock = ms => { const x = new Date(ms), today = new Date().toDateString() === x.toDateString(); return x.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en', today ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+function talkList() {
+  if (!talk) return `<p class="empty">…</p>`;
+  if (!talk.ok) return `<p class="msg">⚠ ${esc(P.fail[talk.reason] || talk.reason || '?')}</p>`;
+  const q = talkQ.toLowerCase();
+  if (!talk.items.length) return `<p class="empty">${esc(q ? P.talkNone : P.talkEmpty)}</p>`;
+  return (q ? `<p class="msg dim">${esc(P.talkFound(talk.found))}</p>` : talk.cut || talk.total > talk.items.length ? `<p class="msg dim">${esc(P.talkCut)}</p>` : '')
+    + talk.items.map(m => `<div class="bubble ${m.role === 'user' ? 'me' : 'it'}"><p>${md(mark(m.text, q))}</p><small>${m.role === 'user' ? esc(P.you) : esc(dd ? dd.name : '')}${m.at ? ' · ' + esc(clock(m.at)) : ''}</small></div>`).join('');
+}
+function talkView(a) {
+  return `<input type="search" class="talkq" data-talkq placeholder="${esc(P.talkSearch)}" value="${esc(talkQ)}" enterkeyhint="search"><div id="talklist">${talkList()}</div>
+    <div class="card composer">${a.canMsg ? `<textarea data-text="msg" placeholder="${esc(P.msgPh)}"></textarea><div class="row"><button data-op="message" data-id="${esc(a.id)}">➤ ${esc(P.msgSend)}</button></div>` : `<p class="msg dim">${esc(P.msgOnlyIdle)}</p>`}<p class="msg" data-msg="msg"></p></div>`;
+}
+async function loadTalk(toEnd) {
+  const id = detail; if (!id || sub !== 'talk') return;
+  const r = await fetch(`api/talk?id=${encodeURIComponent(id)}&q=${encodeURIComponent(talkQ)}`).then(x => (x.ok ? x.json() : null)).catch(() => null);
+  if (detail !== id || sub !== 'talk' || !r) return;
+  const same = talk && JSON.stringify(talk) === JSON.stringify(r); talk = r; if (same && !toEnd) return;
+  const atEnd = app.scrollHeight - app.scrollTop - app.clientHeight < 120, list = document.getElementById('talklist');
+  if (list && (typing() || document.activeElement === document.querySelector('[data-talkq]'))) list.innerHTML = talkList(); // keep the search box and its caret
+  else if (!typing()) { const y = app.scrollTop; render(); app.scrollTop = y; }
+  if ((toEnd || atEnd) && !talkQ) app.scrollTop = app.scrollHeight;
 }
 function officeTab() {
   const w = d.people.filter(working).length, n = d.people.filter(p => p.state === 'needs_you' || p.state === 'waiting').length;
@@ -104,7 +138,7 @@ function render() {
   // each agent's face, drawn by the office's own pixel art (the same look as on the computer)
   if (window.Art) app.querySelectorAll('[data-face]').forEach(el => { try { el.appendChild(Art.portrait(el.dataset.face)); } catch {} });
 }
-const typing = () => { const a = document.activeElement; return busy || (a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) || document.querySelector('details[open].new'); };
+const typing = () => { const a = document.activeElement; return busy || (a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.tagName === 'INPUT')) || document.querySelector('details[open].new'); };
 // a new view: drawn now, or kept until you stop typing (never wipes what is being written)
 function apply(r, force) {
   if (!force && typing()) { pending = r; return; }
@@ -131,15 +165,18 @@ function stream() {
   const es = new EventSource('api/stream');
   es.onmessage = e => { streamAt = Date.now(); try { apply(JSON.parse(e.data)); } catch {} };
 }
+app.addEventListener('input', e => { if (!e.target.matches('[data-talkq]')) return; clearTimeout(talkTimer); talkTimer = setTimeout(() => { talkQ = e.target.value.trim().slice(0, 100); loadTalk(); }, 350); });
 document.addEventListener('focusout', () => setTimeout(() => { if (pending && !typing()) apply(pending, true); }, 0));
-tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; detail = null; dd = null; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
+tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; detail = null; dd = null; talk = null; talkQ = ''; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
 app.addEventListener('click', async e => {
-  if (e.target.closest('[data-back]')) { detail = null; dd = null; render(); app.scrollTop = 0; return; }
+  if (e.target.closest('[data-back]')) { detail = null; dd = null; talk = null; talkQ = ''; render(); app.scrollTop = 0; return; }
+  const sb = e.target.closest('[data-sub]');
+  if (sb) { sub = sb.dataset.sub; talk = null; render(); app.scrollTop = 0; if (sub === 'talk') loadTalk(true); return; }
   const df = e.target.closest('[data-diff]');
   if (df) { const id = df.dataset.diff; if (diffs[id]) delete diffs[id]; else { diffs[id] = 'loading'; fetch('api/task-diff?id=' + encodeURIComponent(id)).then(x => x.json()).catch(() => ({ ok: false, reason: 'unknown' })).then(r => { if (diffs[id]) { diffs[id] = r; render(); } }); } render(); return; }
   const b = e.target.closest('[data-op]');
   const card = !b && !e.target.closest('textarea, select, a, pre') && e.target.closest('[data-agent]');
-  if (card) { detail = card.dataset.agent; dd = null; render(); app.scrollTop = 0; loadDetail(); return; }
+  if (card) { detail = card.dataset.agent; dd = null; sub = 'info'; talk = null; talkQ = ''; render(); app.scrollTop = 0; loadDetail(); return; }
   if (!b) return;
   const op = b.dataset.op, id = b.dataset.id || 'new', body = { op, id };
   if (op === 'permit') body.allow = !!b.dataset.allow;
@@ -150,13 +187,13 @@ app.addEventListener('click', async e => {
   if (op === 'cancel' && !confirm(X.cancelSure)) return;
   busy = true; b.disabled = true;
   const r = await post(body); busy = false;
-  if (op === 'message' && r.ok) { const ta = app.querySelector('[data-text="msg"]'); if (ta) ta.value = ''; }
+  if (op === 'message' && r.ok) { const ta = app.querySelector('[data-text="msg"]'); if (ta) { ta.value = ''; ta.blur(); } if (sub === 'talk') setTimeout(() => loadTalk(true), 1500); }
   const m = app.querySelector(`[data-msg="${CSS.escape(op === 'message' ? 'msg' : id)}"]`); if (m) m.textContent = r.ok ? '✓ ' + P.done : '⚠ ' + (P.fail[r.reason] || r.reason || '?');
   b.disabled = false; last = null;
   if (op === 'create' && r.ok) { const det = app.querySelector('details.new'); if (det) det.open = false; setTimeout(() => load(true), 600); return; }
   setTimeout(load, 800);
 });
-load(true); stream(); setInterval(() => { if (Date.now() - streamAt > 20000) load(); if (detail && !typing()) loadDetail(); }, 3000);
+load(true); stream(); setInterval(() => { if (Date.now() - streamAt > 20000) load(); if (detail && sub === 'talk') { if (!talkQ) loadTalk(); } else if (detail && !typing()) loadDetail(); }, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
 // tap the logo: how this page is running (full-screen app or inside Safari), screen heights and the notch / home-bar insets
 document.querySelector('.brand').addEventListener('click', () => {

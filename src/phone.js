@@ -136,6 +136,12 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
           const first = viewJson(); res.write(`data: ${first}\n\n`); streams.add(res); req.on('close', () => streams.delete(res)); startStream(); return;
         }
         if (url.pathname === '/api/agent' && req.method === 'GET') { phoneSeen = Date.now(); return send(res, 200, 'application/json', JSON.stringify(agent(snapshot({ privacy }), String(url.searchParams.get('id') || ''), privacy))); }
+        if (url.pathname === '/api/talk' && req.method === 'GET') { // one live agent's whole conversation, or what matches a search in it (off in private mode)
+          phoneSeen = Date.now(); const p = (snapshot({ privacy }).people || []).find(x => x.id === String(url.searchParams.get('id') || '') && !x.leaving);
+          if (privacy || !p) return send(res, 200, 'application/json', JSON.stringify({ ok: false, reason: privacy ? 'private' : 'gone' }));
+          require('./said').conversation(p.agent, p.id, { q: url.searchParams.get('q') || '' }).then(r => send(res, 200, 'application/json', JSON.stringify(r)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
+          return;
+        }
         if (url.pathname === '/api/task-diff' && req.method === 'GET') { // what a task changed, to check before concluding (off in private mode)
           tasks.diff(String(url.searchParams.get('id') || ''), { privacy }).then(d => send(res, 200, 'application/json', JSON.stringify(d.ok ? { ...d, diff: String(d.diff || '').slice(0, 60000) } : d)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
           return;

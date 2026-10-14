@@ -113,3 +113,17 @@ button.back { min-height: 40px; padding: 10px 12px; margin-bottom: 12px; }
 /* a task's changes */
 .card pre.diff { max-height: 420px; font-size: 11px; white-space: pre; overflow: auto; word-break: normal; }
 pre.diff .add { color: #8fd18a; } pre.diff .del { color: #f08a8f; } pre.diff .hunk { color: #7fb3e6; } pre.diff .file { color: var(--warn); font-weight: 700; }
+/* an agent's two views (summary, conversation) and the conversation as a chat */
+.subtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 14px; }
+.subtabs button { background: var(--surface); color: var(--muted); box-shadow: none; min-height: 40px; padding: 8px; }
+.subtabs button.on { background: var(--accent); color: #fff; }
+input.talkq { width: 100%; font: 16px/1.4 system-ui, -apple-system, sans-serif; background: #120f16; color: var(--ink); border: 2px solid var(--edge); border-radius: 2px; padding: 10px; margin: 0 0 12px; -webkit-appearance: none; appearance: none; }
+.bubble { max-width: 88%; margin: 0 0 10px; padding: 10px 12px; border: 2px solid var(--edge); border-radius: 4px; box-shadow: 2px 2px 0 var(--edge); background: var(--surface); }
+.bubble.me { margin-left: auto; background: #3a2a24; border-color: #5a3426; }
+.bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.bubble small { display: block; margin-top: 6px; font: 400 9px/1.2 var(--pix); color: var(--muted); text-transform: uppercase; }
+.bubble.me small { text-align: right; }
+mark { background: var(--warn); color: #120f16; border-radius: 2px; padding: 0 1px; }
+.card.composer { margin-top: 14px; }
+.bubble b { display: inline; font-weight: 700; }
+.bubble code { font: 12px/1.4 ui-monospace, Menlo, monospace; background: #120f16; border: 1px solid var(--edge); border-radius: 2px; padding: 0 3px; }

@@ -721,6 +721,19 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'claude-vscode' }, 'sonnet', 'low')).reason, 'unsupported', 'VS Code and the app are not typed into');
   assert.strictEqual((await switchCfg({ agent: 'claude', pid: 1, entrypoint: 'cli' }, 'sonnet; rm -rf ~', 'low')).reason, 'text', 'only a model name and a known effort are typed');
 
+  // one conversation in full (phone chat): readable messages only, found by id only, read incrementally, searchable
+  { const { conversation } = require('../src/said'), cid = 'c0ffee00-1111-2222-3333-444455556666', cf = path.join(claude, 'projects', 'p', cid + '.jsonl');
+    fs.writeFileSync(cf, [{ type: 'user', timestamp: iso(now - 5000), message: { content: 'hello there' } }, { type: 'assistant', timestamp: iso(now - 4000), message: { content: [{ type: 'text', text: 'hi <system-reminder>hidden</system-reminder>' }, { type: 'tool_use', name: 'Bash', input: { command: 'cat secret' } }] } },
+      { type: 'user', message: { content: [{ type: 'tool_result', content: 'API_KEY=x' }] } }, { type: 'user', message: { content: '<local-command-stdout>echo</local-command-stdout>' } }, { type: 'assistant', timestamp: iso(now - 3000), message: { content: [{ type: 'text', text: 'second answer' }] } }].map(line).join(''));
+    const c1 = await conversation('claude', cid);
+    assert.deepStrictEqual(c1.items.map(m => [m.role, m.text]), [['user', 'hello there'], ['assistant', 'hi'], ['assistant', 'second answer']], 'chat: what was said, no tool output, reminders or command echoes');
+    fs.appendFileSync(cf, line({ type: 'user', timestamp: iso(now), message: { content: 'and a third' } }));
+    assert.strictEqual((await conversation('claude', cid)).items.length, 4, 'chat: reads what was added');
+    assert.deepStrictEqual((await conversation('claude', cid, { q: 'SECOND' })).items.map(m => m.text), ['second answer'], 'chat: search inside it');
+    for (const bad of ['../../etc/passwd', 'p/' + cid, '', 'short']) assert.strictEqual((await conversation('claude', bad)).reason, 'nofile', 'chat: an id only, never a path: ' + bad);
+    fs.writeFileSync(path.join(day, 'rollout-2026-01-01T00-00-00-thread-1234abcd.jsonl'), [ev('event_msg', { type: 'user_message', message: 'run it' }, now - 2000), ev('event_msg', { type: 'agent_message', message: 'ran it' }, now - 1000)].map(line).join(''));
+    assert.deepStrictEqual((await conversation('codex', 'thread-1234abcd')).items.map(m => m.text), ['run it', 'ran it'], 'chat: Codex too'); }
+
   // phone panel: only its LAN address, its own token, the tight POST rules, and nothing else of the office
   const { startPhone, lanIp } = require('../src/phone');
   if (lanIp()) {
@@ -759,6 +772,9 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await (await post({ 'X-Coworking': '1', Origin: base }, { op: 'message', id: 'nobody', text: 'hi' })).json()).reason, 'gone', 'phone message: only to a live session');
     assert.strictEqual((await post({ 'X-Coworking': '1', Origin: 'http://evil.example' }, { op: 'message', id: 'x', text: 'hi' })).status, 403, 'phone message: own origin only');
     assert.strictEqual((await (await get('/api/task-diff?id=nope', ck)).json()).reason, 'notask', 'phone diff: a known task only');
+    assert.strictEqual((await (await get('/api/talk?id=nobody', ck)).json()).reason, 'gone', 'phone chat: only a live agent');
+    assert.strictEqual((await get('/api/talk?id=x')).status, 401, 'phone chat: no code, nothing');
+
     { const { view: pv } = require('../src/phone'), snapA = () => ({ people: [{ id: 'a1', name: 'Ana', agent: 'claude', state: 'idle', title: 'secret title', lastPrompt: 'secret prompt', lastReply: 'secret reply', cwd: '/Users/x/p', recent: [{ tool: 'Edit', what: 'secret.js', ts: 1 }] }] });
       const pub = pv({ snapshot: snapA, tasks, privacy: false }).people[0];
       assert.ok(pub.canMsg && pub.lastReply === 'secret reply', 'phone view: last answer and who takes a message');

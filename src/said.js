@@ -56,4 +56,38 @@ async function search(q, { days = 7, limit = 40 } = {}) {
   return out.sort((a, b) => b.at - a.at);
 }
 
-module.exports = { search, said };
+// ---- one conversation in full (the phone's chat view) ----
+// the log of one live session, found by its id only (never a path from outside); read from where it was left off
+const CHAT_BYTES = 30 * 1024 * 1024, CHAT_KEEP = 1500, chats = new Map();
+function locate(agent, id) {
+  if (!/^[0-9A-Za-z-]{8,80}$/.test(String(id || ''))) return null;
+  if (agent === 'claude') { let dirs = []; try { dirs = fs.readdirSync(CLAUDE()); } catch {} for (const d of dirs) { const f = path.join(CLAUDE(), d, id + '.jsonl'); if (fs.existsSync(f)) return f; } return null; }
+  if (agent !== 'codex') return null;
+  let hit = null;
+  const walk = (dir, depth) => { if (hit) return; let list = []; try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; } list.sort((a, b) => (a.name < b.name ? 1 : -1)); for (const e of list) { if (hit) return; const full = path.join(dir, e.name); if (e.isDirectory() && depth < 4) walk(full, depth + 1); else if (e.isFile() && e.name.endsWith('-' + id + '.jsonl')) hit = full; } };
+  walk(CODEX(), 0); return hit;
+}
+// what a person reads: no system reminders, no command echoes or task notices
+function readable(t) {
+  t = String(t || '').replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim();
+  return !t || /^<(command-|local-command|bash-|task-notification|user-prompt-submit-hook)/.test(t) ? '' : t;
+}
+async function conversation(agent, id, { q = '', limit = 200 } = {}) {
+  const file = locate(agent, id); if (!file) return { ok: false, reason: 'nofile' };
+  let size = 0; try { size = fs.statSync(file).size; } catch { return { ok: false, reason: 'nofile' }; }
+  let c = chats.get(file);
+  if (!c || size < c.offset) c = { offset: Math.max(0, size - CHAT_BYTES), items: [], cut: size > CHAT_BYTES };
+  if (size > c.offset) { // only what was added since the last look, up to the last complete line
+    const fd = fs.openSync(file, 'r'), buf = Buffer.alloc(size - c.offset); fs.readSync(fd, buf, 0, buf.length, c.offset); fs.closeSync(fd);
+    const end = buf.lastIndexOf(10); if (end >= 0) {
+      for (const line of buf.subarray(0, end).toString('utf8').split('\n')) { let j; try { j = JSON.parse(line); } catch { continue; } const s = said(agent, j); const text = s && readable(s.text); if (text) c.items.push({ role: s.role, text: text.slice(0, 6000), at: s.at }); }
+      c.offset += end + 1; if (c.items.length > CHAT_KEEP) { c.items = c.items.slice(-CHAT_KEEP); c.cut = true; }
+    }
+    chats.set(file, c); if (chats.size > 20) chats.delete(chats.keys().next().value);
+  }
+  q = String(q || '').toLowerCase().trim().slice(0, 100);
+  const list = q ? c.items.filter(x => x.text.toLowerCase().includes(q)) : c.items;
+  return { ok: true, items: list.slice(-limit), total: c.items.length, found: list.length, cut: c.cut };
+}
+
+module.exports = { search, said, conversation, readable };
