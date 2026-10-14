@@ -7,39 +7,52 @@ const me = { x: 0, y: 0, path: [], flip: false, ready: false, moving: false };
 const keysDown = new Set();
 const PLAYER_SPEED = 70;
 
-// rooms you can't walk through, each with its door (inside and outside points)
+// rooms you can't walk through, each with its door(s). You collide by your feet (the bottom middle of your sprite),
+// so walls stop you where they are drawn; a door lets your feet through.
+const FEET_X = 8, FEET_Y = 21;
+const feet = p => ({ x: p.x + FEET_X, y: p.y + FEET_Y });
 function solidRooms() {
   const out = rooms.map(R => ({ x: R.x, y: R.y, w: R.w, h: R.h, doors: [{ x: R.doorX + 9, y: R.y + R.h, side: 'bottom' }], gap: 9 }));
   if (game) out.push({ x: game.x, y: game.y, w: game.w, h: game.h, doors: game.doors, gap: 9 });
   for (const P of places) out.push({ x: P.x, y: P.y, w: P.w, h: P.h, doors: P.doors, gap: 9 });
-  if (napBox) out.push({ x: RX - 4, y: wing.nap, w: RW + 8, h: 80, doors: [{ x: RX - 4, y: wing.nap + 37, side: 'left' }], gap: 9 });
+  if (wing && spots) { // the right wing: the glass meeting room and the rest room open on the corridor, the servers don't
+    out.push({ x: RX - 2, y: wing.meet, w: RW + 4, h: 98, doors: [{ x: RX - 2, y: wing.meet + 41, side: 'left' }], gap: 8 });
+    out.push({ x: RX - 4, y: wing.nap, w: RW + 8, h: 80, doors: [{ x: RX - 4, y: wing.nap + 37, side: 'left' }], gap: 8 });
+    out.push({ x: RX - 2, y: wing.servers - 4, w: RW + 4, h: 58, doors: [], gap: 0 });
+  }
   return out;
 }
 const inside = (R, p) => p.x > R.x && p.x < R.x + R.w && p.y > R.y && p.y < R.y + R.h;
-const roomOf = p => solidRooms().find(R => inside(R, p)) || null;
-// a step from a to b is blocked when it crosses into or out of a room anywhere but its door
+const roomOf = p => { const f = feet(p); return solidRooms().find(R => inside(R, f)) || null; };
+// a step from a to b is blocked when your feet cross a room's wall anywhere but its door, or leave the floor
 function blocked(a, b) {
-  for (const R of solidRooms()) {
-    if (inside(R, a) === inside(R, b)) continue;
-    const through = R.doors.some(d => (d.side === 'top' || d.side === 'bottom') ? Math.abs(b.x - d.x) <= R.gap && Math.abs(b.y - d.y) <= 8 : Math.abs(b.y - d.y) <= R.gap && Math.abs(b.x - d.x) <= 8);
-    if (!through) return true;
+  const roomsNow = solidRooms();
+  for (const dx of [-5, 0, 5]) { // your feet are about 10 px wide: both sides stop at a wall, not only the middle
+    const fa = { x: a.x + FEET_X + dx, y: a.y + FEET_Y }, fb = { x: b.x + FEET_X + dx, y: b.y + FEET_Y };
+    for (const R of roomsNow) {
+      if (inside(R, fa) === inside(R, fb)) continue;
+      const through = R.doors.some(d => (d.side === 'top' || d.side === 'bottom') ? Math.abs(fb.x - d.x) <= R.gap + 5 && Math.abs(fb.y - d.y) <= 8 : Math.abs(fb.y - d.y) <= R.gap && Math.abs(fb.x - d.x) <= 8);
+      if (!through) return true;
+    }
   }
-  return b.x < 2 || b.x > W - 14 || b.y < TOP - 4 || b.y > H - 18;
+  const fb = feet(b);
+  return fb.x < 8 || fb.x > W - 8 || fb.y < TOP + 4 || fb.y > H - 2;
 }
-// path through doors: out of my room, along the corridor, into the target's room
-// [inside, outside] of the door of R closest to a point
+// [inside, outside] of the door of R closest to a point, as positions for you (top-left of the sprite)
 function doorPoints(R, near) {
   const d = R.doors.slice().sort((p, q) => Math.hypot(p.x - near.x, p.y - near.y) - Math.hypot(q.x - near.x, q.y - near.y))[0];
-  return d.side === 'bottom' ? [{ x: d.x, y: d.y - 6 }, { x: d.x, y: d.y + 6 }] : d.side === 'top' ? [{ x: d.x, y: d.y + 6 }, { x: d.x, y: d.y - 6 }] : d.side === 'right' ? [{ x: d.x - 6, y: d.y }, { x: d.x + 6, y: d.y }] : [{ x: d.x + 6, y: d.y }, { x: d.x - 6, y: d.y }];
+  const at = (x, y) => ({ x: x - FEET_X, y: y - FEET_Y });
+  return d.side === 'bottom' ? [at(d.x, d.y - 8), at(d.x, d.y + 8)] : d.side === 'top' ? [at(d.x, d.y + 8), at(d.x, d.y - 8)] : d.side === 'right' ? [at(d.x - 8, d.y), at(d.x + 8, d.y)] : [at(d.x + 8, d.y), at(d.x - 8, d.y)];
 }
+// path through doors: out of my room, along the corridor, into the target's room
 function planWalk(to) {
   const from = { x: me.x, y: me.y }, A = roomOf(from), B = roomOf(to);
   if (A === B || (A && B && A.x === B.x && A.y === B.y)) return [to];
   const path = [];
-  if (A) { const [i, o] = doorPoints(A, B ? { x: B.x + B.w / 2, y: B.y + B.h / 2 } : to); path.push(i, o); }
+  if (A) { const [i, o] = doorPoints(A, B ? { x: B.x + B.w / 2, y: B.y + B.h / 2 } : feet(to)); path.push(i, o); }
   const start = path.length ? path[path.length - 1] : from;
-  const endDoor = B ? doorPoints(B, start) : null, entry = endDoor ? endDoor[1] : to;
-  path.push({ x: CX - 2, y: start.y }, { x: CX - 2, y: entry.y });
+  const endDoor = B ? doorPoints(B, feet(start)) : null, entry = endDoor ? endDoor[1] : to;
+  path.push({ x: CX - 2 - FEET_X, y: start.y }, { x: CX - 2 - FEET_X, y: entry.y });
   if (B) path.push(endDoor[1], endDoor[0]);
   path.push(to);
   return path;
