@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Zoom in Gather mode: − and + at the bottom of the screen (or the - and = keys), from 1× (the whole office) to 3×, remembered
 - Walking: you collide by your feet (the bottom of your character, about 10 px wide), so walls stop you where they are drawn and you no longer get stuck on an invisible edge in the middle of the floor; the glass meeting room, the rest room and the server corner are walls too, entered by their doors
 - Gather mode (on by default while you walk; ☰ → Settings → Camera follows you): the office drawn twice as big and the view slides with you
 - Walk up to an agent and a card opens over it: what it is doing or asking, its title and what you asked last, with Open/Answer and Conversation

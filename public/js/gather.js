@@ -3,13 +3,32 @@
 // On by default while you walk around (☰ → Settings → Camera follows you). The office is drawn bigger and the view
 // slides with you; next to an agent a card shows what it is doing and what you asked last, with its buttons.
 let gatherOn = qs.get('gather') === '0' ? false : store.get('gather', true) !== false; // ?gather=0 for the README screenshots (the whole office)
-const GATHER_ZOOM = 2;
+// zoom: the − and + buttons in the corner (or the - and = keys); the smallest shows the whole office
+const ZOOMS = [1, 1.5, 2, 2.5, 3];
+let zoomI = Math.max(0, ZOOMS.indexOf(Number(store.get('zoom', 2)))); if (ZOOMS[zoomI] === undefined) zoomI = 2;
 const gatherActive = () => gatherOn && playerOn && !trophyView && !building && !!data;
-function gatherZoom() { return gatherActive() ? GATHER_ZOOM : 1; }
+function gatherZoom() { return gatherActive() ? ZOOMS[zoomI] : 1; }
+function setZoom(step) {
+  const i = Math.max(0, Math.min(ZOOMS.length - 1, zoomI + step)); if (i === zoomI) return;
+  zoomI = i; store.set('zoom', ZOOMS[i]); camX = camY = null; lastLayoutKey = ''; renderAll(); zoomBar();
+}
+const zoomEl = document.createElement('div'); zoomEl.className = 'zoom-bar'; document.body.appendChild(zoomEl);
+function zoomBar() {
+  zoomEl.hidden = !gatherActive();
+  zoomEl.innerHTML = `<button data-zoom="-1" title="${esc(T.gather.out)}" ${zoomI === 0 ? 'disabled' : ''}>−</button><span>${ZOOMS[zoomI]}×</span><button data-zoom="1" title="${esc(T.gather.in)}" ${zoomI === ZOOMS.length - 1 ? 'disabled' : ''}>+</button>`;
+}
+zoomEl.addEventListener('click', e => { const b = e.target.closest('[data-zoom]'); if (b) setZoom(Number(b.dataset.zoom)); });
+zoomBar();
+document.addEventListener('keydown', e => {
+  if (!gatherActive() || e.metaKey || e.ctrlKey || e.altKey || !reportEl.hidden) return;
+  const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
+  if (e.key === '-' || e.key === '_') { setZoom(-1); e.preventDefault(); } else if (e.key === '=' || e.key === '+') { setZoom(1); e.preventDefault(); }
+});
 let camX = null, camY = null;
 function gatherFollow() {
   const on = gatherActive();
   document.body.classList.toggle('gather', on);
+  if (zoomEl.hidden === on) zoomBar();
   if (!on) { if (camX !== null) { camX = camY = null; if (!officeEl.classList.contains('cam')) officeEl.style.transform = ''; } nearCardHide(); return; }
   if (officeEl.classList.contains('cam')) return; // an agent's panel has the camera
   const st = document.getElementById('stage'), vw = st.clientWidth, vh = st.clientHeight, ww = cv.width * S, wh = cv.height * S;

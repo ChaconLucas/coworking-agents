@@ -1023,3 +1023,10 @@ body.gather #office:not(.cam) { transition: none; }
 .near-card .nc-said { color: #5a524a; font-style: italic; }
 .near-card .nc-row { display: flex; gap: 6px; margin-top: 8px; }
 .near-card .btn.ghost { color: #2a2622; border-color: #2a1d27; }
+/* zoom buttons in Gather mode */
+.zoom-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 30; display: flex; align-items: center; gap: 2px; padding: 4px; background: #1b1622; border: 2px solid var(--edge); border-radius: 8px; box-shadow: 3px 3px 0 var(--edge); }
+.zoom-bar[hidden] { display: none; }
+.zoom-bar button { width: 34px; height: 30px; border: 0; border-radius: 5px; background: none; color: #f4ecd8; font: 700 18px/1 system-ui, sans-serif; cursor: pointer; }
+.zoom-bar button:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+.zoom-bar button:disabled { opacity: .35; cursor: default; }
+.zoom-bar span { min-width: 34px; text-align: center; font: 700 10px/1 var(--pix); color: #b9a88a; }
