@@ -996,3 +996,7 @@ body.tv .app-ask { display: none; }
 .watch-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .watch-form select, .watch-form input { font: 13px/1.3 system-ui, -apple-system, sans-serif; padding: 6px 8px; border: 2px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
 .watch-form input[data-w-file] { min-width: 280px; }
+/* the ☰ menu: two columns on a wide window, a little tighter, and it scrolls instead of running off the screen */
+.tools-menu:not([hidden]) { overflow-y: auto; overscroll-behavior: contain; }
+.tools-menu .icon-btn { height: 30px; }
+@media (min-width: 720px) { .tools-menu:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(210px, 1fr)); column-gap: 4px; } }

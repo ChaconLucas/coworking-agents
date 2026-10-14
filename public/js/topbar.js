@@ -213,7 +213,7 @@ const menuEl = document.getElementById('tools-menu'), menuBtn = document.getElem
 document.body.appendChild(menuEl); // out of the bar: its overflow would clip the menu in some browsers
 function setMenu(open) {
   menuEl.hidden = !open; menuBtn.setAttribute('aria-expanded', open);
-  if (open) { const b = menuBtn.getBoundingClientRect(); menuEl.style.top = (b.bottom + 8) + 'px'; menuEl.style.right = Math.max(8, innerWidth - b.right) + 'px'; }
+  if (open) { const b = menuBtn.getBoundingClientRect(); menuEl.style.top = (b.bottom + 8) + 'px'; menuEl.style.right = Math.max(8, innerWidth - b.right) + 'px'; menuEl.style.maxHeight = Math.max(160, innerHeight - b.bottom - 20) + 'px'; } // never taller than the window: it scrolls
 }
 menuBtn.onclick = e => { e.stopPropagation(); setMenu(menuEl.hidden); };
 menuEl.addEventListener('click', e => { if (e.target.closest('#btn-search,#btn-replay')) setMenu(false); });
