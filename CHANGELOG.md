@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Phone app keeps working when the Wi-Fi hands the computer a new address: the link uses the computer's own .local name (Bonjour), and the phone server moves to the new address by itself (same port and code). The address link stays shown for phones that don't resolve the name
+
 ## 0.7.0 — 2026-10-13
 - Phone app, live: the office pushes every change as it happens (the 3-second poll only runs while the stream is down)
 - Phone app: tap an agent to see it in full: what it is asking or doing now, your last request, its last answer, what it did, the files it touched, helpers, model, context, cost (texts hidden in private mode)

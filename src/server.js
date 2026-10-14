@@ -307,7 +307,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
     if (url.pathname === '/api/state') return send(res, 200, 'application/json', safeSnapshot());
     if (url.pathname === '/api/ping') return send(res, 200, 'application/json', '{"ok":true}');
     // the phone link and its QR code, only to this machine (the phone server itself never serves this)
-    if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')), visit: visitNow && visitNow.until > Date.now() ? { ...visitNow, qr: require('./qr').encode(visitNow.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : null } : { on: false, reason: phoneReason }));
+    if (url.pathname === '/api/phone') return send(res, 200, 'application/json', JSON.stringify(phoneInfo ? { on: true, url: phoneInfo.url, ipUrl: phoneInfo.ipUrl, qr: require('./qr').encode(phoneInfo.url).map(r => r.map(x => (x ? 1 : 0)).join('')), visit: visitNow && visitNow.until > Date.now() ? { ...visitNow, qr: require('./qr').encode(visitNow.url).map(r => r.map(x => (x ? 1 : 0)).join('')) } : null } : { on: false, reason: phoneReason }));
     if (url.pathname === '/api/appinstall' && req.method === 'GET') return send(res, 200, 'application/json', JSON.stringify({ on: require('./appinstall').installed(), platform: process.platform, demo }));
     if (url.pathname === '/api/appinstall' && req.method === 'POST') { // create or remove the app on this computer
       const origin = req.headers.origin || '';

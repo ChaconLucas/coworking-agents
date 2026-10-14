@@ -694,7 +694,7 @@ async function renderPhone() {
   const P = T.phone, body = reportEl.querySelector('.report-body');
   const d = await api('api/phone'); if (reportTab !== 'phone' || reportEl.hidden) return;
   if (!d || !d.on) { body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.how)}</p><p><code>npx coworking-agents --phone</code></p><p class="note">${esc(P.warn)}</p>`; return; }
-  body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.scan)}</p><canvas class="qr" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.url)}</code></p><p class="note">${esc(P.warn)}</p>`;
+  body.innerHTML = tabsHtml() + `<h3>📱 ${esc(P.title)}</h3><p>${esc(P.scan)}</p><canvas class="qr" width="10" height="10"></canvas><p><code class="qr-url">${esc(d.url)}</code></p>${d.ipUrl && d.ipUrl !== d.url ? `<p class="note">${esc(T.phone.ipAlt)}</p><p><code class="qr-url">${esc(d.ipUrl)}</code></p>` : ''}<p class="note">${esc(P.warn)}</p>`;
   drawQr(body.querySelector('canvas.qr'), d.qr);
   body.insertAdjacentHTML('beforeend', `<h3>📲 ${esc(T.phone.homeTitle)}</h3><p class="note">${esc(T.phone.homeIos)}</p><p class="note">${esc(T.phone.homeAndroid)}</p><p class="note">${esc(T.phone.homeNote)}</p><p><button class="btn small ghost" data-phonerotate>🔄 ${esc(T.phone.rotate)}</button> <small class="note" data-phonerotate-msg></small></p>`);
   const V = T.visit; visitUntil = d.visit ? d.visit.until : 0;

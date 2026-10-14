@@ -725,8 +725,14 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   const { startPhone, lanIp } = require('../src/phone');
   if (lanIp()) {
     const ph = await startPhone({ port: 0, demo: false, snapshot: () => ({ people: [] }), tasks, sendText: async () => ({ ok: true }), people: () => [] });
-    const tok = ph.url.split('t=')[1], base = 'http://' + ph.host, get = (u, h = {}) => fetch(base + u, { headers: h, redirect: 'manual' });
+    const tok = ph.url.split('t=')[1], base = ph.ipUrl.replace(/\/\?t=.*$/, ''), get = (u, h = {}) => fetch(base + u, { headers: h, redirect: 'manual' });
     assert.strictEqual((await get('/api/m')).status, 401, 'phone: no token, nothing');
+    { // the computer's own .local name is answered too (it survives a new Wi-Fi address); any other name is refused
+      const port = new URL(base).port, hostTry = h => new Promise(r => require('http').get({ host: new URL(base).hostname, port, path: '/api/m', headers: { Host: h } }, x => { x.resume(); r(x.statusCode); }).on('error', () => r(0)));
+      const nm = require('os').hostname().toLowerCase();
+      if (/^[a-z0-9-]+\.local$/.test(nm)) assert.ok(ph.url.startsWith(`http://${nm}:${port}/`) && await hostTry(nm.toUpperCase() + ':' + port) === 401, 'phone: link by the .local name, any case');
+      assert.deepStrictEqual([await hostTry('evil.example:' + port), await hostTry('other.local:' + port), await hostTry('localhost:' + port)], [421, 421, 421], 'phone: no other name'); }
+
     assert.strictEqual((await get('/api/m', { Cookie: 'cwp=' + 'b'.repeat(32) })).status, 401, 'phone: wrong token');
     const login = await get('/?t=' + tok); assert.ok(login.status === 302 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')), 'phone: the link sets a strict cookie');
     const ck = { Cookie: 'cwp=' + tok };
@@ -769,7 +775,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     const ph2 = await startPhone({ port: 0, demo: true, snapshot: () => ({ people: [] }), tasks, sendText: async () => ({ ok: true }), people: () => [], token: 'c'.repeat(32) });
     assert.ok(ph2.url.endsWith('t=' + 'c'.repeat(32)), 'a kept code is reused'); ph2.close();
     // visits: own token in the path, read-only, nothing but the picture and counts, gone when ended
-    const vi = ph.addVisit(60), vpath = vi.url.replace(base, '');
+    const vi = ph.addVisit(60), vpath = new URL(vi.url).pathname;
     assert.strictEqual((await get(vpath)).status, 302, 'visit: link redirects under itself');
     assert.strictEqual((await get(vpath + '/')).status, 200, 'visit: the page');
     assert.strictEqual((await get(vpath + '/frame.png')).status, 404, 'visit: no picture yet');

@@ -68,6 +68,9 @@ function folders(snap, tl) {
   for (const x of (tl.settings && tl.settings.templates) || []) if (x.dir) set.add(x.dir);
   return [...set].slice(0, 30);
 }
+// the computer's own name on the local network (Bonjour, e.g. "MyMac.local"): it stays the same when the Wi-Fi hands out a
+// new address, so the link and the home-screen icon keep working. Not in demo or private mode (it names the computer).
+function localName() { const h = os.hostname().toLowerCase(); return /^[a-z0-9-]{1,63}\.local$/.test(h) ? h : ''; } // lower case, as browsers send it
 function limitsOf(snap) {
   const out = [];
   for (const [id, l] of Object.entries(snap.limits || {})) for (const [w, v] of [['5h', l && l.primary], ['week', l && l.secondary]]) if (v) out.push({ ai: id, window: w, pct: Math.round(v.usedPercent), resetsAt: v.resetsAt || 0 });
@@ -75,7 +78,7 @@ function limitsOf(snap) {
 }
 
 function startPhone({ port = 4778, privacy = false, demo = false, snapshot, tasks, sendText, people, token: kept, onToken, extra }) {
-  const ip = lanIp();
+  let ip = lanIp();
   if (!ip) return Promise.resolve({ ok: false, reason: 'nolan' });
   let token = /^[0-9a-f]{32}$/.test(kept || '') ? kept : crypto.randomBytes(16).toString('hex'); // kept across restarts so the home-screen icon keeps working
   // live view: one timer for every open phone, sending only when something changed (and a ping so proxies keep it open)
@@ -95,10 +98,12 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
     streamTimer.unref();
   }
   return new Promise((resolve, reject) => {
-    let host = '';
+    let host = '', port0 = 0; const name = demo || privacy ? '' : localName();
+    const hosts = () => [ip + ':' + port0, ...(name ? [name + ':' + port0] : [])];
     const server = http.createServer((req, res) => {
       try {
-        if ((req.headers.host || '') !== host) { res.writeHead(421); return res.end(); } // only this LAN address, never a rebinding name
+        const reqHost = String(req.headers.host || '').toLowerCase();
+        if (!hosts().includes(reqHost)) { res.writeHead(421); return res.end(); } // only this LAN address or the computer's own .local name, never a rebinding name
         res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
         const url = new URL(req.url, 'http://x');
@@ -134,7 +139,7 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         }
         if (url.pathname === '/frame.png' && req.method === 'GET') { phoneSeen = Date.now(); return frame ? (res.writeHead(200, { 'Content-Type': 'image/png' }), res.end(frame)) : send(res, 404, 'text/plain', 'no picture yet'); } // the office drawn without names
         if (url.pathname === '/api/m' && req.method === 'POST') {
-          if (req.headers['x-coworking'] !== '1' || req.headers.origin !== 'http://' + host) { res.writeHead(403); return res.end(); }
+          if (req.headers['x-coworking'] !== '1' || req.headers.origin !== 'http://' + reqHost) { res.writeHead(403); return res.end(); }
           let body = '';
           req.on('data', c => { body += c; if (body.length > 1e4) req.destroy(); });
           req.on('end', async () => {
@@ -164,10 +169,19 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         send(res, 404, 'text/plain', 'not found');
       } catch { if (!res.headersSent) send(res, 500, 'text/plain', 'error'); else res.destroy(); }
     });
+    // a new address from the Wi-Fi: listen there instead (same port and code), so nothing has to be scanned again
+    const sockets = new Set(); server.on('connection', c => { sockets.add(c); c.on('close', () => sockets.delete(c)); });
+    const follow = setInterval(() => {
+      const now = lanIp(); if (!now || now === ip) return;
+      for (const r of streams) r.destroy(); streams.clear();
+      server.close(() => { server.once('error', () => {}); server.listen(port0, now, () => { ip = now; host = (name || ip) + ':' + port0; }); });
+      for (const c of sockets) c.destroy();
+    }, 15000); follow.unref();
     server.once('error', reject);
     server.listen(port, ip, () => {
-      host = `${ip}:${server.address().port}`;
-      resolve({ ok: true, url: `http://${host}/?t=${token}`, host, close: () => { visits.clear(); for (const r of streams) r.destroy(); streams.clear(); server.close(); },
+      port0 = server.address().port; host = (name || ip) + ':' + port0;
+      resolve({ ok: true, get url() { return `http://${host}/?t=${token}`; }, set url(v) {}, get host() { return host; }, get ipUrl() { return `http://${ip}:${port0}/?t=${token}`; },
+        close: () => { clearInterval(follow); visits.clear(); for (const r of streams) r.destroy(); streams.clear(); server.close(); },
         rotate: () => { token = crypto.randomBytes(16).toString('hex'); if (onToken) onToken(token); return `http://${host}/?t=${token}`; }, // every phone has to scan again
         addVisit: minutes => { const t = crypto.randomBytes(16).toString('hex'), until = Date.now() + Math.min(240, Math.max(5, Number(minutes) || 60)) * 60000; visits.set(t, { until }); return { url: `http://${host}/v/${t}`, until }; },
         endVisits: () => { visits.clear(); frame = null; },
