@@ -39,13 +39,17 @@ function shellRunning(pid, since, now) {
   return kids.some(k => k.start >= since - 2000 && /shell-snapshots|^\/bin\/(ba|z)?sh -c|^(ba|z)?sh -c|bash(\.exe)?"? -c|powershell|pwsh|cmd\.exe/i.test(k.cmd));
 }
 
-// Stalled tool: instant ones (edit, read) only stall when awaiting approval; Bash is measured by its process;
+// Stalled tool: instant ones (edit, read) only stall when awaiting approval (never in the modes that don't ask for them);
+// Bash is measured by its process;
 // inherently slow ones (web, MCP, subagents) count as work, unless the mode always asks.
 const INSTANT = new Set(['edit', 'read']);
+const FREE_INSTANT = new Set(['acceptEdits', 'auto', 'dontAsk', 'bypassPermissions']); // modes where reading and editing never ask
 function stalledState(st, pend, pid, now) {
   if (st.explicitApprovals) return pend.kind;
+  // tools called together are written back together: a quick read waits on a command running beside it
+  if (pid && [...st.pending.values()].some(x => x.kind === 'terminal' && x !== pend && shellRunning(pid, x.ts, now))) return 'terminal';
   if (pend.kind === 'terminal' && pid) return shellRunning(pid, pend.ts, now) ? 'terminal' : 'waiting';
-  if (INSTANT.has(pend.kind)) return st.permissionMode === 'bypassPermissions' ? pend.kind : 'waiting';
+  if (INSTANT.has(pend.kind)) return FREE_INSTANT.has(st.permissionMode) ? pend.kind : 'waiting';
   const mode = st.permissionMode || 'default';
   return mode === 'default' && now - pend.ts > 30000 ? 'waiting' : pend.kind;
 }

@@ -924,3 +924,42 @@ body.tv .help, body.tv .talk, body.tv .dpop, body.tv .hmore, body.tv .scene-more
 .app-ask { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 9998; width: min(460px, calc(100vw - 32px)); background: #221f27; color: #ece7df; border: 2px solid #8b5cf6; border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.45); font-size: 14px; }
 .app-ask p { margin: 8px 0; } .app-ask .tchk { display: flex; gap: 8px; align-items: center; font-size: 13px; }
 body.tv .app-ask { display: none; }
+/* an agent's two views in the side panel, and its conversation as a chat */
+.ptabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0 4px; }
+.ptabs button { font: 700 11px/1 var(--pix); text-transform: uppercase; letter-spacing: .04em; padding: 9px; border: 2px solid var(--edge); border-radius: 4px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.ptabs button.on { background: var(--accent); color: #fff; }
+.ptalk-q { width: 100%; margin: 10px 0; padding: 8px 10px; border: 2px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, sans-serif; }
+#ptalk-list .bubble { max-width: 90%; margin: 0 0 10px; padding: 9px 11px; border: 2px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, var(--ink)); }
+#ptalk-list .bubble.me { margin-left: auto; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+#ptalk-list .bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.45; }
+#ptalk-list .bubble code { font: 12px/1.4 ui-monospace, Menlo, monospace; background: var(--bg); border-radius: 3px; padding: 0 3px; }
+#ptalk-list .bubble small { display: block; margin-top: 5px; font: 400 9px/1.2 var(--pix); text-transform: uppercase; color: var(--muted); }
+#ptalk-list .bubble.me small { text-align: right; }
+#ptalk-list mark { background: var(--warn); color: #120f16; border-radius: 2px; }
+.ptalk-box textarea { width: 100%; font: 13px/1.4 system-ui, -apple-system, sans-serif; border: 2px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 8px; }
+/* tasks as a board */
+.tview { display: inline-flex; gap: 6px; margin-left: 8px; }
+.board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 8px 0 16px; align-items: start; }
+.bcol { background: color-mix(in srgb, var(--surface) 90%, var(--ink)); border: 2px dashed transparent; border-radius: 8px; padding: 8px; min-height: 140px; transition: border-color .12s, background .12s; }
+.bcol h4 { margin: 2px 2px 8px; font: 700 11px/1.2 var(--pix); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.bcol.bok { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.bcol.bover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.bcard { background: var(--surface); border: 2px solid var(--line); border-left: 4px solid var(--muted); border-radius: 6px; padding: 8px 9px; margin-bottom: 8px; cursor: grab; }
+.bcard:hover { border-color: var(--accent); }
+.bcard.dragging { opacity: .45; }
+.bcard b { display: block; font-size: 13px; overflow-wrap: anywhere; }
+.bcard small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.bcard .bask, .bcard .bwhy { display: inline-block; margin-top: 5px; font-size: 11px; color: var(--bad); }
+.bcard.st-running { border-left-color: #2ce8f5; } .bcard.st-pending { border-left-color: var(--muted); } .bcard.st-blocked, .bcard.st-failed { border-left-color: var(--bad); } .bcard.st-done { border-left-color: var(--ok); } .bcard.st-cancelled { border-left-color: var(--line); opacity: .7; }
+@media (max-width: 760px) { .board { grid-template-columns: 1fr 1fr; } }
+.trow label:has([data-tsearch]) { display: flex; align-items: center; gap: 6px; } .tview { flex: none; }
+/* the pace of a limit and the usage map */
+.ltile .pace { display: block; margin-top: 4px; color: var(--muted); }
+.ltile .pace.hot { color: var(--bad); font-weight: 600; }
+.heat { display: grid; gap: 3px; margin: 6px 0; overflow-x: auto; }
+.hrow { display: grid; grid-template-columns: 34px repeat(24, minmax(10px, 1fr)); gap: 3px; align-items: center; }
+.hrow span { font: 700 10px/1 var(--pix); color: var(--muted); text-transform: uppercase; }
+.hrow i { height: 16px; border-radius: 3px; background: color-mix(in srgb, var(--accent) calc(var(--a) * 100%), color-mix(in srgb, var(--surface) 88%, var(--ink))); }
+.hrow.axis em { font: 9px/1 var(--pix); color: var(--muted); font-style: normal; text-align: left; }
+/* the day's timelapse */
+.tl-out img { display: block; max-width: 100%; image-rendering: pixelated; border: 2px solid var(--edge); border-radius: 6px; margin: 10px 0; }

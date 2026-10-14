@@ -359,6 +359,7 @@ function shipHtml(t, c) {
 }
 const shipApi = body => fetch('api/task-ship', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
 function renderTasks() {
+  if (boardDrag) return; // never redraw under a card being dragged
   const X = TT(), body = reportEl.querySelector('.report-body');
   if (taskSel && taskDetail) return renderTaskDetail(body);
   const draft = reportEl.querySelector('.tform') ? tfVal() : null; // what was typed survives the refresh
@@ -369,15 +370,50 @@ function renderTaskList(X, body) {
   const order = ['blocked', 'running', 'pending', 'failed', 'done', 'cancelled'], list = taskData.tasks.slice().sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state) || b.priority - a.priority || b.updated - a.updated);
   const kindL = { task: X.kinds.task, session: X.kinds.session, today: X.kinds.today, month: X.kinds.month };
   body.innerHTML = tabsHtml() + `<p class="sub">${esc(X.sub)}</p>${taskData.privacy ? `<p class="note">🔒 ${esc(X.privateNote)}</p>` : ''}${taskData.dayStopped ? `<div class="talert">⏸ ${esc(X.dayStopped(fmtUSD(taskData.spentToday || 0), fmtUSD(taskData.settings.dayBudget || 0)))}</div>` : ''}` + formHtml() + settingsHtml()
-    + `<div class="trow"><label style="flex:2">🔎 <input data-tsearch placeholder="${esc(X.search)}"></label></div>`
+    + `<div class="trow"><label style="flex:2">🔎 <input data-tsearch placeholder="${esc(X.search)}"></label><span class="tview">${[['list', '☰', X.board.list], ['board', '▦', X.board.board]].map(([k, i, l]) => `<button class="btn small ${taskView === k ? '' : 'ghost'}" data-tview="${k}">${i} ${esc(l)}</button>`).join('')}</span></div>`
     + (taskSaid.length ? `<h4 class="tsaid-h">💬 ${esc(X.saidTitle(taskSaid.length))}</h4><ul class="queue tsaid">${taskSaid.map(r => { const live = data && data.people.some(p => p.id === r.id); return `<li ${live ? `data-tperson="${esc(r.id)}"` : ''}><span><small>${esc(r.agent)} · ${esc(r.role === 'user' ? X.saidYou : X.saidAgent)} · ${esc(ago(Date.now() - r.at))}${live ? ' · ' + esc(X.saidLive) : ''}</small><br>${esc(r.snippet)}</span></li>`; }).join('')}</ul>` : '')
     + (taskSearch.length ? `<ul class="queue">${taskSearch.map(r => `<li ${r.kind === 'task' ? `data-topen="${esc(r.id)}"` : r.live ? `data-tperson="${esc(r.id)}"` : ''}><b>${esc(r.title)}</b> <small>${esc(kindL[r.kind] || r.kind)} · ${esc(r.agent || '')}${r.state ? ' · ' + esc(X.states[r.state] || T.states[r.state] || r.state) : ''}</small></li>`).join('')}</ul>` : '')
-    + (list.length ? [['need', ['blocked', 'failed']], ['active', ['running', 'pending']], ['done', ['done', 'cancelled']]].map(([g, sts]) => {
+    + (list.length && taskView === 'board' ? boardHtml(list) : list.length ? [['need', ['blocked', 'failed']], ['active', ['running', 'pending']], ['done', ['done', 'cancelled']]].map(([g, sts]) => {
       const items = list.filter(t => sts.includes(t.state)); if (!items.length) return '';
       const ul = `<ul class="queue tlist">${items.map(rowHtml).join('')}</ul>`;
       return g === 'done' ? `<details class="tgroup"><summary><h4>${esc(X.groups[g])} <small>${items.length}</small></h4></summary>${ul}</details>` : `<div class="tgroup"><h4>${esc(X.groups[g])} <small>${items.length}</small></h4>${ul}</div>`;
     }).join('') : `<p class="note">${esc(X.empty)}</p>`) + rankingHtml() + compareHtml();
 }
+// ---- the tasks as a board: queue, running, waiting on you, done; drag a card to retry, conclude or cancel it ----
+let taskView = store.get('taskView', 'list'), boardDrag = null;
+const BOARD = [['queue', ['pending']], ['running', ['running']], ['you', ['blocked', 'failed']], ['done', ['done', 'cancelled']]];
+// what dropping a task on a column does (null: not allowed there)
+function boardMove(t, to) {
+  if (to === 'running' && ['blocked', 'failed'].includes(t.state)) return 'retry';
+  if (to === 'done' && t.state === 'blocked') return 'conclude';
+  if (to === 'done' && ['pending', 'running', 'failed'].includes(t.state)) return 'cancel';
+  return null;
+}
+function boardHtml(list) {
+  const X = TT(), B = X.board;
+  const card = t => `<div class="bcard st-${t.state}" draggable="true" data-bdrag="${esc(t.id)}" data-topen="${esc(t.id)}"><b>${esc(t.title)}</b>
+    <small>${esc(t.agent)} · ${t.costUnknown && !t.cost ? '?' : esc(fmtUSD(t.cost || 0))} · ${esc(ago(Date.now() - t.updated))}</small>${t.ask ? `<span class="bask">🔐 ${esc(t.ask.tool)}</span>` : t.reason && ['blocked', 'failed'].includes(t.state) ? `<span class="bwhy">${esc(X.reasons[t.reason] || t.reason)}</span>` : ''}</div>`;
+  return `<p class="note">${esc(B.hint)}</p><div class="board">${BOARD.map(([k, sts]) => { const items = list.filter(t => sts.includes(t.state)), shown = k === 'done' ? items.slice(0, 12) : items;
+    return `<div class="bcol" data-bcol="${k}"><h4>${esc(B.cols[k])} <small>${items.length}</small></h4>${shown.map(card).join('') || `<p class="note bempty">—</p>`}</div>`; }).join('')}</div>`;
+}
+reportEl.addEventListener('dragstart', e => {
+  const c = e.target.closest && e.target.closest('[data-bdrag]'); if (!c || reportTab !== 'tasks') return;
+  const t = taskData.tasks.find(x => x.id === c.dataset.bdrag); if (!t) return;
+  boardDrag = t; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); c.classList.add('dragging');
+  reportEl.querySelectorAll('[data-bcol]').forEach(col => col.classList.toggle('bok', !!boardMove(t, col.dataset.bcol)));
+});
+reportEl.addEventListener('dragover', e => { const col = e.target.closest && e.target.closest('[data-bcol]'); if (boardDrag && col && boardMove(boardDrag, col.dataset.bcol)) { e.preventDefault(); col.classList.add('bover'); } });
+reportEl.addEventListener('dragleave', e => { const col = e.target.closest && e.target.closest('[data-bcol]'); if (col && !col.contains(e.relatedTarget)) col.classList.remove('bover'); });
+reportEl.addEventListener('dragend', () => { boardDrag = null; reportEl.querySelectorAll('.bok,.bover,.dragging').forEach(x => x.classList.remove('bok', 'bover', 'dragging')); });
+reportEl.addEventListener('drop', async e => {
+  const col = e.target.closest && e.target.closest('[data-bcol]'), t = boardDrag; if (!col || !t) return;
+  e.preventDefault(); boardDrag = null;
+  const op = boardMove(t, col.dataset.bcol); reportEl.querySelectorAll('.bok,.bover,.dragging').forEach(x => x.classList.remove('bok', 'bover', 'dragging'));
+  if (!op || (op === 'cancel' && !confirm(TT().cancelSure))) return;
+  const r = await api('api/tasks', { op, id: t.id });
+  if (!r.ok) toast(`<b>${esc(t.title)}</b>${esc(tFail(r))}`, 'warn');
+  await pollTasks(); renderTasks();
+});
 function renderTaskDetail(body) {
   const X = TT(), t = taskDetail, ev = t.events || [], live = t.state === 'running';
   const evHtml = ev.slice(-60).reverse().map(e => {
@@ -434,6 +470,7 @@ reportEl.addEventListener('click', async e => {
     const ti = reportEl.querySelector('[data-tf="title"]'); if (ti && !ti.value) ti.value = x.name; return;
   }
   const per = e.target.closest('[data-tperiod]'); if (per) { taskPeriod = per.dataset.tperiod; return renderTasks(); }
+  const tv = e.target.closest('[data-tview]'); if (tv) { taskView = tv.dataset.tview; store.set('taskView', taskView); return renderTasks(); }
   const op1 = e.target.closest('[data-topen]'); if (op1) { taskDiff = null; return loadTask(op1.dataset.topen); }
   const pp = e.target.closest('[data-tperson]'); if (pp) { closeReport(); selected = pp.dataset.tperson; return renderPanel(); }
   const b = e.target.closest('[data-tact]'); if (!b) return;
@@ -585,7 +622,7 @@ function drawReleaseBadge(x, y, t) { // the rocket poster gets a star when a new
 // the same panels in the ☰ menu
 {
   const menu = document.getElementById('tools-menu');
-  if (menu) for (const [tab, icon] of [['tv', '📺'], ['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
+  if (menu) for (const [tab, icon] of [['tv', '📺'], ['phone', '📱'], ['broadcast', '📣'], ['repos', '📦'], ['tasks', '📋'], ['usage', '💲'], ['timelapse', '🎞'], ['feed', '🗂'], ['notices', '🔔'], ['version', '🚀']]) {
     const b = document.createElement('button'); b.className = 'icon-btn menu-panel'; b.dataset.menuTab = tab;
     b.innerHTML = `<span aria-hidden="true">${icon}</span><span class="ml"></span>`; menu.prepend(b);
     b.addEventListener('click', () => { if (typeof setMenu === 'function') setMenu(false); if (tab === 'tv') return setTv(true); openReport(tab); });

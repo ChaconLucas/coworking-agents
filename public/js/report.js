@@ -146,6 +146,23 @@ reportEl.addEventListener('click', async e => {
 });
 function closeReport() { reportEl.hidden = true; }
 
+// how fast a limit is filling and when it runs out at that pace (measured over the last hour; nothing until there is enough)
+function paceHtml(u, id, key) {
+  const H = T.heat, x = u && u.pace && u.pace[id] && u.pace[id][key]; if (!x) return '';
+  const at = ms => new Date(ms).toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' }) + (new Date(ms).toDateString() === new Date().toDateString() ? '' : ' ' + new Date(ms).toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en', { weekday: 'short' }));
+  return x.fullAt ? `<small class="pace hot">⏱ ${esc(H.endsAt(at(x.fullAt), x.perHour))}</small>` : `<small class="pace">✓ ${esc(x.perHour > 0.5 ? H.lasts(x.perHour) : H.steady)}</small>`;
+}
+// when the tokens go: weekday × hour over the last 28 days, darker = more output tokens
+function heatHtml(u) {
+  const H = T.heat, g = u && u.heat && u.heat.grid; if (!g) return '';
+  const max = Math.max(1, ...g.flat().map(c => c.out)); if (max <= 1) return '';
+  const days = lang === 'pt' ? ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], order = [1, 2, 3, 4, 5, 6, 0];
+  let best = null; for (const d of order) for (let h = 0; h < 24; h++) if (!best || g[d][h].out > best.out) best = { d, h, out: g[d][h].out };
+  const byDay = order.map(d => ({ d, out: g[d].reduce((n, c) => n + c.out, 0) })).sort((a, b) => b.out - a.out)[0];
+  const rows = order.map(d => `<div class="hrow"><span>${esc(days[d])}</span>${g[d].map((c, h) => `<i style="--a:${c.out ? (0.12 + 0.88 * c.out / max).toFixed(2) : 0}" title="${esc(days[d])} ${h}h · ${esc(fmtK(c.out))} tokens${c.usd ? ' · ' + esc(fmtUSD(c.usd)) : ''}"></i>`).join('')}</div>`).join('');
+  return `<h3>${esc(H.title)}</h3><p class="note">${esc(H.peak(days[best.d], best.h, days[byDay.d]))}</p>
+    <div class="heat">${rows}<div class="hrow axis"><span></span>${Array.from({ length: 24 }, (_, h) => `<em>${h % 3 ? '' : h}</em>`).join('')}</div></div><p class="note">${esc(H.note(u.heat.days))}</p>`;
+}
 function renderReport() {
   if (reportTab === 'tasks') return renderTasks();
   if (reportTab === 'notices') return renderNotices();
@@ -155,6 +172,7 @@ function renderReport() {
   if (reportTab === 'broadcast') return renderBroadcast();
   if (reportTab === 'today') return renderToday();
   if (reportTab === 'feed') return renderFeed();
+  if (reportTab === 'timelapse') return renderTimelapse();
   if (reportTab === 'ach') return renderAchievements();
   if (reportTab === 'paper') return renderPaper();
   if (reportTab === 'queue') return renderQueue();
@@ -181,16 +199,17 @@ function renderReport() {
     <div class="axis">${days.map((k, i) => `<span>${i % 2 ? '' : k.slice(8) + '/' + k.slice(5, 7)}</span>`).join('')}</div>
     <div class="legend">${Object.keys(AGENT).map(id => `<span><i class="ailogo" data-ai="${esc(id)}"></i>${esc(AGENT[id].label)}</span>`).join('')}</div>`;
   // limits first: one big tile per window, the most urgent thing on the page
-  const limTile = (id, label, w) => {
+  const limTile = (id, label, w, key) => {
     if (!w) return '';
     const pct = Math.max(0, Math.min(100, w.usedPercent)), c = pct > 85 ? '#e43b44' : pct > 60 ? '#feae34' : '#63c74d';
-    return `<div class="ltile" style="--c:${c}"><div class="ltop"><span style="color:${AGENT[id].color}"><i class="ailogo" data-ai="${esc(id)}"></i>${esc(AGENT[id].label)}</span><small>${esc(label)}</small></div><b>${Math.round(pct)}%</b><div class="lbar"><i style="width:${pct}%"></i></div><small>${esc(U.resets)} ${esc(untilText(w.resetsAt))}</small></div>`;
+    return `<div class="ltile" style="--c:${c}"><div class="ltop"><span style="color:${AGENT[id].color}"><i class="ailogo" data-ai="${esc(id)}"></i>${esc(AGENT[id].label)}</span><small>${esc(label)}</small></div><b>${Math.round(pct)}%</b><div class="lbar"><i style="width:${pct}%"></i></div><small>${esc(U.resets)} ${esc(untilText(w.resetsAt))}</small>${paceHtml(u, id, key)}</div>`;
   };
-  const tiles = Object.keys(AGENT).flatMap(id => { const l = L[id]; return l ? [limTile(id, U.fiveHour, l.primary), limTile(id, U.week, l.secondary)] : []; }).join('');
+  const tiles = Object.keys(AGENT).flatMap(id => { const l = L[id]; return l ? [limTile(id, U.fiveHour, l.primary, '5h'), limTile(id, U.week, l.secondary, 'week')] : []; }).join('');
   const total = id => u && u.byAgent && u.byAgent[id] ? u.byAgent[id].total : null;
   body.innerHTML = tabsHtml() + `<h2 hidden>${esc(U.title)}</h2><p class="sub">${esc(U.reportSub)}${u && u.scannedAt ? ' · ' + esc(U.updated) + ' ' + esc(ago(Date.now() - u.scannedAt)) : ''}</p>
     <h3>${esc(U.limits)}</h3><div class="ltiles">${tiles || `<p class="note">${esc(U.none)}</p>`}</div>
     ${costGoalHtml(u)}
+    ${heatHtml(u)}
     <h3>${esc(U.last14)}</h3><div class="chart-wrap"><span class="ymax">${tok(max)}</span>${chart}</div>
     <h3>${esc(U.allTime)}</h3><div class="rgrid">${Object.keys(AGENT).map(card).join('')}</div>
     <p class="note" style="margin-top:14px">${esc(U.note)} ${esc(U.costNote)}</p>`;

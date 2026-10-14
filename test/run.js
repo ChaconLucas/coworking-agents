@@ -96,7 +96,11 @@ const sleepers = [spawn('sleep', ['30']), spawn('sleep', ['30'])];
 session(sleepers[0].pid, 'E', 'busy', [permMode('auto'), ...staleBash('E')]);
 session(sleepers[1].pid, 'F', 'busy', [permMode('default'), ...staleBash('F')]);
 // the file only counts as "stalled" if untouched for more than 6s
-for (const id of ['E', 'F']) { const f = path.join(claude, 'projects', 'p', id + '.jsonl'); fs.utimesSync(f, new Date(now - 10000), new Date(now - 10000)); }
+// R1/R2: a Read stalled for 10s: a slow read in auto mode (it never asks there), a permission question in default mode
+const readers = [spawn('sleep', ['30']), spawn('sleep', ['30'])];
+session(readers[0].pid, 'R1', 'busy', [permMode('auto'), use('r1', 'Read', { file_path: '/tmp/x' }, now - 10000)]);
+session(readers[1].pid, 'R2', 'busy', [permMode('default'), use('r2', 'Read', { file_path: '/tmp/x' }, now - 10000)]);
+for (const id of ['E', 'F', 'R1', 'R2']) { const f = path.join(claude, 'projects', 'p', id + '.jsonl'); fs.utimesSync(f, new Date(now - 10000), new Date(now - 10000)); }
 
 // H: a "Claude" with a child shell spawned after the Bash request
 // H's "Claude" process is an sh that spawns another sh (the command's) as its child
@@ -112,7 +116,7 @@ const { snapshot } = require('../src/collect');
 const s = snapshot();
 const by = id => s.people.find(p => p.id === id);
 
-assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'I'].filter(id => id !== 'B' || by('B')).sort(), 'only live sessions');
+assert.deepStrictEqual(s.people.filter(p => p.agent === 'claude').map(p => p.id).sort(), ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'I', 'R1', 'R2'].filter(id => id !== 'B' || by('B')).sort(), 'only live sessions');
 // Codex
 assert.strictEqual(by('X1').agent, 'codex');
 assert.strictEqual(by('X1').title, 'Codex conversation');
@@ -147,6 +151,7 @@ assert.strictEqual(by('G').status, 'busy', 'a new message in the transcript beat
 assert.strictEqual(by('E').state, 'waiting', 'stalled Bash with no shell spawned = waiting for approval, even in auto mode');
 assert.strictEqual(by('F').state, 'waiting', 'default mode: stalled Bash with no shell = waiting for approval');
 assert.strictEqual(by('H').state, 'terminal', 'stalled Bash with a shell spawned after the request = command running');
+assert.deepStrictEqual([by('R1').state, by('R2').state], ['read', 'waiting'], 'a stalled Read asks only in the modes that ask for it');
 if (by('B')) {
   assert.strictEqual(by('B').state, 'idle');
   assert.strictEqual(by('B').doing, null, 'ended turn clears the pending call');
@@ -369,6 +374,16 @@ sleepK.kill();
   const hf = hotFiles();
   assert.ok(Array.isArray(hf) && hf.every(x => typeof x.sessions === 'number' && x.sessions > 0 && !('abs' in x)), 'hot files: counts, no absolute paths');
   assert.deepStrictEqual(hotFiles({ privacy: true }), [], 'hot files: nothing in private mode');
+}
+
+// the timelapse's GIF encoder: LZW codes checked by hand on a 4×2 picture, and a whole file with its frames and loop
+{
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'timelapse.js'), 'utf8'), fn = name => src.slice(src.indexOf('function ' + name), src.indexOf('\n}\n', src.indexOf('function ' + name)) + 2);
+  const { gifEncode, gifLzw } = new Function(fn('gifLzw') + fn('gifEncode') + 'return { gifEncode, gifLzw };')();
+  assert.deepStrictEqual([...gifLzw(Uint8Array.from([0, 0, 1, 1, 0, 0, 1, 1]), 8)], [0, 1, 0, 8, 16, 64, 32, 193, 128], 'gif: LZW codes');
+  const px = c => Uint8ClampedArray.from({ length: 4 * 2 * 4 }, (_, i) => (i % 4 === 3 ? 255 : c[i % 4])), gif = Buffer.from(gifEncode([px([255, 0, 0]), px([0, 0, 255])], 4, 2, 10));
+  assert.ok(gif.subarray(0, 6).toString() === 'GIF89a' && gif.includes('NETSCAPE2.0') && gif[gif.length - 1] === 0x3b && gif.readUInt16LE(6) === 4, 'gif: header, loop and trailer');
+  const big = gifLzw(Uint8Array.from({ length: 20000 }, (_, i) => (i * 7 + (i >> 5)) & 255), 8).length; assert.ok(big > 0, 'gif: past 4096 codes (clear and restart)');
 }
 
 // search in what was said: user and agent text only, never tool output
@@ -929,7 +944,7 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
   const { TOOLS } = require('../src/mcp');
   assert.deepStrictEqual(TOOLS.map(t => t.name), ['list_agents', 'get_agent_status', 'get_conflicts', 'get_daily_report', 'list_tasks']);
 
-  fakeAider.kill(); sleepers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
+  fakeAider.kill(); sleepers.forEach(p => p.kill()); readers.forEach(p => p.kill()); sleepG.kill(); shellH.kill(); sleepI.kill();
   fs.rmSync(root, { recursive: true, force: true });
   await global.__sweep; console.log('ok — ' + (by('B') ? 'all checks' : 'all checks (pid 1 not visible, B skipped)'));
 })().catch(e => { console.error(e); process.exit(1); });

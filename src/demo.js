@@ -99,7 +99,24 @@ function demoUsage() {
   }
   const ppl = demoSnapshot().people;
   const top = ppl.slice(0, 5).map((p, i) => ({ id: p.id, agent: p.agent, title: p.title, activeMs: (40 - i * 7) * 36e5, tools: 2400 - i * 380, output: 3e6 - i * 4e5, last: now }));
-  return { scanning: false, scannedAt: now, byAgent, days, month: { key: Object.keys(days)[0].slice(0, 7), top, costly: top.map((m, i) => ({ id: m.id, agent: m.agent, title: m.title, usd: [41.2, 22.7, 13.9, 6.4, 2.1][i] || 1 })) } };
+  return { scanning: false, scannedAt: now, heat: demoHeat(), pace: { claude: { '5h': { pct: 64, perHour: 18, fullAt: now + 2 * 36e5, resetsAt: now + 3 * 36e5, lasts: false }, week: { pct: 31, perHour: 0.4, fullAt: 0, resetsAt: now + 4 * 864e5, lasts: true } } }, byAgent, days, month: { key: Object.keys(days)[0].slice(0, 7), top, costly: top.map((m, i) => ({ id: m.id, agent: m.agent, title: m.title, usd: [41.2, 22.7, 13.9, 6.4, 2.1][i] || 1 })) } };
+}
+
+// working hours in the usage map: weekdays 9–19 with a peak after lunch, a little on weekends
+function demoHeat() {
+  const grid = Array.from({ length: 7 }, (_, d) => Array.from({ length: 24 }, (_, h) => { const work = d > 0 && d < 6 && h >= 9 && h <= 19, k = work ? (h >= 14 && h <= 16 ? 1 : 0.55) * (d === 2 ? 1.2 : 1) : (h >= 10 && h <= 17 && (d === 0 || d === 6) ? 0.12 : h >= 20 && h <= 23 ? 0.18 : 0); return { out: Math.round(k * 9e5), usd: k * 6.5 }; }));
+  return { days: 28, grid };
+}
+// a short conversation for the chat view in --demo
+function demoTalk(q) {
+  const n = Date.now(), items = [
+    { role: 'user', text: 'Refactor the checkout flow: split payment and shipping into their own steps.', at: n - 42 * 6e4 },
+    { role: 'assistant', text: 'Plan:\n1. Move **payment** into `CheckoutPayment.tsx`\n2. Move **shipping** into `CheckoutShipping.tsx`\n3. Keep the cart summary shared.\n\nStarting with payment.', at: n - 41 * 6e4 },
+    { role: 'user', text: 'Keep the old route working until the release.', at: n - 30 * 6e4 },
+    { role: 'assistant', text: 'Done: `/checkout` still renders the old page behind a flag, and `/checkout/v2` uses the new steps. Tests pass (42).', at: n - 12 * 6e4 },
+  ];
+  const k = String(q || '').toLowerCase().trim(), list = k ? items.filter(m => m.text.toLowerCase().includes(k)) : items;
+  return { ok: true, items: list, total: items.length, found: list.length, cut: false };
 }
 
 // a few tasks in every state, for the Tasks tab in --demo (nothing runs)
@@ -120,4 +137,4 @@ function demoHot() {
   return [['src/checkout/payment.ts', 'shop', 9, ['claude', 'codex']], ['src/api/orders.ts', 'api', 7, ['claude']], ['package.json', 'web-app', 6, ['claude', 'codex']], ['src/auth/session.ts', 'api', 4, ['codex']], ['README.md', 'docs', 3, ['claude']], ['migrations/0042_orders.sql', 'api', 2, ['claude']]]
     .map(([rel, repo, sessions, agents], i) => ({ rel, repo, sessions, agents, last: n - i * 36e5 }));
 }
-module.exports = { demoHot, demoSnapshot, demoReport, demoUsage, demoTasks };
+module.exports = { demoHot, demoSnapshot, demoReport, demoUsage, demoTasks, demoTalk };

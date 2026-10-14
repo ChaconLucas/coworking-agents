@@ -97,6 +97,9 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
   };
   // spend for the phone's Usage tab: today, this month and the month's goal (estimates from the logs)
   const phoneUsage = () => { if (demo) return { today: 12.4, month: 318.9, goal: 400 }; mbExtra(); let month = 0; try { const u = usage(), k = new Date().toISOString().slice(0, 7); for (const [d, v] of Object.entries(u.days || {})) if (d.startsWith(k)) month += v.usd || 0; } catch {} return { today: usdToday, month, goal: Number(tasks.list().settings.monthGoal) || 0 }; };
+  // the pace of each limit, sampled every 30 s (see src/pace.js)
+  const pace = require('./pace');
+  const paceTimer = setInterval(() => { if (!demo) try { pace.record(real().limits); } catch {} }, 30000); paceTimer.unref();
   const mbTimer = setInterval(() => { if (mb.running()) try { mb.write(snapshot({ privacy }), mbExtra()); } catch {} }, 2000); mbTimer.unref();
 
   const server = http.createServer((req, res) => {
@@ -168,7 +171,15 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       });
       return;
     }
-    if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : privateUsage(usage(), privacy)));
+    if (url.pathname === '/api/usage') return send(res, 200, 'application/json', JSON.stringify(demo ? require('./demo').demoUsage() : { ...privateUsage(usage(), privacy), pace: pace.forecast() }));
+    if (url.pathname === '/api/talk' && req.method === 'GET') { // one live agent's whole conversation, or what matches a search in it (off in private mode)
+      if (privacy) return send(res, 200, 'application/json', '{"ok":false,"reason":"private"}');
+      if (demo) return send(res, 200, 'application/json', JSON.stringify(require('./demo').demoTalk(url.searchParams.get('q') || '')));
+      const p = real().people.find(x => x.id === String(url.searchParams.get('id') || '') && !x.leaving);
+      if (!p) return send(res, 200, 'application/json', '{"ok":false,"reason":"gone"}');
+      require('./said').conversation(p.agent, p.id, { q: url.searchParams.get('q') || '', limit: 300 }).then(r => send(res, 200, 'application/json', JSON.stringify(r)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
+      return;
+    }
     if (url.pathname === '/api/compact' && req.method === 'POST') {
       // types "/compact" into a Claude session that finished its turn and whose context is filling up
       const origin = req.headers.origin || '';
@@ -381,7 +392,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
         try { const r = await require('./phone').startPhone({ port: port ? server.address().port + 1 : 0, privacy, demo, snapshot, tasks, sendText, people: () => real().people, token: keepToken ? phoneToken : '', onToken: onPhoneToken, extra: phoneUsage }); if (r.ok) phoneInfo = r; else phoneReason = r.reason; }
         catch (e) { phoneReason = e.code === 'EADDRINUSE' ? 'port' : 'error'; }
       }
-      resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); clearInterval(mbTimer); mb.stop(); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });
+      resolve({ server, token, base, url: `${base}/?t=${token}`, phone: phoneInfo, phoneReason, close: () => { clearInterval(timer); clearInterval(mbTimer); clearInterval(paceTimer); mb.stop(); for (const c of clients) c.destroy(); server.close(); if (phoneInfo) phoneInfo.close(); } });
     });
   });
 }

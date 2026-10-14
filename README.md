@@ -224,6 +224,10 @@ The office works in any browser. If you prefer an app:
 - **Office events and mood:** confetti for tests passing, a PR opened or a week under the cost goal; rain when tests or a task fail; the room turns grey-blue when many agents are stuck on you and warm when everything flows.
 - **Files touched most** (Repositories): what agent sessions edited most this week.
 - **🖥 Tray icon** (Personalise or `--menubar`): how many are working, who needs you (red), a small bar with the fullest token limit (`●2 ▰▰▱▱▱ 41%`), today's spend, the limits, who is working on what and tasks asking permission; clicking opens the office on that agent or task, and it notifies you when nobody has the office open (outside quiet hours). macOS uses JavaScript for Automation, Windows uses PowerShell and Windows Forms, Linux uses `zenity` (icon and tooltip) or `notify-send` (notices only) — all part of the system or one package away. It reads a private status file the office writes and goes away when the office closes.
+- **💬 Conversation** (click an agent): the whole conversation as a chat, a search inside it, and a box to write to it once it finished its turn. Only what you wrote and what it answered; off in private mode.
+- **▦ Task board** (Tasks → Board): queued, running, waiting on you and done; drag a card to retry, conclude or cancel it.
+- **When you spend** (Costs and limits): a weekday × hour map of output tokens over the last 28 days, and under each limit when it would run out at the pace of the last hour.
+- **🎞 Day timelapse:** a picture of the office every 5 minutes (no names), turned into a ~20 s GIF in your browser. The pictures stay in this browser for 3 days.
 - **📺 TV mode** (or `?tv=1`): full screen, only the office and big counters; Esc leaves.
 - **Waiting on you today** in the daily report: measured time the agents waited on your answers and tasks stood blocked on you.
 - **Sounds and do not disturb** (Personalise): each sound on or off, and a daily quiet window that mutes sounds and system notifications.

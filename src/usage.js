@@ -14,7 +14,7 @@ const CODEX = () => path.join(process.env.CODEX_HOME || path.join(os.homedir(), 
 
 const zero = () => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 });
 const add = (a, b) => { a.input += b.input; a.output += b.output; a.cacheRead += b.cacheRead; a.cacheWrite += b.cacheWrite; a.cacheWrite1h += b.cacheWrite1h || 0; return a; };
-const SCAN_VERSION = 4; // bump when scanFile's output changes: cached files are rescanned once
+const SCAN_VERSION = 5; // bump when scanFile's output changes: cached files are rescanned once
 const day = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 function walk(dir, out = []) {
@@ -32,7 +32,7 @@ function walk(dir, out = []) {
 const GAP = 5 * 60000;
 const TS_RE = /"timestamp":"([^"]+)"/;
 async function scanFile(file, kind) {
-  const res = { total: zero(), byDay: {}, byModel: {}, act: {}, title: '', usdByDay: {} };
+  const res = { total: zero(), byDay: {}, byModel: {}, act: {}, title: '', usdByDay: {}, byHour: {} };
   let prevTs = 0;
   const activity = (line, isTool) => {
     const m = TS_RE.exec(line); if (!m) return;
@@ -49,6 +49,8 @@ async function scanFile(file, kind) {
     add(res.byDay[k] || (res.byDay[k] = zero()), u);
     if (model) add(res.byModel[model] || (res.byModel[model] = zero()), u);
     const c = model ? costOf(model, u) : null; if (c) res.usdByDay[k] = (res.usdByDay[k] || 0) + c; // estimated cost per day
+    const hk = k + ' ' + String(new Date(ts || Date.now()).getHours()).padStart(2, '0'), h = res.byHour[hk] || (res.byHour[hk] = { out: 0, usd: 0 }); // per hour, for the usage map
+    h.out += u.output; if (c) h.usd += c;
   };
   const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
   let lastId = null, model = '';
@@ -137,6 +139,13 @@ async function refresh() {
       if (m.activeMs || m.tools) board.push(m);
     }
     board.sort((a, b) => b.activeMs - a.activeMs || b.tools - a.tools);
+    // when the tokens go: output tokens and estimated spend per weekday and hour over the last 28 days
+    const from = day(Date.now() - 27 * 864e5), grid = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({ out: 0, usd: 0 })));
+    for (const { res } of Object.values(c)) for (const [hk, v] of Object.entries(res.byHour || {})) {
+      if (hk.slice(0, 10) < from) continue;
+      const g = grid[new Date(hk.slice(0, 10) + 'T12:00:00').getDay()][Number(hk.slice(11))]; if (g) { g.out += v.out; g.usd += v.usd; }
+    }
+    state.heat = { days: 28, grid };
     state.days = days; state.month = { key: month, top: board.slice(0, 5), costly: board.filter(b => b.usd > 0).sort((a, b) => b.usd - a.usd).slice(0, 8).map(({ id, agent, title, usd }) => ({ id, agent, title, usd })) };
     state.result = out; state.scannedAt = Date.now();
   } finally { state.scanning = false; }
@@ -145,7 +154,7 @@ async function refresh() {
 // returns what we have now and refreshes in the background when older than a minute
 function usage() {
   if (!state.scanning && Date.now() - state.scannedAt > 60000) refresh();
-  return { scanning: state.scanning, scannedAt: state.scannedAt, byAgent: state.result, days: state.days || null, month: state.month || null };
+  return { scanning: state.scanning, scannedAt: state.scannedAt, byAgent: state.result, days: state.days || null, month: state.month || null, heat: state.heat || null };
 }
 
 module.exports = { usage, refresh, scanFile };

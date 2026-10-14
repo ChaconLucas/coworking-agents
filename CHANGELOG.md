@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Conversation in the side panel: click an agent, then *Conversation* for the whole conversation as a chat, a search inside it, and a box to write to it when it finished its turn
+- Tasks as a board (Tasks → *Board*): queued, running, waiting on you, done; drag a card to retry, conclude or cancel it
+- When you spend (Costs and limits): output tokens per weekday and hour over the last 28 days, with the peak; and under each limit, at the measured pace of the last hour, when it would run out or that it lasts until it resets
+- Day timelapse (☰ → 🎞): a picture of the office every 5 minutes while it is open, drawn without names, turned into a ~20 s GIF made in the browser; kept only in this browser for 3 days
+- Fix: a stalled Read or Edit no longer shows as waiting for your approval in the modes that never ask for them (auto, accept edits, don't ask, bypass), nor a quick tool waiting on a command running beside it
 - Phone app updates faster: the live link pings every 5 s (a quiet office no longer looks offline and falls back to polling), reopens at once when the app comes back from the background, and new messages reach the open conversation with each change
 - Phone app: an agent's whole conversation as a chat (its own tab next to the summary), with a search inside it that also reaches older messages, and the message box at the bottom. Only what you wrote and what it answered; no tool output, reminders or command echoes; off in private mode
 - Phone home-screen icon opens with its code: the code link is the page itself (no redirect) and the manifest has no fixed start, so the icon keeps the link it was added from (iOS gives a home-screen app its own cookies)
