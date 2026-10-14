@@ -1031,3 +1031,11 @@ body.gather #office:not(.cam) { transition: none; }
 .tools-menu .menu-zoom button:disabled { opacity: .35; cursor: default; }
 .tools-menu .menu-zoom .mz-z { min-width: 38px; text-align: center; font: 700 10px/1 var(--pix); color: #f4ecd8; }
 body.gather main#stage { cursor: grab; } body.gather main#stage:active { cursor: grabbing; }
+/* the small zoom buttons on the left edge in Gather mode */
+.zoom-pad { position: fixed; left: 10px; top: 50%; transform: translateY(-50%); z-index: 30; display: flex; flex-direction: column; gap: 4px; }
+.zoom-pad[hidden] { display: none; }
+.zoom-pad button { width: 30px; height: 30px; border: 2px solid var(--edge); border-radius: 6px; background: #1b1622; color: #f4ecd8; font: 700 16px/1 system-ui, sans-serif; box-shadow: 2px 2px 0 var(--edge); cursor: pointer; }
+.zoom-pad button:hover:not(:disabled) { background: #2a2433; }
+.zoom-pad button:disabled { opacity: .35; cursor: default; }
+/* walking is part of Gather mode now (the switch is "Gather mode" in the menu) */
+#tools-menu #btn-walk { display: none; }

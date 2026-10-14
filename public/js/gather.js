@@ -2,9 +2,9 @@
 // ---------------- Gather mode: a closer camera that follows you, and a card when you walk up to someone ----------------
 // On by default while you walk around (☰ → Settings → Camera follows you). The office is drawn bigger and the view
 // slides with you; next to an agent a card shows what it is doing and what you asked last, with its buttons.
-let gatherOn = qs.get('gather') === '0' ? false : store.get('gather', true) !== false; // ?gather=0 for the README screenshots (the whole office)
+let gatherOn = qs.get('gather') === '0' ? false : store.get('gather', true) !== false && store.get('player', true) !== false; // ?gather=0 for the README screenshots (the whole office)
 // zoom: − and + in the bar at the bottom (or the - and = keys, or pinch / ctrl + wheel); "fit" shows the whole office
-const ZOOMS = ['fit', 0.75, 1, 1.5, 2, 2.5, 3];
+const ZOOMS = ['fit', 1, 1.5, 2, 2.5, 3, 4];
 let zoomI = ZOOMS.indexOf(store.get('zoom', 2)); if (zoomI < 0) zoomI = 4;
 const gatherActive = () => gatherOn && playerOn && !trophyView && !building && !!data;
 // how much bigger than the normal scale: "fit" makes the whole floor fit the window
@@ -66,7 +66,7 @@ function gatherFollow() {
     const st = document.getElementById('stage'), want = on ? Math.max(240, Math.round(innerHeight - (st.getBoundingClientRect().top + scrollY) - 8)) + 'px' : '';
     if (st.style.height !== want) st.style.height = want;
   }
-  if (!on) { if (camX !== null) { camX = camY = null; camManual = false; if (!officeEl.classList.contains('cam')) officeEl.style.transform = ''; } nearCardHide(); return; }
+  if (!on) { camX = camY = null; camManual = false; if (!officeEl.classList.contains('cam') && officeEl.style.transform) officeEl.style.transform = ''; nearCardHide(); return; }
   if (officeEl.classList.contains('cam')) return; // an agent's panel has the camera
   if (me.moving && camManual) { camManual = false; zoomBar(); } // walking brings the camera back to you
   if (camManual) { clampCam(); nearCard(); return; }
@@ -77,7 +77,7 @@ function gatherFollow() {
   officeEl.style.transform = `translate(${-Math.round(camX)}px, ${-Math.round(camY)}px)`;
   nearCard();
 }
-function setGather(on) { gatherOn = on; store.set('gather', on); camX = camY = null; camManual = false; lastLayoutKey = ''; renderAll(); labelGather(); zoomBar(); }
+function setGather(on) { gatherOn = on; store.set('gather', on); camX = camY = null; camManual = false; if (playerOn !== on && typeof setPlayer === 'function') setPlayer(on); lastLayoutKey = ''; gatherFollow(); renderAll(); labelGather(); zoomBar(); } // Gather: you walk and the camera follows; Normal: the whole map, no character
 // the switch, in the menu's Settings, with the same green dot as the others
 const gatherBtn = document.createElement('button');
 gatherBtn.id = 'btn-gather'; gatherBtn.className = 'icon-btn';
@@ -117,3 +117,13 @@ nearEl.addEventListener('click', e => {
   if (b.dataset.near === 'talk') { deskSub = 'talk'; showPerson(p.id); return; }
   if ((p.state === 'needs_you' || p.state === 'waiting') && typeof openTalk === 'function') openTalk(p.id); else showPerson(p.id);
 });
+
+// small zoom buttons on the left edge of the screen while in Gather mode (the same as the menu row)
+const zoomPad = document.createElement('div'); zoomPad.className = 'zoom-pad'; zoomPad.hidden = true; document.body.appendChild(zoomPad);
+function zoomPadDraw() {
+  const on = gatherActive(), G = T.gather; zoomPad.hidden = !on; if (!on) return;
+  const html = `<button data-zp="1" title="${esc(G.in)}" ${zoomI === ZOOMS.length - 1 ? 'disabled' : ''}>+</button><button data-zp="-1" title="${esc(G.out)}" ${zoomI === 0 ? 'disabled' : ''}>−</button>${camManual ? `<button data-zp="me" title="${esc(G.backToMe)}">◎</button>` : ''}`;
+  if (zoomPad.innerHTML !== html) zoomPad.innerHTML = html;
+}
+zoomPad.addEventListener('click', e => { const b = e.target.closest('[data-zp]'); if (!b) return; if (b.dataset.zp === 'me') { camManual = false; zoomBar(); } else setZoom(Number(b.dataset.zp)); zoomPadDraw(); });
+setInterval(zoomPadDraw, 400);

@@ -74,10 +74,9 @@ function relayout() {
   // with several rooms, shrink the scale so two fit side by side; with just one, keep it big
   const groups = new Set((data ? data.people : []).map(roomKey)).size;
   const s0 = Math.max(1.6, Math.min(3, availW / (groups > 1 ? 840 : 520)));
-  // Gather mode: a wider, roomier floor with open areas on both sides (a park on the left, a café on the right)
-  const g = typeof gatherActive === 'function' && gatherActive();
-  SIDE_L = g ? 210 : 0; SIDE_R = g ? 230 : 0; ROWGAP = g ? 34 : SHELF_GAP; COLGAP = g ? 26 : 8;
-  W = Math.max(g ? 900 : 480, Math.min(g ? 1100 : 920, Math.floor(availW / s0))) + SIDE_L + SIDE_R;
+  // a wide, roomy floor with open areas on both sides (a park on the left, a café on the right), in both modes
+  SIDE_L = 210; SIDE_R = 230; ROWGAP = 34; COLGAP = 26;
+  W = Math.max(900, Math.min(1100, Math.floor(availW / s0))) + SIDE_L + SIDE_R;
   CX = W - RW - 14 - SIDE_R; RX = CX + 10;
   const leftW = CX - 12 - SIDE_L;
   floors = planFloors(data ? data.people : [], leftW);
@@ -157,7 +156,7 @@ function fitScale() {
   const availW = Math.min((stage.clientWidth || document.documentElement.clientWidth - 32) - 4, 2400); // hidden (building view) measures 0
   // the trophy room is its own screen with a fixed size
   const w = trophyView ? TROPHY_W : W, h = trophyView ? TROPHY_H : H;
-  S = Math.max(1.5, Math.floor(Math.min(availW / w, 4) * 4) / 4);
+  S = Math.max(.5, Math.floor(Math.min(availW / w, 4) * 4) / 4); // the whole floor across the window (it is wide: the park and the café on its sides)
   if (typeof gatherZoom === 'function') S = Math.min(6, S * gatherZoom(w, h, S)); // Gather mode: drawn bigger, the camera follows you
   cv.width = w; cv.height = h;
   cv.style.width = w * S + 'px'; cv.style.height = h * S + 'px';

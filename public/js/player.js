@@ -59,7 +59,7 @@ function planWalk(to) {
 }
 
 function updatePlayer(dt) {
-  if (!playerOn || !data || trophyView) { placePlayerTag(); return; }
+  if (!playerOn || !data || trophyView) { placePlayerTag(); if (typeof gatherFollow === 'function') gatherFollow(); return; } // leaving Gather resets the camera
   if (!me.ready || me.y > H) { Object.assign(me, { x: CX - 8, y: H - 24, ready: true }); }
   let dx = 0, dy = 0;
   const k = c => keysDown.has(c);
