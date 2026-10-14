@@ -5,6 +5,12 @@ const DWELL_MS = 3500;
 // the library and the lab are a walk away: go only after a while doing that, come back only after a while doing something else
 const ROOM_GO_MS = 20000, ROOM_BACK_MS = 8000;
 // seats in the library and the lab: two rows facing the tables or benches (the rooms draw their furniture to match)
+// benches in the garden, two rows
+function gardenSeats() {
+  if (!garden) return [];
+  const out = []; for (const row of [garden.y + 46, garden.y + 112]) for (let x = garden.x + 40; x <= garden.x + garden.w - 60; x += 70) out.push({ x, y: row, zone: 'garden', pose: 'stand' }, { x: x + 18, y: row, zone: 'garden', pose: 'stand' });
+  return out;
+}
 function placeSeats(name) {
   const P = places.find(x => x.name === name); if (!P) return [];
   const out = []; for (const row of [P.y + 44, P.y + 104]) for (let x = P.x + 14; x <= P.x + P.w - 30; x += 34) out.push({ x, y: row, zone: name, pose: 'sit' });
@@ -29,6 +35,10 @@ function plan(now) {
   };
   const byZone = { lounge: [], nap: [], meet: [], desk: [], leave: [], library: [], lab: [] };
   for (const c of layout) byZone[zoneFor(c)].push(c);
+  // a stroll: half of those whose turn ended spend each two minutes in the garden instead of the lounge
+  const slot = Math.floor(now / 120000), strollers = byZone.lounge.filter(c => garden && hash(c.p.id + ':' + slot) % 2 === 0);
+  byZone.lounge = byZone.lounge.filter(c => !strollers.includes(c));
+  { const gs = gardenSeats(); strollers.forEach((c, i) => assign.set(c.p.id, gs[(hash(c.p.id) + i) % Math.max(1, gs.length)] || null)); }
   const lounge = byZone.lounge, free = [];
   if (lounge.length >= 2) { assign.set(lounge[0].p.id, spots.ping[0]); assign.set(lounge[1].p.id, spots.ping[1]); free.push(...lounge.slice(2)); }
   else free.push(...lounge);
@@ -60,6 +70,7 @@ const SPEED = 52;
 function exitPath(pt, cell) {
   const P = places.find(P => pt.x >= P.x && pt.x <= P.x + P.w && pt.y >= P.y && pt.y <= P.y + P.h);
   if (P) { const d = P.doors[0]; return [{ x: pt.x, y: P.y + 14 }, { x: d.x - 8, y: P.y + 14 }, { x: d.x - 8, y: P.y - 8 }]; } // out through the room's top door
+  if (garden && pt.y >= garden.y && pt.x < CX) return [{ x: pt.x, y: garden.y - 6 }]; // the garden is open to the hallway above it
   if (pt.x < CX && cell) {
     const R = cell.room;
     return [{ x: pt.x, y: cell.aisle }, { x: R.doorX + 9, y: cell.aisle }, { x: R.doorX + 9, y: R.y + R.h + 6 }];

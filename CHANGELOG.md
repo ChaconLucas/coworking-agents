@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Gather mode (on by default while you walk; ☰ → Settings → Camera follows you): the office drawn twice as big and the view slides with you
+- Walk up to an agent and a card opens over it: what it is doing or asking, its title and what you asked last, with Open/Answer and Conversation
+- A garden at the bottom of the floor (trees, a fountain, flower beds, benches); agents whose turn ended take turns strolling out there
 - The agents walk: after about 20 s reading or browsing an agent gets up, walks to the library and sits at a reading table; after about 20 s running commands it goes to the lab; after about 8 s on something else it walks back to its desk. Bigger rooms. Who waits on you stays at the desk, waving (the waiting room shows them when you walk in)
 
 ## 0.10.0 — 2026-10-14

@@ -69,8 +69,9 @@ function updatePlayer(dt) {
     }
     me.moving = true;
   }
-  if (me.moving) followPlayer();
+  if (me.moving && !(typeof gatherActive === 'function' && gatherActive())) followPlayer();
   placePlayerTag();
+  if (typeof gatherFollow === 'function') gatherFollow();
 }
 // the page scrolls to keep you on screen
 function followPlayer() {
@@ -143,4 +144,4 @@ overlay.addEventListener('click', e => {
   if (y < TOP - 6) return;
   me.path = planWalk({ x, y }); achBump('steps');
 });
-function setPlayer(on) { playerOn = on; store.set('player', on); if (data) { renderBar(); renderOverlay(); } }
+function setPlayer(on) { playerOn = on; store.set('player', on); if (data) { lastLayoutKey = ''; renderAll(); renderBar(); renderOverlay(); } }

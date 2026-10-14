@@ -1008,3 +1008,18 @@ body.tv .app-ask { display: none; }
   .tools-menu:not([hidden]) { display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); column-gap: 10px; }
   .tools-menu .menu-sec + .menu-sec { border-top: 0; margin-top: 0; padding-top: 0; border-left: 2px dashed #332f37; padding-left: 10px; }
 }
+
+/* Gather mode: the stage is the window, the office slides under it with you */
+body.gather main#stage { display: block; height: calc(100vh - 16px); overflow: hidden; padding: 0; position: relative; }
+body.gather #office { margin: 0; border-radius: 0; box-shadow: none; overflow: visible; width: max-content; }
+body.gather #office:not(.cam) { transition: none; }
+/* the card over the agent you walked up to */
+.near-card { position: absolute; z-index: 6; transform: translate(-50%, -100%); width: 260px; padding: 10px 12px; line-height: 1.35; background: #fffdf8; color: #2a2622; border: 2px solid #2a1d27; border-radius: 8px; box-shadow: 4px 4px 0 #2a1d27; font: 13px/1.35 system-ui, -apple-system, sans-serif; }
+.near-card b { font: 700 11px/1.2 var(--pix); text-transform: uppercase; letter-spacing: .04em; margin-right: 6px; }
+.near-card .nc-st { font-size: 11px; font-weight: 600; color: #fff; background: var(--c); border-radius: 4px; padding: 1px 6px; }
+.near-card small { display: block; color: #7a7166; margin-top: 3px; }
+.near-card p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.near-card .nc-doing { font: 12px/1.35 ui-monospace, Menlo, monospace; }
+.near-card .nc-said { color: #5a524a; font-style: italic; }
+.near-card .nc-row { display: flex; gap: 6px; margin-top: 8px; }
+.near-card .btn.ghost { color: #2a2622; border-color: #2a1d27; }

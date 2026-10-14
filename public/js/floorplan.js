@@ -10,7 +10,7 @@ let ctx = mainCtx; // switched to the thumbnail canvas while drawing another flo
 Art.setCtx(ctx);
 const overlay = document.getElementById('overlay');
 let S = 3, W = 480, H = 300, CX = 320, RX = 330;
-let game = null, places = [], data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
+let game = null, places = [], garden = null, data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
 
 function rawRoomKey(p) {
   if (p.repo && p.repo.name) return p.repo.name;
@@ -135,15 +135,18 @@ function buildFloor(i) {
   const PH = 170, pw = Math.floor((CX - 20 - 16) / 3), py = y + 6;
   const places = ['library', 'lab', 'waiting'].map((name, k) => { const x = 8 + k * (pw + 8); return { name, x, y: py, w: pw, h: PH, doors: [{ side: 'top', x: x + Math.round(pw / 2), y: py }] }; });
   y += PH + SHELF_GAP + 10;
+  // the garden: open to the hallway, at the bottom of the floor; agents whose turn ended sometimes stroll out here
+  const garden = { x: 8, y: y, w: CX - 20, h: 160 };
+  y += garden.h + 8;
   const occupied = ds.filter(d => d.p);
   const lay = occupied.map(d => Object.assign({}, d));
   lay.forEach((c, k) => { occupied[k].cell = c; });
-  return { rooms: rs, desks: ds, layout: lay, bottom: y, H: 0, game, places };
+  return { rooms: rs, desks: ds, layout: lay, bottom: y, H: 0, game, places, garden };
 }
 
 function useFloor(i) {
   const f = floorStates[i];
-  rooms = f.rooms; desks = f.desks; layout = f.layout; H = f.H; game = f.game; places = f.places || [];
+  rooms = f.rooms; desks = f.desks; layout = f.layout; H = f.H; game = f.game; places = f.places || []; garden = f.garden || null;
 }
 
 function fitScale() {
@@ -152,6 +155,7 @@ function fitScale() {
   // the trophy room is its own screen with a fixed size
   const w = trophyView ? TROPHY_W : W, h = trophyView ? TROPHY_H : H;
   S = Math.max(1.5, Math.floor(Math.min(availW / w, 4) * 4) / 4);
+  if (typeof gatherZoom === 'function') S = Math.min(6, S * gatherZoom()); // Gather mode: drawn bigger, the camera follows you
   cv.width = w; cv.height = h;
   cv.style.width = w * S + 'px'; cv.style.height = h * S + 'px';
   ctx.imageSmoothingEnabled = false;

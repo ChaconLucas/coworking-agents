@@ -832,7 +832,7 @@ function setTv(on) {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tv')) setTv(false); });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('tv')) setTv(false); });
 if (new URLSearchParams(location.search).get('tv') === '1') setTimeout(() => setTv(true), 500);
-function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); document.querySelectorAll('[data-menu-group]').forEach(h => { h.textContent = T.menuGroups[h.dataset.menuGroup]; }); const as = document.querySelector('#btn-autostart .ml'); if (as) { as.textContent = T.menuGroups.autostart; as.parentNode.title = T.appx.autostart; } }
+function labelMenuPanels() { const O = T.officeObj; document.querySelectorAll('[data-menu-tab]').forEach(b => { const l = O.menu[b.dataset.menuTab]; b.querySelector('.ml').textContent = l; b.title = l; }); document.querySelectorAll('[data-menu-group]').forEach(h => { h.textContent = T.menuGroups[h.dataset.menuGroup]; }); const as = document.querySelector('#btn-autostart .ml'); if (as) { as.textContent = T.menuGroups.autostart; as.parentNode.title = T.appx.autostart; } if (typeof labelGather === 'function') labelGather(); }
 setInterval(labelMenuPanels, 2000); setTimeout(labelMenuPanels, 300);
 
 // ---- the recommendation card: current, recommended and pending config, the reason, Apply; refreshed as the task moves ----

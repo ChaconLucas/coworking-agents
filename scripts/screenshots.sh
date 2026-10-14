@@ -15,7 +15,7 @@ shot() { # count, query, output, js-before-shot, viewport
   for _ in $(seq 1 50); do grep -q "http://" "$log" && break; sleep 0.1; done
   local url; url=$(grep -o "http://[^ ]*" "$log" | head -1)
   agent-browser set viewport $vp >/dev/null
-  agent-browser open "${url}&${query}" >/dev/null
+  agent-browser open "${url}&gather=0&${query}" >/dev/null
   sleep 5
   [ -n "$js" ] && { agent-browser eval "$js" >/dev/null; sleep 3; }
   agent-browser screenshot "$PWD/$out" >/dev/null # agent-browser resolves paths from its own daemon cwd

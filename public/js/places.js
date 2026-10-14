@@ -126,3 +126,20 @@ overlay.addEventListener('click', e => {
   const h = placeHits.find(h => x >= h.x && x <= h.x + 16 && y >= h.y - 2 && y <= h.y + 26); if (!h) return;
   e.stopImmediatePropagation(); h.need && typeof openTalk === 'function' ? openTalk(h.id) : showPerson(h.id);
 }, true);
+
+// ---- the garden at the bottom of the floor: grass, a path, trees, flower beds, a fountain and benches ----
+function drawGarden(t) {
+  const G = garden; if (!G) return;
+  const { x, y, w, h } = G;
+  r(x, y, w, h, '#4f8a3c'); for (let k = 0; k < Math.floor(w * h / 90); k++) { const hh = hash('gr' + k); r(x + hh % w, y + (hh >>> 10) % h, 1, 2, (hh >>> 4) % 3 ? '#5f9e48' : '#427a33'); }
+  r(x, y + h / 2 - 6, w, 12, '#c9b48a'); r(x, y + h / 2 - 6, w, 1, '#a8956c'); r(x, y + h / 2 + 5, w, 1, '#a8956c'); for (let k = x + 4; k < x + w; k += 14) r(k, y + h / 2 - 2, 6, 4, '#d8c49c');
+  r(x, y, w, 2, '#3b6a2e');
+  // a round fountain in the middle with moving water
+  const fx = x + w / 2, fy = y + h / 2; r(fx - 22, fy - 14, 44, 28, '#9aa3b0'); r(fx - 19, fy - 11, 38, 22, '#3f8fd0'); for (let k = 0; k < 6; k++) { const hh = hash('fw' + k); if (((t / 260 + k) | 0) % 3) r(fx - 16 + hh % 30, fy - 8 + (hh >>> 6) % 16, 5, 1, '#a9dcff'); } r(fx - 2, fy - 20, 4, 10, '#c0cbdc'); if (((t / 200) | 0) % 2) r(fx - 1, fy - 24, 2, 4, '#a9dcff');
+  // trees along the edges, flower beds
+  for (let k = 0; k < Math.floor(w / 90); k++) for (const ty of [y + 8, y + h - 34]) { const tx = x + 20 + k * 90 + (hash('tr' + k + ty) % 30); if (Math.abs(tx - fx) < 40) continue; r(tx + 8, ty + 16, 4, 12, '#6b4a33'); r(tx, ty, 20, 18, '#2f6b2a'); r(tx + 3, ty - 4, 14, 6, '#3a8a35'); r(tx + 4, ty + 3, 4, 3, '#4fa846'); }
+  for (let k = 0; k < Math.floor(w / 120); k++) { const bx = x + 60 + k * 120; if (Math.abs(bx - fx) < 50) continue; r(bx, y + h / 2 + 12, 26, 8, '#6b4a33'); for (let f = 0; f < 6; f++) r(bx + 2 + f * 4, y + h / 2 + 10 - (f % 2), 3, 3, ['#ff6ec7', '#ffd84d', '#ff4d57', '#ffffff'][f % 4]); }
+  // benches by the seats in actors.js
+  for (const row of [y + 46, y + 112]) for (let bx = x + 40; bx <= x + w - 60; bx += 70) { r(bx - 2, row + 20, 40, 4, '#8a5a3c'); r(bx - 2, row + 24, 2, 5, '#5a3a28'); r(bx + 36, row + 24, 2, 5, '#5a3a28'); }
+  const label = plain(T.places.garden), lw = label.length * 4 + 8; r(x + 6, y + h - 12, lw, 9, '#00000088'); pixText(x + 10, y + h - 10, label, '#f4ecd8');
+}
