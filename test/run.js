@@ -734,7 +734,8 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
       assert.deepStrictEqual([await hostTry('evil.example:' + port), await hostTry('other.local:' + port), await hostTry('localhost:' + port)], [421, 421, 421], 'phone: no other name'); }
 
     assert.strictEqual((await get('/api/m', { Cookie: 'cwp=' + 'b'.repeat(32) })).status, 401, 'phone: wrong token');
-    const login = await get('/?t=' + tok); assert.ok(login.status === 302 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')), 'phone: the link sets a strict cookie');
+    const login = await get('/?t=' + tok); assert.ok(login.status === 200 && /HttpOnly; SameSite=Strict/.test(login.headers.get('set-cookie')) && (await login.text()).includes('phone.js'), 'phone: the link sets a strict cookie and is the page itself (a home-screen icon keeps the link)');
+    assert.ok(!('start_url' in await (await get('/manifest.webmanifest')).json()), 'phone manifest: the icon opens the address it was added from');
     const ck = { Cookie: 'cwp=' + tok };
     assert.strictEqual((await get('/api/m', ck)).status, 200);
     assert.deepStrictEqual([(await get('/api/tasks', ck)).status, (await get('/index.html', ck)).status, (await get('/../src/server.js', ck)).status], [404, 404, 404], 'phone: nothing of the office');

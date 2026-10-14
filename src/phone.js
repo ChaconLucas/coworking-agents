@@ -122,7 +122,10 @@ function startPhone({ port = 4778, privacy = false, demo = false, snapshot, task
         if (PUBLIC[url.pathname] && req.method === 'GET') { const [f, type] = PUBLIC[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, d))); }
         if (url.pathname === '/' && url.searchParams.has('t')) {
           if (!same(url.searchParams.get('t'), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code again.');
-          res.writeHead(302, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/${kept ? '; Max-Age=31536000' : ''}`, Location: '/' }); return res.end();
+          // the page itself, with the code kept in the address: iOS gives a home-screen app its own cookies, so the icon has to
+          // open this same link (the manifest has no start_url, so the icon takes the address it was added from)
+          return fs.readFile(path.join(DIR, 'index.html'), (e, d) => { if (e) return send(res, 404, 'text/plain', 'not found');
+            res.writeHead(200, { 'Set-Cookie': `cwp=${token}; HttpOnly; SameSite=Strict; Path=/${kept ? '; Max-Age=31536000' : ''}`, 'Content-Type': 'text/html; charset=utf-8' }); res.end(String(d).replace(/__V__/g, BUILD)); });
         }
         if (!same(cookieOf(req), token)) return send(res, 401, 'text/plain; charset=utf-8', 'Scan the QR code shown by the office.');
         if (FILES[url.pathname] && req.method === 'GET') { const [f, type] = FILES[url.pathname]; return fs.readFile(path.join(DIR, f), (e, d) => (e ? send(res, 404, 'text/plain', 'not found') : send(res, 200, type, url.pathname === '/' ? String(d).replace(/__V__/g, BUILD) : d))); } // files named with this run, so a home-screen icon never keeps an old page

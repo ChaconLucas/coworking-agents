@@ -1,7 +1,6 @@
 {
   "name": "coworking-agents (phone)",
   "short_name": "coworking",
-  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#1d1a22",
