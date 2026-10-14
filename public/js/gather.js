@@ -6,23 +6,36 @@ let gatherOn = qs.get('gather') === '0' ? false : store.get('gather', true) !== 
 // zoom: − and + in the bar at the bottom (or the - and = keys, or pinch / ctrl + wheel); "fit" shows the whole office
 const ZOOMS = ['fit', 1, 1.5, 2, 2.5, 3, 4];
 let zoomI = ZOOMS.indexOf(store.get('zoom', 2)); if (zoomI < 0) zoomI = 4;
+// Normal mode zooms too, without a character: "width" is the whole floor across the page; closer, you drag or scroll to look
+const NZOOMS = ['width', 1.5, 2, 3, 4];
+let zoomN = Math.max(0, NZOOMS.indexOf(store.get('zoomN', 'width')));
 const gatherActive = () => gatherOn && playerOn && !trophyView && !building && !!data;
-// how much bigger than the normal scale: "fit" makes the whole floor fit the window
+const placeView = () => !trophyView && !building && !!data;
+const camActive = () => gatherActive() || (!gatherOn && zoomN > 0 && placeView()); // the camera moves the floor under the window
+// how much bigger than the page-wide scale: "fit" makes the whole floor fit the window
 function gatherZoom(w, h, s) {
-  if (!gatherActive()) return 1;
+  if (!gatherActive()) return !gatherOn && placeView() ? (zoomN ? NZOOMS[zoomN] : 1) : 1;
   const z = ZOOMS[zoomI]; if (z !== 'fit') return z;
   const st = document.getElementById('stage'), top = st.getBoundingClientRect().top + scrollY;
   return Math.min((st.clientWidth || innerWidth) / (w * s), Math.max(240, innerHeight - top - 8) / (h * s));
 }
 function setZoom(step) {
+  if (!gatherOn) { // Normal mode: its own steps; the camera stays where you look (centred on the same spot)
+    const i = Math.max(0, Math.min(NZOOMS.length - 1, zoomN + step)); if (i === zoomN) return;
+    const st = document.getElementById('stage'), rc = st.getBoundingClientRect();
+    const fx = camActive() && camX !== null ? (camX + st.clientWidth / 2) / (cv.width * S) : .5, fy = camActive() && camY !== null ? (camY + st.clientHeight / 2) / (cv.height * S) : Math.min(1, Math.max(0, (innerHeight / 2 - rc.top) / (cv.height * S)));
+    zoomN = i; store.set('zoomN', NZOOMS[i]); lastLayoutKey = ''; renderAll(); zoomBar();
+    camManual = true; camX = fx * cv.width * S - st.clientWidth / 2; camY = fy * cv.height * S - st.clientHeight / 2; gatherFollow();
+    return;
+  }
   const i = Math.max(0, Math.min(ZOOMS.length - 1, zoomI + step)); if (i === zoomI) return;
   zoomI = i; store.set('zoom', ZOOMS[i]); camX = camY = null; camManual = false; lastLayoutKey = ''; renderAll(); zoomBar();
 }
 // the bar at the bottom: Gather or Normal, and the zoom while in Gather
 const zoomEl = document.createElement('div'); zoomEl.className = 'menu-zoom'; zoomEl.hidden = true; // a row in ☰ → Settings, under Gather mode
 function zoomBar() {
-  const G = T.gather, z = ZOOMS[zoomI]; zoomEl.hidden = !gatherOn;
-  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${zoomI === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' ? esc(G.fit) : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${zoomI === ZOOMS.length - 1 ? 'disabled' : ''}>+</button>${camManual ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
+  const G = T.gather, list = gatherOn ? ZOOMS : NZOOMS, i = gatherOn ? zoomI : zoomN, z = list[i]; zoomEl.hidden = false;
+  zoomEl.innerHTML = `<span class="mz-l">${esc(G.zoom)}</span><button data-zoom="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button><span class="mz-z">${z === 'fit' || z === 'width' ? esc(G.fit) : z + '×'}</span><button data-zoom="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button>${camManual && gatherOn ? `<button data-zoom-me title="${esc(G.backToMe)}">◎</button>` : ''}`;
 }
 zoomEl.addEventListener('click', e => {
   e.stopPropagation();
@@ -30,7 +43,7 @@ zoomEl.addEventListener('click', e => {
   const b = e.target.closest('[data-zoom]'); if (b) setZoom(Number(b.dataset.zoom));
 });
 document.addEventListener('keydown', e => {
-  if (!gatherActive() || e.metaKey || e.ctrlKey || e.altKey || !reportEl.hidden) return;
+  if (!placeView() || e.metaKey || e.ctrlKey || e.altKey || !reportEl.hidden) return;
   const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea') return;
   if (e.key === '-' || e.key === '_') { setZoom(-1); e.preventDefault(); } else if (e.key === '=' || e.key === '+') { setZoom(1); e.preventDefault(); }
 });
@@ -41,9 +54,9 @@ const clampCam = () => {
   camX = ww <= vw ? (ww - vw) / 2 : Math.max(0, Math.min(ww - vw, camX)); camY = wh <= vh ? (wh - vh) / 2 : Math.max(0, Math.min(wh - vh, camY));
   officeEl.style.transform = `translate(${-Math.round(camX)}px, ${-Math.round(camY)}px)`;
 };
-const lookAround = () => { if (!camManual) { camManual = true; zoomBar(); } clampCam(); };
+const lookAround = () => { if (!camManual) { camManual = true; zoomBar(); } clampCam(); if (!gatherOn) officeEl.style.transform = `translate(${-Math.round(camX)}px, ${-Math.round(camY)}px)`; };
 overlay.addEventListener('pointerdown', e => {
-  if (!gatherActive() || e.button !== 0 || e.target.closest('button,a,.near-card,.tag,[data-id],.desk-hit,.hit')) return;
+  if (!camActive() || e.button !== 0 || e.target.closest('button,a,.near-card,.tag,[data-id],.desk-hit,.hit')) return;
   drag = { x: e.clientX, y: e.clientY, cx: camX || 0, cy: camY || 0 }; dragged = false;
 });
 addEventListener('pointermove', e => {
@@ -54,13 +67,14 @@ addEventListener('pointermove', e => {
 addEventListener('pointerup', () => { drag = null; });
 overlay.addEventListener('click', e => { if (dragged) { dragged = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true); // a drag is not a click to walk
 document.getElementById('stage').addEventListener('wheel', e => {
-  if (!gatherActive()) return;
+  if (e.ctrlKey && placeView()) { e.preventDefault(); if (Math.abs(e.deltaY) > 2) setZoom(e.deltaY > 0 ? -1 : 1); return; } // pinch on a trackpad, or ctrl + wheel, in both modes
+  if (!camActive()) return;
   e.preventDefault();
   if (e.ctrlKey) { if (Math.abs(e.deltaY) > 2) setZoom(e.deltaY > 0 ? -1 : 1); return; } // pinch on a trackpad, or ctrl + wheel
   camX = (camX || 0) + e.deltaX; camY = (camY || 0) + e.deltaY; lookAround();
 }, { passive: false });
 function gatherFollow() {
-  const on = gatherActive();
+  const on = camActive();
   document.body.classList.toggle('gather', on);
   { // the stage fills the window below the bar and the notices, so nothing hides under the bottom edge
     const st = document.getElementById('stage'), want = on ? Math.max(240, Math.round(innerHeight - (st.getBoundingClientRect().top + scrollY) - 8)) + 'px' : '';
@@ -68,6 +82,7 @@ function gatherFollow() {
   }
   if (!on) { camX = camY = null; camManual = false; if (!officeEl.classList.contains('cam') && officeEl.style.transform) officeEl.style.transform = ''; nearCardHide(); return; }
   if (officeEl.classList.contains('cam')) return; // an agent's panel has the camera
+  if (!gatherActive()) { if (camX === null) { camX = 0; camY = 0; } clampCam(); return; } // Normal mode zoomed: no character, you look around
   if (me.moving && camManual) { camManual = false; zoomBar(); } // walking brings the camera back to you
   if (camManual) { clampCam(); nearCard(); return; }
   const st = document.getElementById('stage'), vw = st.clientWidth, vh = st.clientHeight, ww = cv.width * S, wh = cv.height * S;
@@ -121,8 +136,9 @@ nearEl.addEventListener('click', e => {
 // small zoom buttons on the left edge of the screen while in Gather mode (the same as the menu row)
 const zoomPad = document.createElement('div'); zoomPad.className = 'zoom-pad'; zoomPad.hidden = true; document.body.appendChild(zoomPad);
 function zoomPadDraw() {
-  const on = gatherActive(), G = T.gather; zoomPad.hidden = !on; if (!on) return;
-  const html = `<button data-zp="1" title="${esc(G.in)}" ${zoomI === ZOOMS.length - 1 ? 'disabled' : ''}>+</button><button data-zp="-1" title="${esc(G.out)}" ${zoomI === 0 ? 'disabled' : ''}>−</button>${camManual ? `<button data-zp="me" title="${esc(G.backToMe)}">◎</button>` : ''}`;
+  const on = placeView(), G = T.gather; zoomPad.hidden = !on; if (!on) return;
+  const list = gatherOn ? ZOOMS : NZOOMS, i = gatherOn ? zoomI : zoomN;
+  const html = `<button data-zp="1" title="${esc(G.in)}" ${i === list.length - 1 ? 'disabled' : ''}>+</button><button data-zp="-1" title="${esc(G.out)}" ${i === 0 ? 'disabled' : ''}>−</button>${camManual && gatherActive() ? `<button data-zp="me" title="${esc(G.backToMe)}">◎</button>` : ''}`;
   if (zoomPad.innerHTML !== html) zoomPad.innerHTML = html;
 }
 zoomPad.addEventListener('click', e => { const b = e.target.closest('[data-zp]'); if (!b) return; if (b.dataset.zp === 'me') { camManual = false; zoomBar(); } else setZoom(Number(b.dataset.zp)); zoomPadDraw(); });
