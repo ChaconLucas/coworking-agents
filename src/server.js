@@ -177,7 +177,7 @@ function start({ port = 4777, host = '127.0.0.1', privacy = false, interval = 10
       if (demo) return send(res, 200, 'application/json', JSON.stringify(require('./demo').demoTalk(url.searchParams.get('q') || '')));
       const p = real().people.find(x => x.id === String(url.searchParams.get('id') || '') && !x.leaving);
       if (!p) return send(res, 200, 'application/json', '{"ok":false,"reason":"gone"}');
-      require('./said').conversation(p.agent, p.id, { q: url.searchParams.get('q') || '', limit: 300 }).then(r => send(res, 200, 'application/json', JSON.stringify(r)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
+      require('./said').conversation(p.agent, p.id, { q: url.searchParams.get('q') || '', limit: 300, sub: url.searchParams.get('sub') || '' }).then(r => send(res, 200, 'application/json', JSON.stringify(r)), () => send(res, 200, 'application/json', '{"ok":false,"reason":"unknown"}'));
       return;
     }
     if (url.pathname === '/api/compact' && req.method === 'POST') {

@@ -746,6 +746,13 @@ function req(port, pathName, { method = 'GET', headers = {}, body } = {}) {
     assert.strictEqual((await conversation('claude', cid)).items.length, 4, 'chat: reads what was added');
     assert.deepStrictEqual((await conversation('claude', cid, { q: 'SECOND' })).items.map(m => m.text), ['second answer'], 'chat: search inside it');
     for (const bad of ['../../etc/passwd', 'p/' + cid, '', 'short']) assert.strictEqual((await conversation('claude', bad)).reason, 'nofile', 'chat: an id only, never a path: ' + bad);
+    const sd = path.join(claude, 'projects', 'p', cid, 'subagents'); fs.mkdirSync(sd, { recursive: true });
+    fs.writeFileSync(path.join(sd, 'agent-abc123def.jsonl'), [{ type: 'user', isSidechain: true, message: { content: 'map the call sites' } }, { type: 'assistant', isSidechain: true, message: { content: [{ type: 'text', text: 'found 3' }] } }].map(line).join(''));
+    fs.writeFileSync(path.join(sd, 'agent-abc123def.meta.json'), JSON.stringify({ agentType: 'Explore', description: 'Map call sites' }));
+    const hs = (await conversation('claude', cid)).helpers;
+    assert.deepStrictEqual(hs.map(h => [h.id, h.type, h.what]), [['abc123def', 'Explore', 'Map call sites']], 'chat: the helpers (subagents) of a conversation');
+    assert.deepStrictEqual((await conversation('claude', cid, { sub: 'abc123def' })).items.map(m => m.text), ['map the call sites', 'found 3'], 'chat: a helper\'s own conversation');
+    for (const bad of ['../abc123def', 'abc123def/../../x', 'nope00000']) assert.strictEqual((await conversation('claude', cid, { sub: bad })).reason, 'nofile', 'chat: a helper by id only: ' + bad);
     fs.writeFileSync(path.join(day, 'rollout-2026-01-01T00-00-00-thread-1234abcd.jsonl'), [ev('event_msg', { type: 'user_message', message: 'run it' }, now - 2000), ev('event_msg', { type: 'agent_message', message: 'ran it' }, now - 1000)].map(line).join(''));
     assert.deepStrictEqual((await conversation('codex', 'thread-1234abcd')).items.map(m => m.text), ['run it', 'ran it'], 'chat: Codex too'); }
 

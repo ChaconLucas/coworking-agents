@@ -3,7 +3,7 @@
 const P = T.phone, X = T.tasks;
 const app = document.getElementById('app'), statusEl = document.getElementById('status'), tabsEl = document.getElementById('tabs');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {}, sub = 'info', talk = null, talkQ = '', talkTimer = 0, es = null;
+let last = null, busy = false, tab = 'now', d = null, pending = null, streamAt = 0, detail = null, dd = null, diffs = {}, sub = 'info', talk = null, talkQ = '', talkTimer = 0, es = null, talkSub = '', helpers = [];
 try { tab = localStorage.getItem('cw.phone.tab') || 'now'; } catch {}
 const post = body => fetch('api/m', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Coworking': '1' }, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ ok: false, reason: 'unknown' }));
 const usd = n => 'US$ ' + (Number(n) || 0).toFixed(2);
@@ -98,17 +98,26 @@ function talkList() {
   const q = talkQ.toLowerCase();
   if (!talk.items.length) return `<p class="empty">${esc(q ? P.talkNone : P.talkEmpty)}</p>`;
   return (q ? `<p class="msg dim">${esc(P.talkFound(talk.found))}</p>` : talk.cut || talk.total > talk.items.length ? `<p class="msg dim">${esc(P.talkCut)}</p>` : '')
-    + talk.items.map(m => `<div class="bubble ${m.role === 'user' ? 'me' : 'it'}"><p>${md(mark(m.text, q))}</p><small>${m.role === 'user' ? esc(P.you) : esc(dd ? dd.name : '')}${m.at ? ' · ' + esc(clock(m.at)) : ''}</small></div>`).join('');
+    + talk.items.map(m => `<div class="bubble ${m.role === 'user' ? 'me' : 'it'}"><p>${md(mark(m.text, q))}</p><small>${(h => m.role === 'user' ? esc(h && dd ? dd.name : P.you) : esc(h ? h.type : dd ? dd.name : ''))(helpers.find(x => x.id === talkSub))}${m.at ? ' · ' + esc(clock(m.at)) : ''}</small></div>`).join('');
+}
+// the agent itself and each of its helpers (subagents); a dot marks the ones still working
+function helpersHtml() {
+  if (!helpers.length) return '';
+  const cur = helpers.find(h => h.id === talkSub);
+  return `<div class="helpers"><button class="${talkSub ? '' : 'on'}" data-subag="">${esc(P.main)}</button>${helpers.map(h => `<button class="${h.id === talkSub ? 'on' : ''}" data-subag="${esc(h.id)}">${h.live ? '● ' : ''}${esc(h.type)}</button>`).join('')}</div>
+    ${cur ? `<p class="msg dim">🤖 ${esc(P.helperOf(cur.type))}${cur.what ? ': ' + esc(cur.what) : ''}</p>` : ''}`;
 }
 function talkView(a) {
-  return `<input type="search" class="talkq" data-talkq placeholder="${esc(P.talkSearch)}" value="${esc(talkQ)}" enterkeyhint="search"><div id="talklist">${talkList()}</div>
-    <div class="card composer">${a.canMsg ? `<textarea data-text="msg" placeholder="${esc(P.msgPh)}"></textarea><div class="row"><button data-op="message" data-id="${esc(a.id)}">➤ ${esc(P.msgSend)}</button></div>` : `<p class="msg dim">${esc(P.msgOnlyIdle)}</p>`}<p class="msg" data-msg="msg"></p></div>`;
+  return `<div id="talkhelpers">${helpersHtml()}</div><input type="search" class="talkq" data-talkq placeholder="${esc(P.talkSearch)}" value="${esc(talkQ)}" enterkeyhint="search"><div id="talklist">${talkList()}</div>
+    <div class="card composer"${talkSub ? ' hidden' : ''}>${a.canMsg ? `<textarea data-text="msg" placeholder="${esc(P.msgPh)}"></textarea><div class="row"><button data-op="message" data-id="${esc(a.id)}">➤ ${esc(P.msgSend)}</button></div>` : `<p class="msg dim">${esc(P.msgOnlyIdle)}</p>`}<p class="msg" data-msg="msg"></p></div>`;
 }
 async function loadTalk(toEnd) {
   const id = detail; if (!id || sub !== 'talk') return;
-  const r = await fetch(`api/talk?id=${encodeURIComponent(id)}&q=${encodeURIComponent(talkQ)}`).then(x => (x.ok ? x.json() : null)).catch(() => null);
+  const r = await fetch(`api/talk?id=${encodeURIComponent(id)}&q=${encodeURIComponent(talkQ)}&sub=${encodeURIComponent(talkSub)}`).then(x => (x.ok ? x.json() : null)).catch(() => null);
   if (detail !== id || sub !== 'talk' || !r) return;
+  if (r.helpers) helpers = r.helpers;
   const same = talk && JSON.stringify(talk) === JSON.stringify(r); talk = r; if (same && !toEnd) return;
+  const hb = document.getElementById('talkhelpers'); if (hb) hb.innerHTML = helpersHtml();
   const atEnd = app.scrollHeight - app.scrollTop - app.clientHeight < 120, list = document.getElementById('talklist');
   if (list && (typing() || document.activeElement === document.querySelector('[data-talkq]'))) list.innerHTML = talkList(); // keep the search box and its caret
   else if (!typing()) { const y = app.scrollTop; render(); app.scrollTop = y; }
@@ -172,13 +181,15 @@ document.addEventListener('focusout', () => setTimeout(() => { if (pending && !t
 tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; detail = null; dd = null; talk = null; talkQ = ''; try { localStorage.setItem('cw.phone.tab', tab); } catch {} if (d) render(); app.scrollTop = 0; });
 app.addEventListener('click', async e => {
   if (e.target.closest('[data-back]')) { detail = null; dd = null; talk = null; talkQ = ''; render(); app.scrollTop = 0; return; }
+  const sa = e.target.closest('[data-subag]');
+  if (sa) { talkSub = sa.dataset.subag; talk = null; render(); loadTalk(true); return; }
   const sb = e.target.closest('[data-sub]');
   if (sb) { sub = sb.dataset.sub; talk = null; render(); app.scrollTop = 0; if (sub === 'talk') loadTalk(true); return; }
   const df = e.target.closest('[data-diff]');
   if (df) { const id = df.dataset.diff; if (diffs[id]) delete diffs[id]; else { diffs[id] = 'loading'; fetch('api/task-diff?id=' + encodeURIComponent(id)).then(x => x.json()).catch(() => ({ ok: false, reason: 'unknown' })).then(r => { if (diffs[id]) { diffs[id] = r; render(); } }); } render(); return; }
   const b = e.target.closest('[data-op]');
   const card = !b && !e.target.closest('textarea, select, a, pre') && e.target.closest('[data-agent]');
-  if (card) { detail = card.dataset.agent; dd = null; sub = 'info'; talk = null; talkQ = ''; render(); app.scrollTop = 0; loadDetail(); return; }
+  if (card) { detail = card.dataset.agent; dd = null; sub = 'info'; talk = null; talkQ = ''; talkSub = ''; helpers = []; render(); app.scrollTop = 0; loadDetail(); return; }
   if (!b) return;
   const op = b.dataset.op, id = b.dataset.id || 'new', body = { op, id };
   if (op === 'permit') body.allow = !!b.dataset.allow;

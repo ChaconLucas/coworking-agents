@@ -127,3 +127,6 @@ mark { background: var(--warn); color: #120f16; border-radius: 2px; padding: 0 1
 .card.composer { margin-top: 14px; }
 .bubble b { display: inline; font-weight: 700; }
 .bubble code { font: 12px/1.4 ui-monospace, Menlo, monospace; background: #120f16; border: 1px solid var(--edge); border-radius: 2px; padding: 0 3px; }
+.helpers { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.helpers button { min-height: 36px; padding: 8px 10px; font-size: 10px; background: var(--surface); color: var(--muted); box-shadow: none; }
+.helpers button.on { background: var(--accent); color: #fff; }

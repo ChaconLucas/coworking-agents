@@ -72,8 +72,35 @@ function readable(t) {
   t = String(t || '').replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim();
   return !t || /^<(command-|local-command|bash-|task-notification|user-prompt-submit-hook)/.test(t) ? '' : t;
 }
-async function conversation(agent, id, { q = '', limit = 200 } = {}) {
-  const file = locate(agent, id); if (!file) return { ok: false, reason: 'nofile' };
+// an agent's helpers (subagents), each with its own log: Claude keeps them beside the conversation (<id>/subagents),
+// Codex writes a rollout per child thread that points at its parent (today's and yesterday's)
+const SUB_RE = /^[0-9A-Za-z-]{6,80}$/;
+function firstAsk(file) { // the request a helper got: the first thing it was told, from the start of its log
+  try { const fd = fs.openSync(file, 'r'), buf = Buffer.alloc(65536), n = fs.readSync(fd, buf, 0, buf.length, 0); fs.closeSync(fd);
+    for (const line of buf.subarray(0, n).toString('utf8').split('\n')) { let j; try { j = JSON.parse(line); } catch { continue; } const x = said(file.includes(path.sep + 'subagents' + path.sep) ? 'claude' : 'codex', j); if (x && x.role === 'user') return readable(x.text).replace(/\s+/g, ' ').slice(0, 140); } } catch {}
+  return '';
+}
+function helperFile(agent, id, sub) {
+  if (!SUB_RE.test(String(sub || ''))) return null;
+  if (agent === 'claude') { const main = locate('claude', id); if (!main) return null; const f = path.join(path.dirname(main), id, 'subagents', 'agent-' + sub + '.jsonl'); return fs.existsSync(f) ? f : null; }
+  if (agent === 'codex') { const kids = require('./sources/codex').children(id, 0).map(c => c.id); return kids.includes(sub) ? locate('codex', sub) : null; } // only a child of this thread
+  return null;
+}
+function helpers(agent, id) {
+  const now = Date.now(), out = [];
+  if (agent === 'claude') {
+    const main = locate('claude', id), dir = main && path.join(path.dirname(main), id, 'subagents'); let files = [];
+    try { files = fs.readdirSync(dir).filter(f => /^agent-[0-9A-Za-z-]+\.jsonl$/.test(f)); } catch {}
+    for (const f of files) { const full = path.join(dir, f); let mt = 0; try { mt = fs.statSync(full).mtimeMs; } catch { continue; }
+      let meta = {}; try { meta = JSON.parse(fs.readFileSync(full.replace(/\.jsonl$/, '.meta.json'), 'utf8')); } catch {}
+      out.push({ id: f.slice(6, -6), type: String(meta.agentType || 'agent').slice(0, 40), what: String(meta.description || '').slice(0, 140) || firstAsk(full), at: mt, live: now - mt < 120000 }); }
+  } else if (agent === 'codex') {
+    for (const c of require('./sources/codex').children(id, 0)) { const f = locate('codex', c.id); let mt = 0; try { mt = fs.statSync(f).mtimeMs; } catch { continue; } out.push({ id: c.id, type: c.model || 'agent', what: firstAsk(f), at: mt, live: now - mt < 120000 }); }
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, 40);
+}
+async function conversation(agent, id, { q = '', limit = 200, sub = '' } = {}) {
+  const file = sub ? helperFile(agent, id, sub) : locate(agent, id); if (!file) return { ok: false, reason: 'nofile' };
   let size = 0; try { size = fs.statSync(file).size; } catch { return { ok: false, reason: 'nofile' }; }
   let c = chats.get(file);
   if (!c || size < c.offset) c = { offset: Math.max(0, size - CHAT_BYTES), items: [], cut: size > CHAT_BYTES };
@@ -87,7 +114,7 @@ async function conversation(agent, id, { q = '', limit = 200 } = {}) {
   }
   q = String(q || '').toLowerCase().trim().slice(0, 100);
   const list = q ? c.items.filter(x => x.text.toLowerCase().includes(q)) : c.items;
-  return { ok: true, items: list.slice(-limit), total: c.items.length, found: list.length, cut: c.cut };
+  return { ok: true, items: list.slice(-limit), total: c.items.length, found: list.length, cut: c.cut, helpers: sub ? undefined : helpers(agent, id) };
 }
 
-module.exports = { search, said, conversation, readable };
+module.exports = { search, said, conversation, readable, helpers };

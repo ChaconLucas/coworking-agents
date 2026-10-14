@@ -963,3 +963,6 @@ body.tv .app-ask { display: none; }
 .hrow.axis em { font: 9px/1 var(--pix); color: var(--muted); font-style: normal; text-align: left; }
 /* the day's timelapse */
 .tl-out img { display: block; max-width: 100%; image-rendering: pixelated; border: 2px solid var(--edge); border-radius: 6px; margin: 10px 0; }
+.phelpers { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.phelpers button { font: 700 10px/1 var(--pix); text-transform: uppercase; padding: 7px 9px; border: 2px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.phelpers button.on { border-color: var(--accent); color: var(--ink); }

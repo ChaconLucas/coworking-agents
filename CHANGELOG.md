@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Conversation (computer and phone): every agent's helpers (Claude subagents, Codex child threads) listed above the chat, with a dot on the ones still working; pick one to read its own conversation, from the request it got to its answer, with the same search
 - Conversation in the side panel: click an agent, then *Conversation* for the whole conversation as a chat, a search inside it, and a box to write to it when it finished its turn
 - Tasks as a board (Tasks → *Board*): queued, running, waiting on you, done; drag a card to retry, conclude or cancel it
 - When you spend (Costs and limits): output tokens per weekday and hour over the last 28 days, with the peak; and under each limit, at the measured pace of the last hour, when it would run out or that it lasts until it resets
