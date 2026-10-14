@@ -448,6 +448,7 @@ function drawScene(t, dt) {
   movers.push({ y: cat.y, draw: () => drawMascot(cat.x, cat.y, cat.mode, t, cat.flip) });
   movers.push(...extraWalkers(t));
   drawPets(t, movers);
+  if (typeof drawPlaceRooms === 'function') drawPlaceRooms(t, movers); // the library, the lab and the waiting room (who you see depends on where you stand)
   drawPlayer(t, movers);
   movers.push({ y: robot.y, draw: () => drawRobot(t) });
   movers.sort((a, b) => a.y - b.y).forEach(m => m.draw());

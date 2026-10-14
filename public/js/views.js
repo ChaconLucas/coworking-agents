@@ -132,9 +132,7 @@ function openElevator() {
     ${btn('data-go="trophy"', E.trophy, viewName === 'trophy')}
     ${floors.map((f, i) => btn(`data-go-floor="${i}"`, floors.length > 1 ? E.floor(i + 1) : E.office, !trophyView && floor === i)).reverse().join('')}
     ${btn('data-go="servers"', E.servers, viewName === 'servers')}
-    ${btn('data-go="library"', E.library, viewName === 'library')}
-    ${btn('data-go="lab"', E.lab, viewName === 'lab')}
-    ${btn('data-go="meeting"', E.meeting, viewName === 'meeting')}
+
   </div></div></div>`;
   liftEl.hidden = false; achBump('lifts');
 }

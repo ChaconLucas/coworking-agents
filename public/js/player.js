@@ -11,6 +11,7 @@ const PLAYER_SPEED = 70;
 function solidRooms() {
   const out = rooms.map(R => ({ x: R.x, y: R.y, w: R.w, h: R.h, doors: [{ x: R.doorX + 9, y: R.y + R.h, side: 'bottom' }], gap: 9 }));
   if (game) out.push({ x: game.x, y: game.y, w: game.w, h: game.h, doors: game.doors, gap: 9 });
+  for (const P of places) out.push({ x: P.x, y: P.y, w: P.w, h: P.h, doors: P.doors, gap: 9 });
   if (napBox) out.push({ x: RX - 4, y: wing.nap, w: RW + 8, h: 80, doors: [{ x: RX - 4, y: wing.nap + 37, side: 'left' }], gap: 9 });
   return out;
 }
@@ -97,6 +98,7 @@ function nearThing() {
   }
   for (const g of gameHits) if (near(g.x + g.w / 2, g.y + g.h, 24)) return { label: g.title, run: () => { const m = /data-tab="(\w+)"/.exec(g.attr); if (m) openReport(m[1]); else if (/trophyroom/.test(g.attr)) setTrophyView(true); else if (/arcade/.test(g.attr)) openArcade(); } };
   if (typeof officeTips === 'function') { const o = officeTips(); for (const [b, tab, label] of [[boardBox, 'tasks', o.tasks], [costBox, 'usage', o.costs], [noticesBox, 'notices', o.notices], [historyBox, 'feed', o.history], [releaseBox, 'version', o.releases]]) if (b && near(b.x + b.w / 2, b.y + b.h + 14, 26)) return { label: label.split('\n')[0], run: () => openReport(tab) }; }
+  for (const h of (typeof placeHits !== 'undefined' ? placeHits : [])) if (near(h.x + 8, h.y + 12, 22)) return { label: T.walk.talk(h.name), run: () => (h.need ? openTalk(h.id) : showPerson(h.id)) };
   if (radioBox && near(radioBox.x + 7, radioBox.y + 20, 26)) return { label: radioOn ? T.radio.on : T.radio.off, run: () => setRadio(!radioOn) };
   if (catBox && near(cat.x + 6, cat.y + 6, 18)) return { label: T.walk.pet, run: petCat };
   if (elevatorBox && near(elevatorBox.x + 14, elevatorBox.y + 30, 22)) return { label: T.elevator.title, run: openElevator };

@@ -2,8 +2,8 @@
 
 ## Unreleased
 - Fix: the test suite no longer stops a running office started at login (it turned the login item off through the real launchd label)
-- Three new rooms in the elevator: the library (who is reading files or browsing the web, at reading tables), the lab (who is running commands, tests or builds, at benches with their output on screen) and the meeting room (an agent and the helpers it called, around the table). The agents stay at their desks; a room shows who is doing that right now
-- Walk inside every room, like in the office (arrows/WASD, Shift to run, or a click): Enter next to someone opens them, and the elevator door in the corner takes you back. The rooftop, the trophy room and the server room too
+- Three new rooms on the office floor, under the game room: the library, the lab and the waiting room. The agents stay at their desks; walk into a room (arrows/WASD or a click) and you see who is reading or browsing, running commands, or waiting on you right now. A number on the door says how many; Enter next to someone opens them (the waiting room opens the question)
+- Walk inside the rooftop, the trophy room and the server room too; the elevator door in the corner takes you back
 
 ## 0.9.1 — 2026-10-14
 - ☰ → Settings → *Open with the computer*: the start-at-login switch right in the menu, with its green dot (it also stays in Personalise)

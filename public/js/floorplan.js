@@ -10,7 +10,7 @@ let ctx = mainCtx; // switched to the thumbnail canvas while drawing another flo
 Art.setCtx(ctx);
 const overlay = document.getElementById('overlay');
 let S = 3, W = 480, H = 300, CX = 320, RX = 330;
-let game = null, data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
+let game = null, places = [], data = null, selected = null, layout = [], desks = [], rooms = [], floors = [], floor = 0, spots = null, hallBox = null, boardBox = null, wing = null, floorStates = [], building = false;
 
 function rawRoomKey(p) {
   if (p.repo && p.repo.name) return p.repo.name;
@@ -131,15 +131,19 @@ function buildFloor(i) {
   const game = { x: 8, y: gy, w: gw, h: GH, doorY: gy + GH / 2,
     doors: [{ side: 'right', x: 8 + gw, y: gy + GH / 2 }, { side: 'top', x: 8 + Math.round(gw * .2), y: gy }, { side: 'top', x: 8 + Math.round(gw * .62), y: gy }, { side: 'bottom', x: 8 + Math.round(gw * .75), y: gy + GH }] };
   y += GH + SHELF_GAP + 4;
+  // under the game room: the library, the lab and the waiting room, side by side, doors on their top wall to the hallway
+  const PH = 118, pw = Math.floor((CX - 20 - 16) / 3), py = y + 6;
+  const places = ['library', 'lab', 'waiting'].map((name, k) => { const x = 8 + k * (pw + 8); return { name, x, y: py, w: pw, h: PH, doors: [{ side: 'top', x: x + Math.round(pw / 2), y: py }] }; });
+  y += PH + SHELF_GAP + 10;
   const occupied = ds.filter(d => d.p);
   const lay = occupied.map(d => Object.assign({}, d));
   lay.forEach((c, k) => { occupied[k].cell = c; });
-  return { rooms: rs, desks: ds, layout: lay, bottom: y, H: 0, game };
+  return { rooms: rs, desks: ds, layout: lay, bottom: y, H: 0, game, places };
 }
 
 function useFloor(i) {
   const f = floorStates[i];
-  rooms = f.rooms; desks = f.desks; layout = f.layout; H = f.H; game = f.game;
+  rooms = f.rooms; desks = f.desks; layout = f.layout; H = f.H; game = f.game; places = f.places || [];
 }
 
 function fitScale() {
