@@ -212,12 +212,15 @@ The 🔔 bell collects agent requests, task updates, recommendations (*Apply*, *
 The office works in any browser. If you prefer an app:
 
 - **Create the app** (Personalise, or `npx coworking-agents install-app`): a *Coworking Agents* app made on your computer — free, no store, no signing — in Applications (macOS), the Start Menu and Desktop (Windows) or the applications menu (Linux). Opening it starts the office if needed and shows it in an app window. `uninstall-app` removes it.
-- **On the phone:** with `--phone`, add the phone panel to the home screen (Safari → Share → Add to Home Screen; Chrome → Add to Home screen). It opens full screen on the same Wi-Fi; the code is kept, and *Change the phone code* cuts every phone off.
+- **On the phone:** turn the phone on in ☰ → 📱 Phone (or start with `--phone`) and add it to the home screen (Safari → Share → Add to Home Screen; Chrome → Add to Home screen). Its address never changes: the computer's own name on the network (`yourmac.local`, so a new Wi-Fi address doesn't matter) and port 4778, with a kept code, so the icon added once keeps working after restarts and updates. *Change the phone code* cuts every phone off.
 - **Install as an app** (Personalise, or Chrome/Edge's install icon): its own window, no tabs, an icon in the Dock or taskbar. Nothing is cached; it is the same live office.
 - **`npx coworking-agents --app`** opens it in an app window of Chrome, Edge, Brave or Chromium without installing anything.
-- **Start with the computer:** `npx coworking-agents autostart on` (or the switch in Personalise) starts it hidden at login with the tray icon; `autostart off` undoes it. It uses each system's own login entry (macOS LaunchAgent, Windows Startup folder, Linux XDG autostart) with the program and its arguments, never a shell line.
+- **Start with the computer:** `npx coworking-agents autostart on` (or ☰ → Settings → *Open with the computer*) starts it hidden at login with the tray icon; `autostart off` undoes it. It uses each system's own login entry (macOS LaunchAgent, Windows Startup folder, Linux XDG autostart) with the program and its arguments, never a shell line.
 
 ## More panels
+
+The ☰ menu groups everything in three columns: **See** (tasks, costs, notices, history, repositories, past conversations, timelapse, releases), **Do** (new session, message several, tell me when…, phone, TV mode, search, replay, photo, decorate) and **Settings** (system notices, sounds, focus, walking, radio, open with the computer, language, personalise).
+
 
 - **📦 Repositories:** who is in each repo now, what is not committed, to push or behind, worktrees, open tasks, PRs and today's activity.
 - **📣 Message several agents:** one request to the agents you pick, typed into terminal sessions that are waiting and continued in the background for VS Code and app conversations; busy ones are left out.
@@ -230,6 +233,7 @@ The office works in any browser. If you prefer an app:
 - **⏰ Tell me when…:** a notice when an agent finishes (also a button in its panel), when a limit passes a level you pick, or when any agent edits a file you name.
 - **🗄 Past conversations:** every Claude Code and Codex conversation from the last 60 days, open or closed, found by name, folder or what was said, and read as a chat with its helpers. Read only.
 - **🎞 Day timelapse:** a picture of the office every 5 minutes (no names), turned into a ~20 s GIF in your browser. The pictures stay in this browser for 3 days.
+- **👥 Everyone in the office:** the count under the office name (`6 agents +2 🤖` while helpers work); click it for every agent with its state and the helpers working for it.
 - **📺 TV mode** (or `?tv=1`): full screen, only the office and big counters; Esc leaves.
 - **Waiting on you today** in the daily report: measured time the agents waited on your answers and tasks stood blocked on you.
 - **Sounds and do not disturb** (Personalise): each sound on or off, and a daily quiet window that mutes sounds and system notifications.
