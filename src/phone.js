@@ -39,7 +39,7 @@ function view({ snapshot, tasks, privacy, extra }) {
     ask: p.doing && (p.state === 'needs_you' || p.state === 'waiting') ? (privacy ? '' : p.doing.ask || p.doing.what || p.doing.tool || '') : '',
     options: p.doing && p.doing.options && !p.doing.multi && p.doing.qcount === 1 ? p.doing.options.map(o => (privacy ? '' : String(o.label || o).slice(0, 80))) : null,
     lastPrompt: privacy ? '' : cut(p.lastPrompt, 200), lastReply: privacy ? '' : cut(p.lastReply, 300), model: p.model || '', usd: p.cost ? p.cost.usd : 0,
-    ctxPct: p.ctxMax ? Math.round(p.ctx / p.ctxMax * 100) : 0, canMsg: canMsg(p),
+    ctxPct: p.ctxMax ? Math.round(p.ctx / p.ctxMax * 100) : 0, canMsg: canMsg(p), helpers: (p.subagents || []).length,
   }));
   const tl = tasks.list({ privacy });
   const list = tl.tasks.map(t => ({ id: t.id, title: t.title, state: t.state, reason: t.reason, agent: t.agent, cost: t.cost, costUnknown: t.costUnknown, ask: t.ask || null, result: privacy ? '' : String(t.result || '').slice(0, 600), review: t.review && !privacy ? String(t.review.text || '').slice(0, 600) : '', updated: t.updated, attempts: t.attempts }));

@@ -17,7 +17,11 @@ function renderBar() {
   }
   // stat tiles: the "needs you" one turns red and pulses when it isn't zero
   const tile = (n, label, color, cls = '') => `<span class="stat ${cls}" style="--c:${color}"><i></i><b>${n}</b><small>${esc(label)}</small></span>`;
+  // who is in the office: the agents, and the helpers (subagents) they have working right now
+  const live = data.people.filter(p => !p.leaving), subs = live.flatMap(p => (p.subagents || []).map(a => `${p.name} → ${a.type}${a.description ? ': ' + a.description : ''}`));
   document.getElementById('counts').innerHTML = [
+    `<span class="stat crew" style="--c:var(--muted)" title="${esc(live.map(p => p.name).join(', '))}"><i></i><b>${live.length}</b><small>${esc(T.crew.agents(live.length))}</small></span>`,
+    `<span class="stat crew ${subs.length ? '' : 'zero'}" style="--c:${KIND_COLOR.delegate || '#a46dff'}" title="${esc(subs.join('\n') || T.crew.none)}"><i></i><b>${subs.length}</b><small>${esc(T.crew.helpers(subs.length))}</small></span>`,
     tile(c.work, T.working, KIND_COLOR.terminal),
     tile(c.need, T.needYou, KIND_COLOR.needs_you, c.need ? 'need' : 'zero'),
     tile(c.turn, T.yourTurn, KIND_COLOR.idle, c.turn ? '' : 'zero'),

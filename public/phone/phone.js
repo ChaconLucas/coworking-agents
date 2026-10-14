@@ -24,7 +24,7 @@ function nowTab() {
   h.push(`<h2>${esc(P.agents)} <small>${others.length}</small></h2>`);
   if (!others.length) h.push(`<p class="empty">${esc(P.noAgents)}</p>`);
   for (const p of others) h.push(`<div class="card agent" data-agent="${esc(p.id)}"><div class="who"><span class="face" data-face="${esc(p.id)}"></span><div class="txt"><div class="line"><b>${esc(p.name)}</b>${pill(stateCls(p.state), T.states[p.state] || p.state)}</div>
-    <small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.branch ? ' · ' + esc(p.branch) : ''}${p.since ? ' · ' + esc(ago(d.now - p.since)) : ''}</small>
+    <small>${esc(p.agent)}${p.repo ? ' · ' + esc(p.repo) : ''}${p.branch ? ' · ' + esc(p.branch) : ''}${p.since ? ' · ' + esc(ago(d.now - p.since)) : ''}${p.helpers ? ' · 🤖 ' + esc(T.crew.status(p.helpers)) : ''}</small>
     ${p.doing && working(p) ? `<p class="doing">${esc(p.doing)}</p>` : p.title ? `<p class="doing dim">${esc(p.title)}</p>` : ''}${p.lastReply && !working(p) ? `<p class="said">💬 ${esc(p.lastReply)}</p>` : ''}</div><span class="more">›</span></div></div>`);
   return h.join('');
 }
@@ -140,7 +140,8 @@ function usageTab() {
 }
 function render() {
   const n = d.people.filter(p => p.state === 'needs_you' || p.state === 'waiting').length + d.tasks.filter(t => t.ask).length;
-  statusEl.textContent = P.status(d.people.filter(working).length, n) + (Date.now() - streamAt < 8000 ? ' · ● ' + P.live : '');
+  const hs = d.people.reduce((k, p) => k + (p.helpers || 0), 0);
+  statusEl.textContent = `${d.people.length} ${T.crew.agents(d.people.length)} · ${hs} ${T.crew.helpers(hs)} · ` + P.status(d.people.filter(working).length, n) + (Date.now() - streamAt < 8000 ? ' · ● ' + P.live : '');
   tabsEl.innerHTML = [['now', '●', P.tabNow, n], ['tasks', '☰', P.tabTasks, d.tasks.filter(t => ['blocked', 'failed'].includes(t.state)).length], ['office', '▦', P.tabOffice, 0], ['usage', '$', P.tabUsage, 0]]
     .map(([k, icon, label, badge]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><span class="ic">${icon}</span>${esc(label)}${badge ? `<i>${badge}</i>` : ''}</button>`).join('');
   app.innerHTML = detail ? agentView() : tab === 'tasks' ? tasksTab() : tab === 'office' ? officeTab() : tab === 'usage' ? usageTab() : nowTab();
